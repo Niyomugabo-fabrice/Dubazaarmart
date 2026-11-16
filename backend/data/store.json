@@ -6,20 +6,49 @@
   },
   "products": [
     {
-      "id": "p_1794860517903_oph41",
-      "name": "Iphone 17 pro max",
+      "id": "p_1794864170640_pe69m",
+      "name": "JBL A 45",
+      "category": "speakers",
+      "brand": "JBL",
+      "description": "JBL A 45 - authentic Dubai-sourced product with full warranty.",
+      "price": 500000,
+      "originalPrice": 700000,
+      "discount": 0,
+      "image": "/uploads/product-1794864100170-c359e2eb.jpg",
+      "images": [
+        "/uploads/product-1794864100170-c359e2eb.jpg"
+      ],
+      "quantity": 20,
+      "sku": "DUB-SPE-MWJRS9L6",
+      "condition": "New",
+      "specs": {
+        "Origin": "Dubai, UAE",
+        "Condition": "Brand New Sealed"
+      },
+      "warranty": "1 year official warranty",
+      "featured": true,
+      "active": true,
+      "rating": 5,
+      "reviews": 1,
+      "badge": "Top Pick",
+      "createdAt": "2026-11-16T21:22:50.640Z",
+      "updatedAt": "2026-11-16T21:23:49.143Z"
+    },
+    {
+      "id": "p_1794863344706_bt81o",
+      "name": "Iphone 14 pro max",
       "category": "smartphones",
       "brand": "Apple",
-      "description": "Iphone 17 pro max - authentic Dubai-sourced product with full warranty.",
-      "price": 2000000,
-      "originalPrice": 2000000,
-      "discount": 0,
-      "image": "/uploads/product-1794860515221-4ba7487f.jpg",
+      "description": "Iphone 14 pro max - authentic Dubai-sourced product with full warranty.",
+      "price": 1000000,
+      "originalPrice": 1500000,
+      "discount": 86,
+      "image": "/uploads/product-1794863309201-9f67aace.jpg",
       "images": [
-        "/uploads/product-1794860515221-4ba7487f.jpg"
+        "/uploads/product-1794863309201-9f67aace.jpg"
       ],
       "quantity": 4,
-      "sku": "DUB-SMA-MWJPLZ3D",
+      "sku": "DUB-SMA-MWJRAK8Z",
       "condition": "New",
       "specs": {
         "Origin": "Dubai, UAE",
@@ -31,284 +60,202 @@
       "rating": 5,
       "reviews": 1,
       "badge": "Hot Deal",
-      "createdAt": "2026-11-16T20:21:57.903Z",
-      "updatedAt": "2026-11-16T20:29:53.292Z"
+      "createdAt": "2026-11-16T21:09:04.706Z",
+      "updatedAt": "2026-11-16T21:27:21.942Z"
+    },
+    {
+      "id": "p_1794863176305_tgu7r",
+      "name": "Iphone 15 pro max",
+      "category": "smartphones",
+      "brand": "Apple",
+      "description": "Iphone 15 pro max - authentic Dubai-sourced product with full warranty.",
+      "price": 1500000,
+      "originalPrice": 1500000,
+      "discount": 0,
+      "image": "/uploads/product-1794863123715-0ac3707c.jpg",
+      "images": [
+        "/uploads/product-1794863123715-0ac3707c.jpg"
+      ],
+      "quantity": 15,
+      "sku": "DUB-SMA-MWJR6YAG",
+      "condition": "New",
+      "specs": {
+        "Origin": "Dubai, UAE",
+        "Condition": "Brand New Sealed"
+      },
+      "warranty": "1 year official warranty",
+      "featured": true,
+      "active": true,
+      "rating": 5,
+      "reviews": 1,
+      "badge": "New Arrival",
+      "createdAt": "2026-11-16T21:06:16.305Z",
+      "updatedAt": "2026-11-16T21:06:49.146Z"
+    },
+    {
+      "id": "p_1794862349676_im78j",
+      "name": "Iphone 16 Pro max",
+      "category": "smartphones",
+      "brand": "Apple",
+      "description": "Iphone 16 Pro max - authentic Dubai-sourced product with full warranty.",
+      "price": 1800000,
+      "originalPrice": 1800000,
+      "discount": 0,
+      "image": "/uploads/product-1794862320975-81f18a06.jpg",
+      "images": [
+        "/uploads/product-1794862320975-81f18a06.jpg"
+      ],
+      "quantity": 10,
+      "sku": "DUB-SMA-MWJQP8I2",
+      "condition": "New",
+      "specs": {
+        "Origin": "Dubai, UAE",
+        "Condition": "Brand New Sealed"
+      },
+      "warranty": "1 year official warranty",
+      "featured": true,
+      "active": true,
+      "rating": 5,
+      "reviews": 1,
+      "badge": "Hot Deal",
+      "createdAt": "2026-11-16T20:52:29.676Z",
+      "updatedAt": "2026-11-16T20:52:29.676Z",
+      "expectedFullStock": 20,
+      "unitCost": 1350000,
+      "minStock": 5
+    },
+    {
+      "id": "p_1794862153238_xuueq",
+      "name": "Iphone 17 Pro max",
+      "category": "smartphones",
+      "brand": "Apple",
+      "description": "Iphone 17 Pro max - authentic Dubai-sourced product with full warranty.",
+      "price": 2000000,
+      "originalPrice": 2000000,
+      "discount": 0,
+      "image": "/uploads/product-1794862148894-9b5a1cff.jpg",
+      "images": [
+        "/uploads/product-1794862148894-9b5a1cff.jpg"
+      ],
+      "quantity": 10,
+      "sku": "DUB-SMA-MWJQL0VZ",
+      "condition": "New",
+      "specs": {
+        "Origin": "Dubai, UAE",
+        "Condition": "Brand New Sealed"
+      },
+      "warranty": "1 year official warranty",
+      "featured": true,
+      "active": true,
+      "rating": 5,
+      "reviews": 1,
+      "badge": "New Arrival",
+      "createdAt": "2026-11-16T20:49:13.238Z",
+      "updatedAt": "2026-11-16T20:49:13.238Z",
+      "expectedFullStock": 20,
+      "unitCost": 1500000,
+      "minStock": 5
     }
   ],
   "customers": [
     {
       "id": "c_1794828439538",
-      "name": "Intore Cyaane",
+      "name": "NIYOMUGABO Fabrice",
       "email": "intorecyaane@gmail.com",
-      "ordersCount": 1,
-      "totalSpent": 1460000,
+      "ordersCount": 0,
+      "totalSpent": 0,
       "createdAt": "2026-11-16T11:27:19.536Z"
     },
     {
       "id": "c1",
       "name": "Claudine Uwimana",
       "email": "claudine.u@gmail.com",
-      "ordersCount": 2,
-      "totalSpent": 1830000,
+      "ordersCount": 1,
+      "totalSpent": 370000,
       "createdAt": "2026-10-17T11:15:22.200Z"
     },
     {
       "id": "c2",
       "name": "Jean-Paul Hakizimana",
       "email": "jp.hakiza@yahoo.com",
-      "ordersCount": 1,
-      "totalSpent": 2860000,
+      "ordersCount": 0,
+      "totalSpent": 0,
       "createdAt": "2026-11-01T11:15:22.200Z"
     },
     {
       "id": "c3",
       "name": "Amina Kabanda",
       "email": "amina.k@outlook.com",
-      "ordersCount": 1,
-      "totalSpent": 390000,
+      "ordersCount": 0,
+      "totalSpent": 0,
       "createdAt": "2026-11-11T11:15:22.200Z"
     }
   ],
-  "orders": [
-    {
-      "id": "ORD-FFC5FD6C",
-      "customerId": "c_1794828439538",
-      "customerName": "Intore Cyaane",
-      "phone": "0791905573",
-      "email": "intorecyaane@gmail.com",
-      "deliveryAddress": {
-        "province": "Northern",
-        "district": "Gasabo",
-        "sector": "Kimironko",
-        "street": "Kigali",
-        "cell": "Main"
-      },
-      "status": "PAID",
-      "paymentStatus": "PAID",
-      "paymentMethod": "mtn",
-      "subtotal": 1450000,
-      "deliveryFee": 10000,
-      "total": 1460000,
-      "createdAt": "2026-11-16T11:27:19.536Z",
-      "items": [
-        {
-          "id": "item-1794828439537-mrco",
-          "orderId": "ORD-FFC5FD6C",
-          "productId": "p1",
-          "productName": "Samsung Galaxy S24 Ultra",
-          "category": "smartphones",
-          "sku": "SAM-S24U-BLK",
-          "quantity": 1,
-          "unitPrice": 1450000,
-          "lineTotal": 1450000
-        }
-      ],
-      "requestedDeliveryTime": null,
-      "channel": "web",
-      "cancelReason": null,
-      "customerInstructions": null
-    },
-    {
-      "id": "ORD-94A1F8B2",
-      "customerId": "c1",
-      "customerName": "Claudine Uwimana",
-      "phone": "+250 788 112 233",
-      "email": "claudine.u@gmail.com",
-      "deliveryAddress": {
-        "province": "Kigali",
-        "district": "Gasabo",
-        "sector": "Kimironko",
-        "cell": "Bibare",
-        "street": "KG 123 St",
-        "instructions": "Near Kimironko Market"
-      },
-      "status": "DELIVERED",
-      "paymentStatus": "PAID",
-      "paymentMethod": "mtn",
-      "subtotal": 1450000,
-      "deliveryFee": 10000,
-      "total": 1460000,
-      "createdAt": "2026-11-14T11:15:22.200Z",
-      "items": [
-        {
-          "id": "item-1",
-          "orderId": "ORD-94A1F8B2",
-          "productId": "p1",
-          "productName": "Samsung Galaxy S24 Ultra",
-          "category": "smartphones",
-          "sku": "SAM-S24U-BLK",
-          "quantity": 1,
-          "unitPrice": 1450000,
-          "lineTotal": 1450000
-        }
-      ],
-      "requestedDeliveryTime": null,
-      "channel": "web",
-      "cancelReason": null,
-      "customerInstructions": "Near Kimironko Market"
-    },
-    {
-      "id": "ORD-B3C847E1",
-      "customerId": "c2",
-      "customerName": "Jean-Paul Hakizimana",
-      "phone": "+250 789 445 566",
-      "email": "jp.hakiza@yahoo.com",
-      "deliveryAddress": {
-        "province": "Northern",
-        "district": "Musanze",
-        "sector": "Muhoza",
-        "cell": "Ruhengeri",
-        "street": "NM 45 Ave",
-        "instructions": "Town centre near bank"
-      },
-      "status": "PROCESSING",
-      "paymentStatus": "PAID",
-      "paymentMethod": "airtel",
-      "subtotal": 2850000,
-      "deliveryFee": 10000,
-      "total": 2860000,
-      "createdAt": "2026-11-15T17:15:22.200Z",
-      "items": [
-        {
-          "id": "item-2",
-          "orderId": "ORD-B3C847E1",
-          "productId": "p2",
-          "productName": "Apple MacBook Pro 14\" M3 Pro",
-          "category": "laptops",
-          "sku": "APL-MBP14-M3P",
-          "quantity": 1,
-          "unitPrice": 2850000,
-          "lineTotal": 2850000
-        }
-      ],
-      "requestedDeliveryTime": null,
-      "channel": "web",
-      "cancelReason": null,
-      "customerInstructions": "Town centre near bank"
-    },
-    {
-      "id": "ORD-D2F904A7",
-      "customerId": "c3",
-      "customerName": "Amina Kabanda",
-      "phone": "+250 783 778 899",
-      "email": "amina.k@outlook.com",
-      "deliveryAddress": {
-        "province": "Southern",
-        "district": "Huye",
-        "sector": "Ngoma",
-        "cell": "Matyazo",
-        "street": "HU 88 St",
-        "instructions": "Call when reaching junction"
-      },
-      "status": "PENDING_PAYMENT",
-      "paymentStatus": "PENDING",
-      "paymentMethod": "mtn",
-      "subtotal": 380000,
-      "deliveryFee": 10000,
-      "total": 390000,
-      "createdAt": "2026-11-16T09:15:22.200Z",
-      "items": [
-        {
-          "id": "item-3",
-          "orderId": "ORD-D2F904A7",
-          "productId": "p3",
-          "productName": "Sony WH-1000XM5 Headphones",
-          "category": "headphones",
-          "sku": "SNY-WH1000XM5-BLK",
-          "quantity": 1,
-          "unitPrice": 380000,
-          "lineTotal": 380000
-        }
-      ],
-      "requestedDeliveryTime": null,
-      "channel": "web",
-      "cancelReason": null,
-      "customerInstructions": "Call when reaching junction"
-    }
-  ],
+  "orders": [],
   "companyOrders": [
     {
-      "id": "po_1794848743302",
-      "poNumber": "PO-002",
-      "supplierName": "LDC",
-      "supplierContact": "+7823728382",
-      "shippingCompany": "Rwanda shipping company",
-      "orderDate": "2026-11-16T17:05:43.295Z",
-      "expectedArrival": "2026-11-20T08:01:00.000Z",
+      "id": "po_1794862851638",
+      "poNumber": "PO-001",
+      "supplierName": "ZAMZAR",
+      "supplierContact": "+77891831311",
+      "shippingCompany": "DubaRwanda",
+      "orderDate": "2026-11-16T21:00:51.636Z",
+      "expectedArrival": "2026-11-21T22:05:00.000Z",
       "currency": "USD",
       "shippingCost": 1000,
-      "otherCharges": 70,
-      "totalAmount": 14070,
+      "otherCharges": 500,
+      "totalAmount": 11500,
       "status": "ORDERED",
       "paymentStatus": "PAID",
-      "notes": "this is done for this purpose",
+      "notes": "",
       "items": [
         {
-          "id": "poi_1794848743295_0",
-          "productName": "Samsung galaxy a51",
+          "id": "poi_1794862851636_0",
+          "productName": "Iphone 17 Pro max",
           "category": "smartphones",
-          "unitPrice": 100,
-          "quantityOrdered": 130,
+          "unitPrice": 1000,
+          "quantityOrdered": 10,
           "quantityReceived": 0,
-          "totalPrice": 13000,
+          "totalPrice": 10000,
           "addedToStock": false
         }
       ],
-      "createdAt": "2026-11-16T17:05:43.295Z",
-      "updatedAt": "2026-11-16T17:05:43.295Z"
-    },
-    {
-      "id": "po_1",
-      "poNumber": "PO-001",
-      "supplierName": "Dubai Electronics Wholesale FZ-LLC",
-      "supplierContact": "+971 4 382 9900 / orders@dubaielectronics.ae",
-      "shippingCompany": "Emirates Cargo & DHL Global",
-      "orderDate": "2026-11-10T08:00:00.000Z",
-      "expectedArrival": "2026-11-25T10:00:00.000Z",
-      "currency": "USD",
-      "shippingCost": 450,
-      "otherCharges": 150,
-      "totalAmount": 22400,
-      "status": "SHIPPED",
-      "paymentStatus": "PAID",
-      "notes": "Direct container shipment via Dubai to Kigali International Airport.",
-      "items": [
-        {
-          "id": "poi_1",
-          "productName": "Samsung Galaxy S24 Ultra",
-          "category": "smartphones",
-          "unitPrice": 150,
-          "quantityOrdered": 40,
-          "quantityReceived": 0,
-          "totalPrice": 6000,
-          "addedToStock": false
-        },
-        {
-          "id": "poi_2",
-          "productName": "Apple MacBook Pro 14\" M3 Pro",
-          "category": "laptops",
-          "unitPrice": 500,
-          "quantityOrdered": 30,
-          "quantityReceived": 0,
-          "totalPrice": 15000,
-          "addedToStock": false
-        },
-        {
-          "id": "poi_3",
-          "productName": "Apple AirPods Pro 2nd Gen",
-          "category": "audio",
-          "unitPrice": 40,
-          "quantityOrdered": 20,
-          "quantityReceived": 0,
-          "totalPrice": 800,
-          "addedToStock": false
-        }
-      ],
-      "createdAt": "2026-11-10T08:00:00.000Z",
-      "updatedAt": "2026-11-10T08:00:00.000Z"
+      "createdAt": "2026-11-16T21:00:51.636Z",
+      "updatedAt": "2026-11-16T21:00:51.636Z"
     }
   ],
   "stockMovements": [
+    {
+      "id": "mov_1794863209146_5gaj",
+      "productId": "p_1794863176305_tgu7r",
+      "productName": "Iphone 15 pro max",
+      "sku": "DUB-SMA-MWJR6YAG",
+      "quantity": -5,
+      "movementType": "MANUAL_REMOVAL",
+      "reason": "Sold directly to customer / outside website",
+      "createdAt": "2026-11-16T21:06:49.146Z"
+    },
+    {
+      "id": "mov_1794862490501_i946",
+      "productId": "p_1794862153238_xuueq",
+      "productName": "Iphone 17 Pro max",
+      "sku": "DUB-SMA-MWJQL0VZ",
+      "quantity": -1,
+      "movementType": "SALE",
+      "reason": "Customer order ORD-1BEDD56C (Online)",
+      "referenceId": "ORD-1BEDD56C",
+      "createdAt": "2026-11-16T20:54:50.498Z"
+    },
+    {
+      "id": "mov_1794862190631_2h31",
+      "productId": "p_1794860517903_oph41",
+      "productName": "Iphone 17 pro max",
+      "sku": "DUB-SMA-MWJPLZ3D",
+      "quantity": -4,
+      "movementType": "MANUAL_REMOVAL",
+      "reason": "Sold directly to customer / outside website",
+      "createdAt": "2026-11-16T20:49:50.631Z"
+    },
     {
       "id": "mov_1794860993292_ajn4",
       "productId": "p_1794860517903_oph41",

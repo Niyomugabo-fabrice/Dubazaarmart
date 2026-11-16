@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-gold: #FF6A00;
+  --color-gold-light: #FFB800;
+  --color-gold-dark: #E94B00;
+  --color-brand-blue: #0874F9;
+  --color-brand-green: #17D719;
+  --color-obsidian: #FFFFFF;
+  --color-surface: #FFF7E8;
+  --color-panel: #F1FFF0;
+  --color-border: #FFB800;
+  --color-muted: #0B5B24;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #0874F9 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #0874F9;
+  border-radius: 2px;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: #FFFFFF;
+  color: #111111;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif {
+  font-family: 'DM Serif Display', serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #FF6A00 0%, #FFB800 50%, #FF6A00 100%);
+}
+
+.gold-text,
+.logo-gradient-text {
+  background: linear-gradient(90deg, #0874F9 0%, #FF6A00 50%, #17D719 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(8, 116, 249, 0.14);
+  border-color: rgba(8, 116, 249, 0.55);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #FF6A00, #FFB800);
+  color: #FFFFFF;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.15);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.btn-gold:hover::after {
+  opacity: 1;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(8, 116, 249, 0.55);
+  color: #0874F9;
+  transition: all 0.2s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(8, 116, 249, 0.08);
+  border-color: #0874F9;
+}
+
+.nav-link {
+  color: #111111;
+  transition: color 0.2s;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: #0874F9;
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #0874F9, #FF6A00, #17D719, transparent);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #FFF7E8 25%, #FFB800 50%, #FFF7E8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 0.5s ease forwards;
+}
+
+.badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+}
+
+.product-img-wrap {
+  background: linear-gradient(135deg, #F1FFF0, #FFF7E8);
+}
+
+input, select, textarea {
+  background: #FFF7E8;
+  border: 1px solid #FFB800;
+  color: #111111;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #0874F9;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #0B5B24;
+}

@@ -1,0 +1,371 @@
+{
+  "admin": {
+    "email": "IntoreTech@gmail.com",
+    "password": "Bahoo!123",
+    "name": "IntoreTech Admin"
+  },
+  "products": [
+    {
+      "id": "p_1794860517903_oph41",
+      "name": "Iphone 17 pro max",
+      "category": "smartphones",
+      "brand": "Apple",
+      "description": "Iphone 17 pro max - authentic Dubai-sourced product with full warranty.",
+      "price": 2000000,
+      "originalPrice": 2000000,
+      "discount": 0,
+      "image": "/uploads/product-1794860515221-4ba7487f.jpg",
+      "images": [
+        "/uploads/product-1794860515221-4ba7487f.jpg"
+      ],
+      "quantity": 4,
+      "sku": "DUB-SMA-MWJPLZ3D",
+      "condition": "New",
+      "specs": {
+        "Origin": "Dubai, UAE",
+        "Condition": "Brand New Sealed"
+      },
+      "warranty": "1 year official warranty",
+      "featured": true,
+      "active": true,
+      "rating": 5,
+      "reviews": 1,
+      "badge": "Hot Deal",
+      "createdAt": "2026-11-16T20:21:57.903Z",
+      "updatedAt": "2026-11-16T20:29:53.292Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "c_1794828439538",
+      "name": "Intore Cyaane",
+      "email": "intorecyaane@gmail.com",
+      "ordersCount": 1,
+      "totalSpent": 1460000,
+      "createdAt": "2026-11-16T11:27:19.536Z"
+    },
+    {
+      "id": "c1",
+      "name": "Claudine Uwimana",
+      "email": "claudine.u@gmail.com",
+      "ordersCount": 2,
+      "totalSpent": 1830000,
+      "createdAt": "2026-10-17T11:15:22.200Z"
+    },
+    {
+      "id": "c2",
+      "name": "Jean-Paul Hakizimana",
+      "email": "jp.hakiza@yahoo.com",
+      "ordersCount": 1,
+      "totalSpent": 2860000,
+      "createdAt": "2026-11-01T11:15:22.200Z"
+    },
+    {
+      "id": "c3",
+      "name": "Amina Kabanda",
+      "email": "amina.k@outlook.com",
+      "ordersCount": 1,
+      "totalSpent": 390000,
+      "createdAt": "2026-11-11T11:15:22.200Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "ORD-FFC5FD6C",
+      "customerId": "c_1794828439538",
+      "customerName": "Intore Cyaane",
+      "phone": "0791905573",
+      "email": "intorecyaane@gmail.com",
+      "deliveryAddress": {
+        "province": "Northern",
+        "district": "Gasabo",
+        "sector": "Kimironko",
+        "street": "Kigali",
+        "cell": "Main"
+      },
+      "status": "PAID",
+      "paymentStatus": "PAID",
+      "paymentMethod": "mtn",
+      "subtotal": 1450000,
+      "deliveryFee": 10000,
+      "total": 1460000,
+      "createdAt": "2026-11-16T11:27:19.536Z",
+      "items": [
+        {
+          "id": "item-1794828439537-mrco",
+          "orderId": "ORD-FFC5FD6C",
+          "productId": "p1",
+          "productName": "Samsung Galaxy S24 Ultra",
+          "category": "smartphones",
+          "sku": "SAM-S24U-BLK",
+          "quantity": 1,
+          "unitPrice": 1450000,
+          "lineTotal": 1450000
+        }
+      ],
+      "requestedDeliveryTime": null,
+      "channel": "web",
+      "cancelReason": null,
+      "customerInstructions": null
+    },
+    {
+      "id": "ORD-94A1F8B2",
+      "customerId": "c1",
+      "customerName": "Claudine Uwimana",
+      "phone": "+250 788 112 233",
+      "email": "claudine.u@gmail.com",
+      "deliveryAddress": {
+        "province": "Kigali",
+        "district": "Gasabo",
+        "sector": "Kimironko",
+        "cell": "Bibare",
+        "street": "KG 123 St",
+        "instructions": "Near Kimironko Market"
+      },
+      "status": "DELIVERED",
+      "paymentStatus": "PAID",
+      "paymentMethod": "mtn",
+      "subtotal": 1450000,
+      "deliveryFee": 10000,
+      "total": 1460000,
+      "createdAt": "2026-11-14T11:15:22.200Z",
+      "items": [
+        {
+          "id": "item-1",
+          "orderId": "ORD-94A1F8B2",
+          "productId": "p1",
+          "productName": "Samsung Galaxy S24 Ultra",
+          "category": "smartphones",
+          "sku": "SAM-S24U-BLK",
+          "quantity": 1,
+          "unitPrice": 1450000,
+          "lineTotal": 1450000
+        }
+      ],
+      "requestedDeliveryTime": null,
+      "channel": "web",
+      "cancelReason": null,
+      "customerInstructions": "Near Kimironko Market"
+    },
+    {
+      "id": "ORD-B3C847E1",
+      "customerId": "c2",
+      "customerName": "Jean-Paul Hakizimana",
+      "phone": "+250 789 445 566",
+      "email": "jp.hakiza@yahoo.com",
+      "deliveryAddress": {
+        "province": "Northern",
+        "district": "Musanze",
+        "sector": "Muhoza",
+        "cell": "Ruhengeri",
+        "street": "NM 45 Ave",
+        "instructions": "Town centre near bank"
+      },
+      "status": "PROCESSING",
+      "paymentStatus": "PAID",
+      "paymentMethod": "airtel",
+      "subtotal": 2850000,
+      "deliveryFee": 10000,
+      "total": 2860000,
+      "createdAt": "2026-11-15T17:15:22.200Z",
+      "items": [
+        {
+          "id": "item-2",
+          "orderId": "ORD-B3C847E1",
+          "productId": "p2",
+          "productName": "Apple MacBook Pro 14\" M3 Pro",
+          "category": "laptops",
+          "sku": "APL-MBP14-M3P",
+          "quantity": 1,
+          "unitPrice": 2850000,
+          "lineTotal": 2850000
+        }
+      ],
+      "requestedDeliveryTime": null,
+      "channel": "web",
+      "cancelReason": null,
+      "customerInstructions": "Town centre near bank"
+    },
+    {
+      "id": "ORD-D2F904A7",
+      "customerId": "c3",
+      "customerName": "Amina Kabanda",
+      "phone": "+250 783 778 899",
+      "email": "amina.k@outlook.com",
+      "deliveryAddress": {
+        "province": "Southern",
+        "district": "Huye",
+        "sector": "Ngoma",
+        "cell": "Matyazo",
+        "street": "HU 88 St",
+        "instructions": "Call when reaching junction"
+      },
+      "status": "PENDING_PAYMENT",
+      "paymentStatus": "PENDING",
+      "paymentMethod": "mtn",
+      "subtotal": 380000,
+      "deliveryFee": 10000,
+      "total": 390000,
+      "createdAt": "2026-11-16T09:15:22.200Z",
+      "items": [
+        {
+          "id": "item-3",
+          "orderId": "ORD-D2F904A7",
+          "productId": "p3",
+          "productName": "Sony WH-1000XM5 Headphones",
+          "category": "headphones",
+          "sku": "SNY-WH1000XM5-BLK",
+          "quantity": 1,
+          "unitPrice": 380000,
+          "lineTotal": 380000
+        }
+      ],
+      "requestedDeliveryTime": null,
+      "channel": "web",
+      "cancelReason": null,
+      "customerInstructions": "Call when reaching junction"
+    }
+  ],
+  "companyOrders": [
+    {
+      "id": "po_1794848743302",
+      "poNumber": "PO-002",
+      "supplierName": "LDC",
+      "supplierContact": "+7823728382",
+      "shippingCompany": "Rwanda shipping company",
+      "orderDate": "2026-11-16T17:05:43.295Z",
+      "expectedArrival": "2026-11-20T08:01:00.000Z",
+      "currency": "USD",
+      "shippingCost": 1000,
+      "otherCharges": 70,
+      "totalAmount": 14070,
+      "status": "ORDERED",
+      "paymentStatus": "PAID",
+      "notes": "this is done for this purpose",
+      "items": [
+        {
+          "id": "poi_1794848743295_0",
+          "productName": "Samsung galaxy a51",
+          "category": "smartphones",
+          "unitPrice": 100,
+          "quantityOrdered": 130,
+          "quantityReceived": 0,
+          "totalPrice": 13000,
+          "addedToStock": false
+        }
+      ],
+      "createdAt": "2026-11-16T17:05:43.295Z",
+      "updatedAt": "2026-11-16T17:05:43.295Z"
+    },
+    {
+      "id": "po_1",
+      "poNumber": "PO-001",
+      "supplierName": "Dubai Electronics Wholesale FZ-LLC",
+      "supplierContact": "+971 4 382 9900 / orders@dubaielectronics.ae",
+      "shippingCompany": "Emirates Cargo & DHL Global",
+      "orderDate": "2026-11-10T08:00:00.000Z",
+      "expectedArrival": "2026-11-25T10:00:00.000Z",
+      "currency": "USD",
+      "shippingCost": 450,
+      "otherCharges": 150,
+      "totalAmount": 22400,
+      "status": "SHIPPED",
+      "paymentStatus": "PAID",
+      "notes": "Direct container shipment via Dubai to Kigali International Airport.",
+      "items": [
+        {
+          "id": "poi_1",
+          "productName": "Samsung Galaxy S24 Ultra",
+          "category": "smartphones",
+          "unitPrice": 150,
+          "quantityOrdered": 40,
+          "quantityReceived": 0,
+          "totalPrice": 6000,
+          "addedToStock": false
+        },
+        {
+          "id": "poi_2",
+          "productName": "Apple MacBook Pro 14\" M3 Pro",
+          "category": "laptops",
+          "unitPrice": 500,
+          "quantityOrdered": 30,
+          "quantityReceived": 0,
+          "totalPrice": 15000,
+          "addedToStock": false
+        },
+        {
+          "id": "poi_3",
+          "productName": "Apple AirPods Pro 2nd Gen",
+          "category": "audio",
+          "unitPrice": 40,
+          "quantityOrdered": 20,
+          "quantityReceived": 0,
+          "totalPrice": 800,
+          "addedToStock": false
+        }
+      ],
+      "createdAt": "2026-11-10T08:00:00.000Z",
+      "updatedAt": "2026-11-10T08:00:00.000Z"
+    }
+  ],
+  "stockMovements": [
+    {
+      "id": "mov_1794860993292_ajn4",
+      "productId": "p_1794860517903_oph41",
+      "productName": "Iphone 17 pro max",
+      "sku": "DUB-SMA-MWJPLZ3D",
+      "quantity": -1,
+      "movementType": "MANUAL_REMOVAL",
+      "reason": "Sold directly to customers",
+      "createdAt": "2026-11-16T20:29:53.292Z"
+    },
+    {
+      "id": "mov_1",
+      "productId": "p1",
+      "productName": "Samsung Galaxy S24 Ultra",
+      "sku": "SAM-S24U-BLK",
+      "quantity": -1,
+      "movementType": "SALE",
+      "reason": "Online Customer Order ORD-B3C847E1",
+      "referenceId": "ORD-B3C847E1",
+      "createdAt": "2026-11-15T19:15:00.000Z"
+    },
+    {
+      "id": "mov_2",
+      "productId": "p2",
+      "productName": "Apple MacBook Pro 14\" M3 Pro",
+      "sku": "APL-MBP14-M3P",
+      "quantity": -1,
+      "movementType": "SALE",
+      "reason": "Online Customer Order ORD-A1B2C3D4",
+      "referenceId": "ORD-A1B2C3D4",
+      "createdAt": "2026-11-15T14:30:00.000Z"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "ann_1794860724187",
+      "title": "Promotion",
+      "message": "now the price is too low the iphone 17 pro max is 1800000 Rwandan Franchs",
+      "tag": "Promotion",
+      "active": true,
+      "startDate": "2026-11-03T00:00:00.000Z",
+      "endDate": "2026-11-19T00:00:00.000Z",
+      "createdAt": "2026-11-16T20:25:24.187Z"
+    }
+  ],
+  "settings": {
+    "shopName": "DubazaarMart",
+    "companyEmail": "info@dubazaarmart.rw",
+    "supportEmail": "support@dubazaarmart.rw",
+    "phoneNumber": "+250789545954",
+    "whatsappNumber": "+250789545954",
+    "momoNumber": "+250789545954",
+    "businessAddress": "Kigali, Rwanda (Dubai Wholesale Direct)",
+    "currency": "RWF",
+    "standardDeliveryFee": 10000,
+    "expressDeliveryFee": 25000,
+    "freeDeliveryThreshold": 500000,
+    "updatedAt": "2026-11-16T16:42:32.156Z"
+  }
+}

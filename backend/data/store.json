@@ -32,7 +32,10 @@
       "reviews": 1,
       "badge": "Top Pick",
       "createdAt": "2026-11-16T21:22:50.640Z",
-      "updatedAt": "2026-11-16T21:23:49.143Z"
+      "updatedAt": "2026-11-16T21:23:49.143Z",
+      "expectedFullStock": 20,
+      "unitCost": 375000,
+      "minStock": 5
     },
     {
       "id": "p_1794863344706_bt81o",
@@ -61,7 +64,10 @@
       "reviews": 1,
       "badge": "Hot Deal",
       "createdAt": "2026-11-16T21:09:04.706Z",
-      "updatedAt": "2026-11-16T21:27:21.942Z"
+      "updatedAt": "2026-11-16T21:27:21.942Z",
+      "expectedFullStock": 20,
+      "unitCost": 750000,
+      "minStock": 5
     },
     {
       "id": "p_1794863176305_tgu7r",
@@ -76,7 +82,7 @@
       "images": [
         "/uploads/product-1794863123715-0ac3707c.jpg"
       ],
-      "quantity": 15,
+      "quantity": 14,
       "sku": "DUB-SMA-MWJR6YAG",
       "condition": "New",
       "specs": {
@@ -90,7 +96,10 @@
       "reviews": 1,
       "badge": "New Arrival",
       "createdAt": "2026-11-16T21:06:16.305Z",
-      "updatedAt": "2026-11-16T21:06:49.146Z"
+      "updatedAt": "2026-11-16T21:06:49.146Z",
+      "expectedFullStock": 20,
+      "unitCost": 1125000,
+      "minStock": 5
     },
     {
       "id": "p_1794862349676_im78j",
@@ -162,8 +171,8 @@
       "id": "c_1794828439538",
       "name": "NIYOMUGABO Fabrice",
       "email": "intorecyaane@gmail.com",
-      "ordersCount": 0,
-      "totalSpent": 0,
+      "ordersCount": 1,
+      "totalSpent": 1510000,
       "createdAt": "2026-11-16T11:27:19.536Z"
     },
     {
@@ -191,40 +200,59 @@
       "createdAt": "2026-11-11T11:15:22.200Z"
     }
   ],
-  "orders": [],
-  "companyOrders": [
+  "orders": [
     {
-      "id": "po_1794862851638",
-      "poNumber": "PO-001",
-      "supplierName": "ZAMZAR",
-      "supplierContact": "+77891831311",
-      "shippingCompany": "DubaRwanda",
-      "orderDate": "2026-11-16T21:00:51.636Z",
-      "expectedArrival": "2026-11-21T22:05:00.000Z",
-      "currency": "USD",
-      "shippingCost": 1000,
-      "otherCharges": 500,
-      "totalAmount": 11500,
-      "status": "ORDERED",
-      "paymentStatus": "PAID",
-      "notes": "",
+      "id": "ORD-CEB08A5C",
+      "customerId": "c_1794828439538",
+      "customerName": "NIYOMUGABO Fabrice",
+      "phone": "0791905573",
+      "email": "intorecyaane@gmail.com",
+      "deliveryAddress": {
+        "province": "Northern",
+        "district": "Gicumbi District",
+        "sector": "Cyumba Sector",
+        "cell": "Nyaruka cell",
+        "street": "Near MURORE Primary school",
+        "instructions": "make sure you reach before deadline"
+      },
+      "status": "PENDING_PAYMENT",
+      "paymentStatus": "PENDING",
+      "paymentMethod": "mtn",
+      "subtotal": 1500000,
+      "deliveryFee": 10000,
+      "total": 1510000,
+      "requestedDeliveryTime": "2026-11-19T08:31:00.000Z",
+      "channel": "web",
+      "customerInstructions": "make sure you reach before deadline",
+      "createdAt": "2026-11-17T06:32:34.998Z",
       "items": [
         {
-          "id": "poi_1794862851636_0",
-          "productName": "Iphone 17 Pro max",
+          "id": "item-1794897154999-so3g",
+          "orderId": "ORD-CEB08A5C",
+          "productId": "p_1794863176305_tgu7r",
+          "productName": "Iphone 15 pro max",
           "category": "smartphones",
-          "unitPrice": 1000,
-          "quantityOrdered": 10,
-          "quantityReceived": 0,
-          "totalPrice": 10000,
-          "addedToStock": false
+          "sku": "DUB-SMA-MWJR6YAG",
+          "quantity": 1,
+          "unitPrice": 1500000,
+          "lineTotal": 1500000
         }
-      ],
-      "createdAt": "2026-11-16T21:00:51.636Z",
-      "updatedAt": "2026-11-16T21:00:51.636Z"
+      ]
     }
   ],
+  "companyOrders": [],
   "stockMovements": [
+    {
+      "id": "mov_1794897154999_tmn9",
+      "productId": "p_1794863176305_tgu7r",
+      "productName": "Iphone 15 pro max",
+      "sku": "DUB-SMA-MWJR6YAG",
+      "quantity": -1,
+      "movementType": "SALE",
+      "reason": "Customer order ORD-CEB08A5C (Online)",
+      "referenceId": "ORD-CEB08A5C",
+      "createdAt": "2026-11-17T06:32:34.998Z"
+    },
     {
       "id": "mov_1794863209146_5gaj",
       "productId": "p_1794863176305_tgu7r",

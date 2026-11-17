@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String   @default("IntoreTech Admin")
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("admins")
+}
+
+model Customer {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  orders    Order[]
+
+  @@map("customers")
+}
+
+model Product {
+  id                String      @id @default(uuid()) @db.Uuid
+  name              String
+  brand             String      @default("")
+  category          String      @default("")
+  description       String      @default("")
+  sku               String      @unique
+  price             Decimal     @db.Decimal(14, 2)
+  originalPrice     Decimal     @default(0) @map("original_price") @db.Decimal(14, 2)
+  discount          Int         @default(0)
+  quantity          Int         @default(0)
+  active            Boolean     @default(true)
+  image             String?
+  images            Json        @default("[]")
+  condition         String      @default("New")
+  specs             Json        @default("{}")
+  warranty          String      @default("1 year warranty")
+  featured          Boolean     @default(false)
+  rating            Decimal     @default(5.0) @db.Decimal(3, 1)
+  reviews           Int         @default(0)
+  badge             String?
+  expectedFullStock Int         @default(20) @map("expected_full_stock")
+  unitCost          Decimal     @default(0) @map("unit_cost") @db.Decimal(14, 2)
+  minStock          Int         @default(5) @map("min_stock")
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  orderItems        OrderItem[]
+
+  @@index([quantity], map: "products_quantity_idx")
+  @@map("products")
+}
+
+model Order {
+  id                    String      @id @default(uuid()) @db.Uuid
+  customerId            String?     @map("customer_id") @db.Uuid
+  customer              Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName          String      @map("customer_name")
+  phone                 String
+  email                 String
+  deliveryAddress       Json        @default("{}") @map("delivery_address")
+  status                String      @default("PENDING_PAYMENT")
+  paymentStatus         String      @default("PENDING") @map("payment_status")
+  paymentMethod         String      @default("unknown") @map("payment_method")
+  subtotal              Decimal     @db.Decimal(14, 2)
+  deliveryFee           Decimal     @default(0) @map("delivery_fee") @db.Decimal(14, 2)
+  totalAmount           Decimal     @map("total_amount") @db.Decimal(14, 2)
+  requestedDeliveryTime DateTime?   @map("requested_delivery_time") @db.Timestamptz(6)
+  channel               String      @default("web")
+  cancelReason          String?     @map("cancel_reason")
+  customerInstructions  String?     @map("customer_instructions")
+  createdAt             DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  items                 OrderItem[]
+
+  @@index([createdAt(sort: Desc)], map: "orders_created_at_idx")
+  @@index([status], map: "orders_status_idx")
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String?  @map("product_id") @db.Uuid
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName String   @map("product_name")
+  category    String   @default("")
+  sku         String   @default("")
+  quantity    Int
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(14, 2)
+  lineTotal   Decimal  @map("line_total") @db.Decimal(14, 2)
+
+  @@index([orderId], map: "order_items_order_id_idx")
+  @@map("order_items")
+}
+
+model CompanyOrder {
+  id              String             @id @default(uuid()) @db.Uuid
+  poNumber        String             @unique @map("po_number")
+  supplierName    String             @map("supplier_name")
+  supplierContact String             @default("") @map("supplier_contact")
+  shippingCompany String             @default("") @map("shipping_company")
+  orderDate       DateTime           @default(now()) @map("order_date") @db.Timestamptz(6)
+  expectedArrival DateTime           @map("expected_arrival") @db.Timestamptz(6)
+  currency        String             @default("USD")
+  shippingCost    Decimal            @default(0) @map("shipping_cost") @db.Decimal(14, 2)
+  otherCharges    Decimal            @default(0) @map("other_charges") @db.Decimal(14, 2)
+  totalAmount     Decimal            @default(0) @map("total_amount") @db.Decimal(14, 2)
+  status          String             @default("ORDERED")
+  paymentStatus   String             @default("PAID") @map("payment_status")
+  notes           String             @default("")
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  items           CompanyOrderItem[]
+
+  @@index([expectedArrival], map: "company_orders_expected_arrival_idx")
+  @@map("company_orders")
+}
+
+model CompanyOrderItem {
+  id               String       @id @default(uuid()) @db.Uuid
+  orderId          String       @map("order_id") @db.Uuid
+  order            CompanyOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productName      String       @map("product_name")
+  category         String       @default("")
+  unitPrice        Decimal      @map("unit_price") @db.Decimal(14, 2)
+  quantityOrdered  Int          @map("quantity_ordered")
+  quantityReceived Int          @default(0) @map("quantity_received")
+  totalPrice       Decimal      @map("total_price") @db.Decimal(14, 2)
+  addedToStock     Boolean      @default(false) @map("added_to_stock")
+
+  @@map("company_order_items")
+}
+
+model StockMovement {
+  id           String   @id @default(uuid()) @db.Uuid
+  productId    String   @map("product_id")
+  productName  String   @map("product_name")
+  sku          String   @default("")
+  quantity     Int
+  movementType String   @map("movement_type")
+  reason       String   @default("")
+  referenceId  String?  @map("reference_id")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt(sort: Desc)], map: "stock_movements_created_at_idx")
+  @@map("stock_movements")
+}
+
+model WebsiteSettings {
+  id                    String   @id @default("primary")
+  shopName              String   @default("DubazaarMart") @map("shop_name")
+  companyEmail          String   @default("info@dubazaarmart.rw") @map("company_email")
+  supportEmail          String   @default("support@dubazaarmart.rw") @map("support_email")
+  phoneNumber           String   @default("+250789545954") @map("phone_number")
+  whatsappNumber        String   @default("+250789545954") @map("whatsapp_number")
+  momoNumber            String   @default("+250789545954") @map("momo_number")
+  businessAddress       String   @default("Kigali, Rwanda (Dubai Wholesale Hub)") @map("business_address")
+  currency              String   @default("RWF")
+  standardDeliveryFee   Decimal  @default(10000) @map("standard_delivery_fee") @db.Decimal(14, 2)
+  expressDeliveryFee    Decimal  @default(25000) @map("express_delivery_fee") @db.Decimal(14, 2)
+  freeDeliveryThreshold Decimal  @default(500000) @map("free_delivery_threshold") @db.Decimal(14, 2)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("website_settings")
+}
+
+model Announcement {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String
+  message   String
+  tag       String    @default("Announcement")
+  active    Boolean   @default(true)
+  startDate DateTime? @map("start_date") @db.Timestamptz(6)
+  endDate   DateTime? @map("end_date") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("announcements")
+}

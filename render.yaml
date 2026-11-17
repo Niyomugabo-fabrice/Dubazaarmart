@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: dubazaarmart-backend
+    env: node
+    region: ohio
+    plan: free
+    rootDir: backend
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: node dist/main.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_0KcMbIfGmDY3@ep-dry-cell-be47ybv6-pooler.c-9.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: JWT_SECRET
+        value: dubazaarmart-secure-jwt-secret-key-2026-production-kigali
+      - key: JWT_REFRESH_SECRET
+        value: fjYrcXcXn6yq4O+fL+SEzAJJBiSfxbH++v8Ga31SbTr0KMwRFtPl+2ITv8+LFaMw
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 30d
+      - key: FRONTEND_URL
+        value: "*"
+      - key: CLOUDINARY_CLOUD_NAME
+        value: qgdngjld
+      - key: CLOUDINARY_API_KEY
+        value: "531744963366974"
+      - key: CLOUDINARY_API_SECRET
+        value: DWo1wLvZER5j_ICj63ricqtGkSk

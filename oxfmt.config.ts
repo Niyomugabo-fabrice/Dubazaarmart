@@ -1,10 +1,8 @@
-import type { OxfmtConfig } from 'oxfmt'
-
 export default {
-  ignorePatterns: ['**/payload-types.ts', 'tsconfig.json'],
+  ignorePatterns: ['tsconfig.json', 'node_modules', 'archive'],
   printWidth: 100,
   semi: false,
   singleQuote: true,
   sortPackageJson: false,
   trailingComma: 'all',
-} satisfies OxfmtConfig
+}

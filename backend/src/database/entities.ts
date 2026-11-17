@@ -1,0 +1,25 @@
+import { AdminEntity } from '../modules/auth/infrastructure/persistence/typeorm/admin.entity'
+import { AdminRefreshTokenEntity } from '../modules/auth/infrastructure/persistence/typeorm/admin-refresh-token.entity'
+import { ProductEntity } from '../modules/products/infrastructure/persistence/typeorm/product.entity'
+import { CustomerEntity } from '../modules/orders/infrastructure/persistence/typeorm/customer.entity'
+import { OrderEntity } from '../modules/orders/infrastructure/persistence/typeorm/order.entity'
+import { OrderItemEntity } from '../modules/orders/infrastructure/persistence/typeorm/order-item.entity'
+import { StockMovementEntity } from '../modules/inventory/infrastructure/persistence/typeorm/stock-movement.entity'
+import { CompanyOrderEntity } from '../modules/procurement/infrastructure/persistence/typeorm/company-order.entity'
+import { CompanyOrderItemEntity } from '../modules/procurement/infrastructure/persistence/typeorm/company-order-item.entity'
+import { WebsiteSettingsEntity } from '../modules/settings/infrastructure/persistence/typeorm/website-settings.entity'
+import { AnnouncementEntity } from '../modules/settings/infrastructure/persistence/typeorm/announcement.entity'
+
+export const databaseEntities = [
+  AdminEntity,
+  AdminRefreshTokenEntity,
+  ProductEntity,
+  CustomerEntity,
+  OrderEntity,
+  OrderItemEntity,
+  StockMovementEntity,
+  CompanyOrderEntity,
+  CompanyOrderItemEntity,
+  WebsiteSettingsEntity,
+  AnnouncementEntity,
+]

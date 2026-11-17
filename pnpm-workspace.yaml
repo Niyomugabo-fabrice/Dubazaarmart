@@ -1,5 +1,9 @@
-allowBuilds:
-  esbuild: false
+packages:
+  - frontend
+  - backend
+
+onlyBuiltDependencies:
+  - esbuild
 supportedArchitectures:
   os:
     - current

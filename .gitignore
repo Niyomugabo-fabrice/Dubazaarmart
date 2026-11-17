@@ -1,14 +1,20 @@
 node_modules/
+.next/
+archive/
 dist/
 build/
 .cache/
 .env*
+!.env.example
+!**/.env.example
 .vite/
 vite.config.*.timestamp-*
 *.tsbuildinfo
 *-debug.log*
 logs/
 *.log
+frontend/.next/
+backend/coverage/
 .claude-replay.*
 .tmp-*
 

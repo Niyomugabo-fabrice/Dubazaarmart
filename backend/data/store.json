@@ -6,6 +6,35 @@
   },
   "products": [
     {
+      "id": "p_1794920420388_0wopw",
+      "name": "Samsung ultra 5",
+      "category": "smartphones",
+      "brand": "Samsung",
+      "description": "Samsung ultra 5 - authentic Dubai-sourced product with full warranty.",
+      "price": 580000,
+      "originalPrice": 650000,
+      "discount": 11,
+      "image": "/uploads/product-1794920365567-4cafd61c.jpg",
+      "images": [
+        "/uploads/product-1794920365567-4cafd61c.jpg"
+      ],
+      "quantity": 15,
+      "sku": "DUB-SMA-MWKP9W5H",
+      "condition": "New",
+      "specs": {
+        "Origin": "Dubai, UAE",
+        "Condition": "Brand New Sealed"
+      },
+      "warranty": "1 year official warranty",
+      "featured": true,
+      "active": true,
+      "rating": 5,
+      "reviews": 1,
+      "badge": "Hot Deal",
+      "createdAt": "2026-11-17T13:00:20.388Z",
+      "updatedAt": "2026-11-17T13:00:20.388Z"
+    },
+    {
       "id": "p_1794864170640_pe69m",
       "name": "JBL A 45",
       "category": "speakers",
@@ -237,7 +266,8 @@
           "unitPrice": 1500000,
           "lineTotal": 1500000
         }
-      ]
+      ],
+      "cancelReason": null
     }
   ],
   "companyOrders": [],

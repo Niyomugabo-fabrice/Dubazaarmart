@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiUrl } from '../lib/apiUrl'
 import type { StoredProduct } from '../../backend/store'
 import ImageUploader from './ImageUploader'
 import { fetchProductsFromBackend } from '../store/productsStore'
@@ -54,7 +55,7 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/admin/products/${product!.id}`, {
+      const response = await fetch(apiUrl(`/api/admin/products/${product!.id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

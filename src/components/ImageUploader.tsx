@@ -1,4 +1,5 @@
 import { useState, useRef, type DragEvent, type ChangeEvent } from 'react'
+import { apiUrl, mediaUrl } from '../lib/apiUrl'
 
 interface Props {
   value: string
@@ -79,7 +80,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
 
       // 2. Upload to server
       try {
-        const res = await fetch('/api/upload', {
+        const res = await fetch(apiUrl('/api/upload'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -189,7 +190,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
             <div className="flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-[#FFB800] bg-[#FFFDF5]">
               <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-[#FFB800] bg-white flex-shrink-0 shadow-sm">
                 <img
-                  src={value}
+                  src={mediaUrl(value)}
                   alt="Product preview"
                   className="w-full h-full object-cover"
                 />
@@ -268,7 +269,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
           />
           {value && (
             <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FFF7E8]">
-              <img src={value} alt="Preview" className="w-12 h-12 rounded object-cover border" />
+              <img src={mediaUrl(value)} alt="Preview" className="w-12 h-12 rounded object-cover border" />
               <span className="text-xs text-gray-600 truncate">Image link loaded</span>
             </div>
           )}

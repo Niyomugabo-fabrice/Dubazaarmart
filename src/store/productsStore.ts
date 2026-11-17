@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react'
 import { products as initialProducts, type Product } from '../data/products'
+import { apiUrl, mediaUrl } from '../lib/apiUrl'
 
 let currentProducts: Product[] = []
 let listeners: Array<() => void> = []
+
+function normalizeProduct(product: Product): Product {
+  return {
+    ...product,
+    image: mediaUrl(product.image),
+    images: Array.isArray(product.images)
+      ? product.images.map(mediaUrl)
+      : [mediaUrl(product.image)],
+  }
+}
 
 function notify() {
   for (const listener of listeners) {
@@ -12,11 +23,11 @@ function notify() {
 
 export async function fetchProductsFromBackend(): Promise<Product[]> {
   try {
-    const res = await fetch('/api/products')
+    const res = await fetch(apiUrl('/api/products'))
     if (!res.ok) return currentProducts
     const data = await res.json()
     if (Array.isArray(data.products)) {
-      currentProducts = data.products
+      currentProducts = data.products.map(normalizeProduct)
       notify()
       return currentProducts
     }
@@ -28,7 +39,7 @@ export async function fetchProductsFromBackend(): Promise<Product[]> {
 
 export async function addProductToBackend(productData: Partial<Product>): Promise<Product | null> {
   try {
-    const res = await fetch('/api/products', {
+    const res = await fetch(apiUrl('/api/products'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -42,7 +53,7 @@ export async function addProductToBackend(productData: Partial<Product>): Promis
     }
 
     const data = await res.json()
-    const newProduct: Product = data.product
+    const newProduct = normalizeProduct(data.product)
 
     // Prepend to current products in memory and notify all components
     currentProducts = [newProduct, ...currentProducts.filter(p => p.id !== newProduct.id)]
@@ -56,7 +67,7 @@ export async function addProductToBackend(productData: Partial<Product>): Promis
 
 export async function deleteProductFromBackend(id: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/admin/products/${id}`, {
+    const res = await fetch(apiUrl(`/api/admin/products/${id}`), {
       method: 'DELETE',
     })
     if (res.ok) {

@@ -1,3 +1,5 @@
+import { apiUrl, mediaUrl } from "./apiUrl"
+
 export type DashboardStat = {
   label: string
 
@@ -295,12 +297,6 @@ const emptyDashboardData: DashboardData = {
   inventoryHealth: [],
 }
 
-function apiUrl(path: string) {
-  const baseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "")
-
-  return `${baseUrl}${path}`
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
@@ -373,7 +369,10 @@ function normalizeDashboardData(payload: unknown): DashboardData {
         : [],
 
     products: Array.isArray(payload.products)
-      ? payload.products as DashboardProduct[]
+      ? (payload.products as DashboardProduct[]).map((product) => ({
+          ...product,
+          ...(product.image ? { image: mediaUrl(product.image) } : {}),
+        }))
       : [],
 
     customers: Array.isArray(payload.customers)
@@ -635,7 +634,14 @@ export async function deleteCompanyOrder(poId: string): Promise<boolean> {
 export async function fetchStockSummary(): Promise<StockOverview> {
   const response = await fetch(apiUrl("/api/admin/stock"))
   if (!response.ok) throw new Error("Failed to load inventory summary")
-  return response.json()
+  const overview = await response.json() as StockOverview
+  return {
+    ...overview,
+    items: overview.items.map((item) => ({
+      ...item,
+      ...(item.image ? { image: mediaUrl(item.image) } : {}),
+    })),
+  }
 }
 
 export async function removeStockManual(productId: string, quantity: number, reason: string) {

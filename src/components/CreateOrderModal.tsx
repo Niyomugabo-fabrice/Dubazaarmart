@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { apiUrl } from '../lib/apiUrl'
 import type { Product } from '../data/products'
 
 interface Props {
@@ -75,7 +76,7 @@ export default function CreateOrderModal({ isOpen, products, onClose, onOrderCre
     }
 
     try {
-      const res = await fetch('/api/admin/orders', {
+      const res = await fetch(apiUrl('/api/admin/orders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

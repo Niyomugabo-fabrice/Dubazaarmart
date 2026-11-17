@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiUrl } from '../lib/apiUrl'
 
 export interface AdminUser {
   email: string
@@ -30,7 +31,7 @@ function notify() {
 
 export async function loginAdmin(email: string, pass: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch('/api/admin/login', {
+    const res = await fetch(apiUrl('/api/admin/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim(), password: pass }),
@@ -56,7 +57,7 @@ export async function loginAdmin(email: string, pass: string): Promise<{ success
 export function logoutAdmin() {
   authState = { token: null, admin: null }
   localStorage.removeItem(AUTH_STORAGE_KEY)
-  fetch('/api/admin/logout', { method: 'POST' }).catch(() => {})
+  fetch(apiUrl('/api/admin/logout'), { method: 'POST' }).catch(() => {})
   notify()
 }
 

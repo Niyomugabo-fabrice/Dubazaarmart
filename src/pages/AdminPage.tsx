@@ -25,6 +25,7 @@ import {
   type WebsiteSettings,
   type SiteAnnouncement,
 } from "../lib/dashboardApi"
+import { apiUrl } from "../lib/apiUrl"
 import SiteLogo from "../components/SiteLogo"
 import { useAdminAuth } from "../store/adminAuthStore"
 import { useProducts, fetchProductsFromBackend } from "../store/productsStore"
@@ -369,7 +370,7 @@ export default function AdminPage({ setPage }: Props) {
   async function handleUpdateOrderStatus(orderId: string, newStatus: string) {
     try {
       const isPaid = newStatus === "PAID" || newStatus === "DELIVERED"
-      await fetch(`/api/admin/orders/${orderId}/status`, {
+      await fetch(apiUrl(`/api/admin/orders/${orderId}/status`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

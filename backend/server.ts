@@ -13,7 +13,10 @@ const databaseUrl = process.env.DATABASE_URL ?? null
 const pool = databaseUrl ? new Pool({ connectionString: databaseUrl }) : null
 
 const app = express()
-const allowedOrigin = process.env.FRONTEND_ORIGIN ?? "http://localhost:8443"
+const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? "http://localhost:8443")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean)
 const orderEventClients = new Set<Response>()
 const defaultDeliveryFee = 10_000
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -26,7 +29,7 @@ if (!existsSync(uploadsDir)) {
 }
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }))
-app.use(cors({ origin: allowedOrigin }))
+app.use(cors({ origin: allowedOrigins }))
 app.use(express.json({ limit: "25mb" }))
 app.use(express.urlencoded({ extended: true, limit: "25mb" }))
 app.use("/uploads", express.static(uploadsDir))

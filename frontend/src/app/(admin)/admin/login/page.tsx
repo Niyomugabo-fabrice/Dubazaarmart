@@ -252,6 +252,12 @@ export default function AdminLoginPage() {
             <p className="text-[11px] text-black/55 leading-relaxed">
               <strong>Need a staff account?</strong> Public administrator signups are disabled. Authorized staff must be provisioned by a root administrator.
             </p>
+            <Link
+              href="/admin/register"
+              className="inline-block mt-3 text-xs font-semibold text-[#FF6A00] hover:underline"
+            >
+              Create account
+            </Link>
           </div>
         </div>
       </div>

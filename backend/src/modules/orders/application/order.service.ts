@@ -189,18 +189,14 @@ export class OrderService {
   }
 
   async cancel(id: string, reason?: string) {
-    const order = await this.orders.update(id, {
-      status: 'CANCELLED',
-      paymentStatus: 'CANCELLED',
-      cancelReason: reason || 'Cancelled by admin',
-    })
+    const order = await this.orders.cancel(id, reason || 'Cancelled by admin')
     if (!order) throw new NotFoundException('Order not found')
     return { success: true, order: serializeOrder(order) }
   }
 
   async remove(id: string) {
-    if (!(await this.orders.delete(id))) throw new NotFoundException('Order not found')
-    return { success: true, message: 'Order deleted successfully' }
+    if (!(await this.orders.archive(id))) throw new NotFoundException('Order not found')
+    return { success: true, message: 'Order archived successfully' }
   }
 }
 

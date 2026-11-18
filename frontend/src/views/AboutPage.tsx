@@ -1,8 +1,6 @@
-interface Props {
-  setPage: (p: string) => void
-}
+import Link from 'next/link'
 
-export default function AboutPage({ setPage }: Props) {
+export default function AboutPage() {
   return (
     <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-4xl mx-auto px-4 lg:px-8">
@@ -19,13 +17,13 @@ export default function AboutPage({ setPage }: Props) {
 
         <div className="prose max-w-none space-y-6 mb-12">
           <p className="text-lg leading-relaxed" style={{ color: '#111111' }}>
-            Dubazaarmart.com was founded with a simple mission: to make premium electronics accessible to everyone in Rwanda at fair prices. We source our products directly from trusted wholesalers in Dubai — one of the world's biggest electronics trading hubs — eliminating unnecessary middlemen.
+            Dubazaarmart.com was founded with a simple mission: to make premium electronics accessible to everyone in Rwanda at fair prices. We source our products directly from trusted wholesalers in Dubai — one of the world&apos;s biggest electronics trading hubs — eliminating unnecessary middlemen.
           </p>
           <p className="leading-relaxed" style={{ color: '#111111' }}>
-            Every product we sell is carefully verified for authenticity. We work only with authorized distributors and provide official manufacturer warranties on all items. When you shop with us, you're guaranteed to receive the real thing.
+            Every product we sell is carefully verified for authenticity. We work only with authorized distributors and provide official manufacturer warranties on all items. When you shop with us, you&apos;re guaranteed to receive the real thing.
           </p>
           <p className="leading-relaxed" style={{ color: '#111111' }}>
-            Payment is fast and familiar — we support MTN Mobile Money and Airtel Money, Rwanda's most trusted payment platforms. Your PIN never leaves your phone.
+            Payment is fast and familiar — we support MTN Mobile Money and Airtel Money, Rwanda&apos;s most trusted payment platforms. Your PIN never leaves your phone.
           </p>
         </div>
 
@@ -44,9 +42,9 @@ export default function AboutPage({ setPage }: Props) {
         </div>
 
         <div className="text-center">
-          <button onClick={() => setPage('shop')} className="btn-gold px-8 py-4 rounded-xl font-bold text-base">
+          <Link href="/shop" className="btn-gold px-8 py-4 rounded-xl font-bold text-base inline-block">
             Start Shopping →
-          </button>
+          </Link>
         </div>
       </div>
     </div>

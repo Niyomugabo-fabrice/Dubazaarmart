@@ -48,5 +48,6 @@ export interface OrderRepository {
   listAdminOrders(query: AdminOrderQuery): Promise<{ rows: OrderEntity[]; totalOrders: number }>
   findById(id: string): Promise<OrderEntity | null>
   update(id: string, values: OrderUpdates): Promise<OrderEntity | null>
-  delete(id: string): Promise<boolean>
+  cancel(id: string, reason: string): Promise<OrderEntity | null>
+  archive(id: string): Promise<boolean>
 }

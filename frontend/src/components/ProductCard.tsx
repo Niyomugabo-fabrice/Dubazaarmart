@@ -1,26 +1,32 @@
+'use client'
+
 import { cartStore } from '../store/cartStore'
 import { useCart } from '../store/cartStore'
 import type { Product } from '../data/products'
+import { useAppNavigation } from '../lib/navigation'
 
 interface Props {
   product: Product
-  onView: (p: Product) => void
 }
 
-export default function ProductCard({ product, onView }: Props) {
+export default function ProductCard({ product }: Props) {
+  const { navigateToProduct } = useAppNavigation()
   const { wishlist } = useCart()
   const inWishlist = wishlist.includes(product.id)
-  const inCart = cartStore.getItems().some(i => i.product.id === product.id)
 
   function formatPrice(n: number) {
     return `RWF ${n.toLocaleString()}`
+  }
+
+  function handleClick() {
+    navigateToProduct(product)
   }
 
   return (
     <div
       className="card-hover rounded-2xl overflow-hidden cursor-pointer group flex flex-col"
       style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}
-      onClick={() => onView(product)}
+      onClick={handleClick}
     >
       {/* Image */}
       <div className="relative overflow-hidden aspect-square product-img-wrap">
@@ -46,6 +52,7 @@ export default function ProductCard({ product, onView }: Props) {
           onClick={e => { e.stopPropagation(); cartStore.toggleWishlist(product.id) }}
           className="absolute bottom-3 right-3 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid #FFB800' }}
+          aria-label="Toggle wishlist"
         >
           <svg width="16" height="16" fill={inWishlist ? '#FF6A00' : 'none'} stroke={inWishlist ? '#FF6A00' : '#111111'} strokeWidth="2" viewBox="0 0 24 24">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -68,27 +75,25 @@ export default function ProductCard({ product, onView }: Props) {
             ))}
           </div>
           <span className="text-xs" style={{ color: '#0B5B24' }}>({product.reviews})</span>
+          <span className="text-xs ml-auto" style={{ color: '#0B5B24' }}>{product.warranty}</span>
         </div>
 
-        {/* Price */}
-        <div className="flex items-end gap-2 mb-3">
-          <span className="text-base font-bold" style={{ color: '#FF6A00' }}>{formatPrice(product.price)}</span>
-          {product.originalPrice > product.price && (
-            <span className="text-xs line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</span>
-          )}
+        {/* Price & Cart */}
+        <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255,184,0,0.3)' }}>
+          <div>
+            <div className="text-base font-bold text-[#111111]">{formatPrice(product.price)}</div>
+            {product.originalPrice > product.price && (
+              <div className="text-xs line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</div>
+            )}
+          </div>
+          <button
+            onClick={e => { e.stopPropagation(); cartStore.add(product) }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center btn-gold text-xs font-bold transition-transform active:scale-90"
+            aria-label="Add to cart"
+          >
+            +
+          </button>
         </div>
-
-        {/* Add to cart */}
-        <button
-          onClick={e => { e.stopPropagation(); cartStore.add(product) }}
-          className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
-          style={inCart
-            ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00', border: '1px solid rgba(255,106,0,0.4)' }
-            : { background: '#F1FFF0', color: '#111111', border: '1px solid #FFB800' }
-          }
-        >
-          {inCart ? '✓ Added to Cart' : 'Add to Cart'}
-        </button>
       </div>
     </div>
   )

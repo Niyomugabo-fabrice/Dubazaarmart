@@ -13,6 +13,9 @@ export class CustomerEntity {
   @Column({ type: 'text' })
   email!: string
 
+  @Column({ name: 'password_hash', type: 'text', nullable: true, select: false })
+  passwordHash!: string | null
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
 

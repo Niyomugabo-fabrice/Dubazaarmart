@@ -38,8 +38,8 @@ export class TypeOrmProductRepository implements ProductRepository {
     return this.products.save(this.products.create(product))
   }
 
-  async delete(id: string): Promise<boolean> {
-    const result = await this.products.delete({ id })
+  async archive(id: string): Promise<boolean> {
+    const result = await this.products.update({ id }, { active: false })
     return Boolean(result.affected)
   }
 }

@@ -67,10 +67,14 @@ export default function CreateOrderModal({ isOpen, products, onClose, onOrderCre
       paymentMethod,
       status: orderStatus,
       paymentStatus,
+      deliveryFee,
       items: [
         {
+          productName: selectedProduct?.name || 'Item',
+          category: selectedProduct?.category || 'General',
           sku: selectedSku,
           quantity: Math.max(1, quantity),
+          unitPrice,
         },
       ],
     }

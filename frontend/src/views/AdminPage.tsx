@@ -1,4 +1,7 @@
+"use client"
+
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import {
   fetchAdminOrders,
   fetchDashboardData,
@@ -44,10 +47,8 @@ import AnnouncementsModal from "../components/AnnouncementsModal"
 import ConfirmModal from "../components/ConfirmModal"
 import LiveCountdown from "../components/LiveCountdown"
 import type { StoredProduct } from "../types/product"
-
-interface Props {
-  setPage: (p: string) => void
-}
+import { useAppNavigation } from "../lib/navigation"
+import { useToast } from "../components/ui/Toast"
 
 function DashboardIcon({ name }: { name: string }) {
   const common = {
@@ -264,44 +265,9 @@ const STATUS_COLORS: Record<string, string> = {
 
 type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "customers" | "inventory" | "settings"
 
-function getCountdownBadge(targetDateStr: string | null | undefined, isDelivered = false) {
-  if (!targetDateStr) return null
-  const target = new Date(targetDateStr).getTime()
-  const diff = target - Date.now()
-
-  if (diff <= 0) {
-    if (isDelivered) {
-      return (
-        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800">
-          ✓ Completed
-        </span>
-      )
-    }
-    return (
-      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
-        OVERDUE
-      </span>
-    )
-  }
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
-  const mins = Math.floor((diff / 1000 / 60) % 60)
-
-  const label = days > 0
-    ? `${days}d ${hours}h left`
-    : hours > 0
-      ? `${hours}h ${mins}m left`
-      : `${mins}m left`
-
-  return (
-    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF6A00]/15 text-[#FF6A00] border border-[#FF6A00]/30">
-      ⏳ {label}
-    </span>
-  )
-}
-
-export default function AdminPage({ setPage }: Props) {
+export default function AdminPage() {
+  const { navigate } = useAppNavigation()
+  const toast = useToast()
   const { isAuthenticated, admin, token: adminToken, login, logout } = useAdminAuth()
   const { products: storeProducts, deleteProduct } = useProducts()
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
@@ -421,12 +387,12 @@ export default function AdminPage({ setPage }: Props) {
   async function executeDeleteOrder(orderId: string) {
     try {
       await deleteAdminOrder(orderId)
-      setActionSuccess(`Order #${orderId} has been permanently deleted.`)
+      setActionSuccess(`Order #${orderId.slice(0, 8)} archived and retained for records.`)
       setTimeout(() => setActionSuccess(null), 3500)
       setRefreshToken((v) => v + 1)
     } catch (err) {
       console.error("Failed to delete order", err)
-      alert(err instanceof Error ? err.message : "Failed to delete order")
+      toast.error(err instanceof Error ? err.message : "Failed to delete order", "Delete Failed")
     } finally {
       setConfirmDeleteOrder(null)
     }
@@ -439,12 +405,12 @@ export default function AdminPage({ setPage }: Props) {
   async function executeDeleteCompanyOrder(poId: string, poNumber: string) {
     try {
       await deleteCompanyOrder(poId)
-      setActionSuccess(`Purchase Order #${poNumber} has been permanently deleted.`)
+      setActionSuccess(`Purchase Order #${poNumber} archived and retained for records.`)
       setTimeout(() => setActionSuccess(null), 3500)
       setRefreshToken((v) => v + 1)
     } catch (err) {
       console.error("Failed to delete company order", err)
-      alert(err instanceof Error ? err.message : "Failed to delete company order")
+      toast.error(err instanceof Error ? err.message : "Failed to delete company order", "Delete Failed")
     } finally {
       setConfirmDeletePo(null)
     }
@@ -483,16 +449,12 @@ export default function AdminPage({ setPage }: Props) {
     }
   }
 
-  if (!isAuthenticated) {
-    return (
-      <AdminLoginView
-        onLogin={login}
-        onBack={() => setPage("home")}
-      />
-    )
-  }
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setIsLoading(false)
+      return
+    }
     let isMounted = true
 
     async function loadDashboardData() {
@@ -524,9 +486,10 @@ export default function AdminPage({ setPage }: Props) {
     return () => {
       isMounted = false
     }
-  }, [revenueRange, refreshToken])
+  }, [isAuthenticated, revenueRange, refreshToken])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     const eventSource = new EventSource(getAdminOrderEventsUrl())
     eventSource.onopen = () => setLiveUpdatesConnected(true)
     eventSource.onerror = () => setLiveUpdatesConnected(false)
@@ -539,10 +502,10 @@ export default function AdminPage({ setPage }: Props) {
       eventSource.close()
       setLiveUpdatesConnected(false)
     }
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
-    if (section !== "orders") return
+    if (!isAuthenticated || section !== "orders") return
 
     let isMounted = true
     setOrdersLoading(true)
@@ -579,6 +542,7 @@ export default function AdminPage({ setPage }: Props) {
       clearTimeout(timeout)
     }
   }, [
+    isAuthenticated,
     section,
     ordersPage,
     ordersPageSize,
@@ -590,7 +554,7 @@ export default function AdminPage({ setPage }: Props) {
   ])
 
   useEffect(() => {
-    if (section !== "companyOrders") return
+    if (!isAuthenticated || section !== "companyOrders") return
     let isMounted = true
     setCompanyOrdersLoading(true)
     fetchCompanyOrders(companyOrderSearch.trim(), companyOrderStatusFilter)
@@ -604,10 +568,10 @@ export default function AdminPage({ setPage }: Props) {
     return () => {
       isMounted = false
     }
-  }, [section, companyOrderSearch, companyOrderStatusFilter, refreshToken])
+  }, [isAuthenticated, section, companyOrderSearch, companyOrderStatusFilter, refreshToken])
 
   useEffect(() => {
-    if (section !== "inventory") return
+    if (!isAuthenticated || section !== "inventory") return
     let isMounted = true
     Promise.all([fetchStockSummary(), fetchStockMovements()])
       .then(([summary, movements]) => {
@@ -620,10 +584,10 @@ export default function AdminPage({ setPage }: Props) {
     return () => {
       isMounted = false
     }
-  }, [section, refreshToken])
+  }, [isAuthenticated, section, refreshToken])
 
   useEffect(() => {
-    if (section !== "settings") return
+    if (!isAuthenticated || section !== "settings") return
     let isMounted = true
     Promise.all([fetchWebsiteSettings(), fetchAdminAnnouncements()])
       .then(([st, an]) => {
@@ -636,18 +600,18 @@ export default function AdminPage({ setPage }: Props) {
     return () => {
       isMounted = false
     }
-  }, [section, refreshToken])
+  }, [isAuthenticated, section, refreshToken])
 
   // Always keep products in sync with the backend store
   useEffect(() => {
+    if (!isAuthenticated) return
     fetchProductsFromBackend()
-  }, [refreshToken])
+  }, [isAuthenticated, refreshToken])
 
   const stats = dashboardData?.stats ?? []
   const recentOrders = dashboardData?.recentOrders ?? []
   const products = storeProducts
   const customers = dashboardData?.customers ?? []
-  const inventory = dashboardData?.inventory ?? []
   const revenueTrend = dashboardData?.revenueTrend ?? []
   const orderPipeline = dashboardData?.orderPipeline ?? []
   const paymentBreakdown = dashboardData?.paymentBreakdown ?? []
@@ -697,6 +661,15 @@ export default function AdminPage({ setPage }: Props) {
       p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
       p.brand.toLowerCase().includes(productSearch.toLowerCase()),
   )
+
+  if (!isAuthenticated) {
+    return (
+      <AdminLoginView
+        onLogin={login}
+        onBack={() => navigate("home")}
+      />
+    )
+  }
 
   return (
     <div
@@ -792,14 +765,26 @@ export default function AdminPage({ setPage }: Props) {
                 <div className="text-[10px] text-[#0B5B24] truncate">{admin?.email || "IntoreTech@gmail.com"}</div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={logout}
-              className="text-[11px] font-bold text-[#FF6A00] hover:text-[#E94B00] px-2 py-1 rounded bg-[#FF6A00]/10 ml-1 flex-shrink-0"
-              title="Sign out of Admin Workspace"
-            >
-              Log out
-            </button>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/admin/register"
+                className="text-[11px] font-bold text-[#FF6A00] hover:text-[#E94B00] px-2 py-1 rounded bg-[#FF6A00]/10 flex-shrink-0"
+                title="Provision staff accounts"
+              >
+                + Staff
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  logout()
+                  navigate("/admin/login")
+                }}
+                className="text-[11px] font-bold text-gray-500 hover:text-black px-2 py-1 rounded hover:bg-black/5 flex-shrink-0"
+                title="Sign out of Admin Workspace"
+              >
+                Log out
+              </button>
+            </div>
           </div>
 
           <div
@@ -828,7 +813,7 @@ export default function AdminPage({ setPage }: Props) {
           </div>
           <button
             type="button"
-            onClick={() => setPage("home")}
+            onClick={() => navigate("home")}
             className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-white/5"
             style={{ color: "#111111" }}
           >
@@ -886,7 +871,7 @@ export default function AdminPage({ setPage }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => setPage("home")}
+              onClick={() => navigate("home")}
               className="btn-gold rounded-xl px-3 py-2 text-xs font-semibold sm:px-4 sm:text-sm"
             >
               Storefront
@@ -3058,9 +3043,9 @@ export default function AdminPage({ setPage }: Props) {
       {/* Delete Order Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmDeleteOrder !== null}
-        title="Delete Order"
-        message={`Are you sure you want to permanently delete Order #${confirmDeleteOrder}? This action cannot be undone.`}
-        confirmLabel="Delete Order"
+        title="Archive Order"
+        message={`Archive Order #${confirmDeleteOrder}? It will leave the active list but remain in the database for your records.`}
+        confirmLabel="Archive Order"
         danger
         onConfirm={() => {
           if (confirmDeleteOrder) {
@@ -3073,9 +3058,9 @@ export default function AdminPage({ setPage }: Props) {
       {/* Delete Purchase Order Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmDeletePo !== null}
-        title="Delete Purchase Order"
-        message={`Are you sure you want to permanently delete Purchase Order #${confirmDeletePo?.poNumber}? This action cannot be undone.`}
-        confirmLabel="Delete PO"
+        title="Archive Purchase Order"
+        message={`Archive Purchase Order #${confirmDeletePo?.poNumber}? It will leave the active list but remain in the database for your records.`}
+        confirmLabel="Archive PO"
         danger
         onConfirm={() => {
           if (confirmDeletePo) {
@@ -3103,9 +3088,9 @@ export default function AdminPage({ setPage }: Props) {
       {/* Delete Product Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmDeleteProduct !== null}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${confirmDeleteProduct?.name}"? It will be removed from your store catalog.`}
-        confirmLabel="Delete Product"
+        title="Archive Product"
+        message={`Archive "${confirmDeleteProduct?.name}"? It will be removed from the store catalog while its order history is preserved.`}
+        confirmLabel="Archive Product"
         danger
         onConfirm={async () => {
           if (confirmDeleteProduct) {
@@ -3113,7 +3098,7 @@ export default function AdminPage({ setPage }: Props) {
             setConfirmDeleteProduct(null)
             try {
               await deleteProduct(id)
-              setActionSuccess(`Product "${name}" deleted.`)
+              setActionSuccess(`Product "${name}" archived.`)
               setTimeout(() => setActionSuccess(null), 3000)
               fetchProductsFromBackend()
               setRefreshToken((v) => v + 1)

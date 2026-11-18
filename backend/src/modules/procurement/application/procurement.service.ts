@@ -72,8 +72,8 @@ export class ProcurementService {
   }
 
   async remove(id: string) {
-    if (!(await this.procurement.delete(id))) throw new NotFoundException('Company order not found')
-    return { success: true, message: 'Company order deleted' }
+    if (!(await this.procurement.archive(id))) throw new NotFoundException('Company order not found')
+    return { success: true, message: 'Company order archived' }
   }
 
   async receive(id: string, body: Record<string, any>) {

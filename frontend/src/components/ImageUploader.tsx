@@ -66,8 +66,12 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
   }
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please select a valid image file (PNG, JPG, JPEG, WEBP).')
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      setUploadError('Please select a valid image file (PNG, JPG, JPEG, WEBP, or GIF).')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image files must be 10MB or smaller.')
       return
     }
 
@@ -75,36 +79,36 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
       setUploading(true)
       setUploadError(null)
 
-      // 1. Compress image to web-optimized dimensions
       const compressedDataUrl = await compressImage(file)
-
-      // 2. Upload to server
-      try {
-        const res = await apiFetch(apiUrl('/api/upload'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            image: compressedDataUrl,
-            filename: file.name,
-          }),
-        })
-
-        if (res.ok) {
-          const data = await res.json()
-          if (data.url) {
-            onChange(data.url)
-            return
-          }
-        }
-      } catch (uploadNetErr) {
-        console.warn('Backend upload failed, falling back to client data URL:', uploadNetErr)
+      const compressedBlob = await (await fetch(compressedDataUrl)).blob()
+      if (compressedBlob.size > 10 * 1024 * 1024) {
+        throw new Error('The processed image is larger than 10MB.')
       }
 
-      // If server upload had an issue, fallback to data URL directly so image is never lost
-      onChange(compressedDataUrl)
+      const formData = new FormData()
+      formData.append('file', compressedBlob, file.name)
+      const response = await apiFetch(apiUrl('/api/upload'), {
+        method: 'POST',
+        body: formData,
+      })
+      if (!response.ok) {
+        const result = await response.json() as { error?: unknown; message?: unknown }
+        const message = typeof result.error === 'string'
+          ? result.error
+          : typeof result.message === 'string'
+            ? result.message
+            : 'Image upload failed.'
+        throw new Error(message)
+      }
+
+      const result = await response.json() as { url?: unknown }
+      if (typeof result.url !== 'string' || !result.url) {
+        throw new Error('The image upload response did not include a URL.')
+      }
+      onChange(result.url)
     } catch (err) {
       console.error('Failed to process image:', err)
-      setUploadError('Could not process this image. Please try another file.')
+      setUploadError(err instanceof Error ? err.message : 'Could not process this image. Please try another file.')
     } finally {
       setUploading(false)
     }
@@ -243,7 +247,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
                 {uploading ? 'Uploading image from device…' : 'Click to upload image or drag & drop'}
               </div>
               <p className="mt-1 text-xs text-[#0B5B24]">
-                PNG, JPG, JPEG, WEBP from your phone, tablet, or computer (Max 10MB)
+                PNG, JPG, JPEG, WEBP, GIF from your phone, tablet, or computer (Max 10MB)
               </p>
               <button
                 type="button"

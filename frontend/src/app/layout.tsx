@@ -1,9 +1,13 @@
 import React from 'react'
 import type { Metadata } from 'next'
 import '@/index.css'
+import AppProviders from '@/providers/AppProviders'
 
 export const metadata: Metadata = {
-  title: 'DubazaarMart - Premium Dubai Electronics in Rwanda',
+  title: {
+    default: 'DubazaarMart - Premium Dubai Electronics in Rwanda',
+    template: '%s | DubazaarMart',
+  },
   description:
     'Genuine Dubai-sourced smartphones, laptops, smartwatches, and electronics delivered same-day in Kigali, Rwanda.',
   icons: {
@@ -32,7 +36,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-white text-[#111111] antialiased">
-        <div id="root">{children}</div>
+        <div id="root">
+          <AppProviders>{children}</AppProviders>
+        </div>
       </body>
     </html>
   )

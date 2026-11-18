@@ -1,4 +1,4 @@
-import { Check, Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
+import { Check, Column, CreateDateColumn, DeleteDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
 import { CompanyOrderItemEntity } from './company-order-item.entity'
 
 @Entity({ name: 'company_orders' })
@@ -54,6 +54,9 @@ export class CompanyOrderEntity {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null
 
   @OneToMany(() => CompanyOrderItemEntity, (item) => item.order, { cascade: ['insert'] })
   items!: CompanyOrderItemEntity[]

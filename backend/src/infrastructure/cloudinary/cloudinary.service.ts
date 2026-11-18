@@ -21,6 +21,7 @@ export class CloudinaryService {
     const options: Record<string, unknown> = {
       folder: 'dubazaarmart/products',
       resource_type: 'image',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
       transformation: [{ quality: 'auto:good' }, { fetch_format: 'auto' }],
     }
     if (filename) options.public_id = filename

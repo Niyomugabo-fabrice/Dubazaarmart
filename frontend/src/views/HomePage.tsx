@@ -1,19 +1,18 @@
+"use client"
+
 import { useState, useEffect } from 'react'
-import { categories, testimonials, products as fallbackProducts } from '../data/products'
+import { categories, testimonials } from '../data/products'
 import ProductCard from '../components/ProductCard'
-import type { Product } from '../data/products'
 import SiteLogo from '../components/SiteLogo'
 import { useProducts } from '../store/productsStore'
 import { useWebsiteSettings } from '../store/settingsStore'
+import { swaggerUrl } from '../services/api-client'
+import { useAppNavigation } from '../lib/navigation'
 
-interface Props {
-  setPage: (p: string) => void
-  setSelectedProduct: (p: Product) => void
-}
-
-export default function HomePage({ setPage, setSelectedProduct }: Props) {
+export default function HomePage() {
+  const { navigate } = useAppNavigation()
   const settings = useWebsiteSettings()
-  const { products: liveProducts } = useProducts()
+  const { products: liveProducts, loading, error } = useProducts()
   const products = liveProducts
 
   const [activeTab, setActiveTab] = useState<'featured' | 'popular' | 'new' | 'deals'>('featured')
@@ -38,10 +37,6 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
     if (activeTab === 'deals') return p.discount >= 15
     return p.reviews > 150
   })
-
-  function formatPrice(n: number) {
-    return `RWF ${n.toLocaleString()}`
-  }
 
   const whyItems = [
     { icon: '✈️', title: 'Sourced from Dubai', desc: 'Direct from UAE wholesalers — authentic products at wholesale prices.' },
@@ -107,10 +102,10 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
               </p>
 
               <div className="flex flex-wrap gap-4">
-                <button onClick={() => setPage('shop')} className="btn-gold px-8 py-4 rounded-xl text-base font-bold">
+                <button onClick={() => navigate('shop')} className="btn-gold px-8 py-4 rounded-xl text-base font-bold">
                   Shop Now →
                 </button>
-                <button onClick={() => setPage('categories')} className="btn-ghost px-8 py-4 rounded-xl text-base font-bold">
+                <button onClick={() => navigate('categories')} className="btn-ghost px-8 py-4 rounded-xl text-base font-bold">
                   Browse Categories
                 </button>
               </div>
@@ -163,7 +158,7 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
               <div className="badge mb-2" style={{ color: '#FF6A00' }}>EXPLORE</div>
               <h2 className="text-3xl font-bold text-[#111111]">Shop by Category</h2>
             </div>
-            <button onClick={() => setPage('categories')} className="text-sm btn-ghost px-4 py-2 rounded-lg font-medium">
+            <button onClick={() => navigate('categories')} className="text-sm btn-ghost px-4 py-2 rounded-lg font-medium">
               All Categories →
             </button>
           </div>
@@ -171,7 +166,7 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
             {categories.slice(0, 7).map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setPage('shop')}
+                onClick={() => navigate('shop')}
                 className="flex flex-col items-center gap-2 p-4 rounded-2xl card-hover text-center"
                 style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
               >
@@ -212,28 +207,32 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full py-12 text-center" style={{ color: '#0B5B24' }} role="status" aria-live="polite">
+                Loading products…
+              </div>
+            ) : error ? (
+              <div className="col-span-full py-12 text-center" style={{ color: '#0B5B24' }} role="alert">
+                {error}
+              </div>
+            ) : products.length === 0 ? (
               <div className="col-span-full py-12 text-center border-2 border-dashed rounded-2xl" style={{ borderColor: '#FFB800' }}>
                 <div className="text-3xl mb-2">📦</div>
                 <div className="font-bold text-gray-900 text-lg">Your store is ready for products</div>
                 <p className="text-sm text-[#0B5B24] mt-1 mb-4">No products are currently in the catalog. Log in to the Admin Dashboard to add your first product.</p>
-                <button onClick={() => setPage('admin')} className="btn-gold px-6 py-2.5 rounded-xl font-bold text-sm">
+                <button onClick={() => navigate('admin')} className="btn-gold px-6 py-2.5 rounded-xl font-bold text-sm">
                   Open Admin Dashboard →
                 </button>
               </div>
             ) : (
               (filteredProducts.length > 0 ? filteredProducts : products).slice(0, 8).map(p => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  onView={prod => { setSelectedProduct(prod); setPage('product') }}
-                />
+                <ProductCard key={p.id} product={p} />
               ))
             )}
           </div>
 
           <div className="text-center mt-10">
-            <button onClick={() => setPage('shop')} className="btn-ghost px-8 py-3 rounded-xl text-base font-semibold">
+            <button onClick={() => navigate('shop')} className="btn-ghost px-8 py-3 rounded-xl text-base font-semibold">
               View All Products →
             </button>
           </div>
@@ -250,7 +249,7 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
               <h3 className="text-3xl lg:text-4xl font-bold text-[#111111] mb-2">Up to <span className="gold-text">30% OFF</span></h3>
               <p style={{ color: '#111111' }}>On selected smartphones and laptops this week only</p>
             </div>
-            <button onClick={() => setPage('deals')} className="btn-gold px-8 py-4 rounded-xl font-bold text-lg flex-shrink-0 relative">
+            <button onClick={() => navigate('deals')} className="btn-gold px-8 py-4 rounded-xl font-bold text-lg flex-shrink-0 relative">
               Grab the Deal →
             </button>
           </div>
@@ -377,13 +376,21 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
             {[
               { title: 'Shop', links: ['Smartphones', 'Laptops', 'Tablets', 'Headphones', 'Smart Watches', 'All Products'] },
               { title: 'Company', links: ['About Us', 'Delivery Info', 'Contact Us', 'Terms & Conditions', 'Privacy Policy'] },
-              { title: 'Account', links: ['My Account', 'My Orders', 'Wishlist', 'Track Order', 'Returns'] },
+              { title: 'Account', links: ['My Account', 'My Orders', 'Wishlist', 'Track Order', 'Returns', 'Create Account', 'Admin Dashboard'] },
             ].map(col => (
               <div key={col.title}>
                 <h4 className="font-semibold text-[#111111] mb-4 text-sm">{col.title}</h4>
                 <div className="flex flex-col gap-2">
                   {col.links.map(link => (
-                    <button key={link} className="text-sm text-left hover:text-[#111111] transition-colors" style={{ color: '#0B5B24' }}>
+                    <button
+                      key={link}
+                      onClick={() => {
+                        if (link === 'Create Account') navigate('account')
+                        if (link === 'Admin Dashboard') navigate('admin')
+                      }}
+                      className="text-sm text-left hover:text-[#111111] transition-colors"
+                      style={{ color: '#0B5B24' }}
+                    >
                       {link}
                     </button>
                   ))}
@@ -393,8 +400,11 @@ export default function HomePage({ setPage, setSelectedProduct }: Props) {
           </div>
           <div className="section-divider mb-6" />
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm" style={{ color: '#0B5B24' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm" style={{ color: '#0B5B24' }}>
               © 2026 Dubazaarmart.com — All rights reserved
+              <a href={swaggerUrl()} target="_blank" rel="noopener noreferrer" className="hover:text-[#111111] transition-colors">
+                API Documentation
+              </a>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm" style={{ color: '#0B5B24' }}>We accept:</span>

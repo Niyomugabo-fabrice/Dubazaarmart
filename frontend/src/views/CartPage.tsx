@@ -1,12 +1,13 @@
+'use client'
+
 import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { cartStore, useCart } from '../store/cartStore'
 import { createWhatsAppOrder } from '../lib/dashboardApi'
 
-interface Props {
-  setPage: (p: string) => void
-}
-
-export default function CartPage({ setPage }: Props) {
+export default function CartPage() {
+  const router = useRouter()
   const { cartItems, subtotal, delivery, total } = useCart()
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false)
   const [customerName, setCustomerName] = useState('')
@@ -17,6 +18,10 @@ export default function CartPage({ setPage }: Props) {
 
   function formatPrice(n: number) {
     return `${n.toLocaleString()} RWF`
+  }
+
+  function handleNavigate(path: string) {
+    router.push(path)
   }
 
   async function handleOrderViaWhatsApp(e: React.FormEvent) {
@@ -62,9 +67,12 @@ export default function CartPage({ setPage }: Props) {
           <div className="text-7xl mb-6">🛒</div>
           <h2 className="text-2xl font-bold text-[#111111] mb-3">Your cart is empty</h2>
           <p className="mb-8" style={{ color: '#0B5B24' }}>Discover amazing electronics from Dubai</p>
-          <button onClick={() => setPage('shop')} className="btn-gold px-8 py-3 rounded-xl font-bold">
+          <Link
+            href="/shop"
+            className="btn-gold px-8 py-3 rounded-xl font-bold inline-block"
+          >
             Start Shopping →
-          </button>
+          </Link>
         </div>
       </div>
     )
@@ -107,9 +115,12 @@ export default function CartPage({ setPage }: Props) {
               <button onClick={() => cartStore.clear()} className="text-sm text-red-600 hover:underline">
                 Clear cart
               </button>
-              <button onClick={() => setPage('shop')} className="text-sm text-[#0B5B24] hover:underline font-medium">
+              <Link
+                href="/shop"
+                className="text-sm text-[#0B5B24] hover:underline font-medium"
+              >
                 + Add more products
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -140,7 +151,10 @@ export default function CartPage({ setPage }: Props) {
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              <button onClick={() => setPage('checkout')} className="w-full py-3.5 rounded-xl font-bold btn-gold text-base shadow-sm">
+              <button
+                onClick={() => handleNavigate('/checkout')}
+                className="w-full py-3.5 rounded-xl font-bold btn-gold text-base shadow-sm"
+              >
                 Online Checkout (MoMo / Airtel) →
               </button>
 
@@ -156,9 +170,12 @@ export default function CartPage({ setPage }: Props) {
                 Order via WhatsApp
               </button>
 
-              <button onClick={() => setPage('shop')} className="w-full py-2.5 rounded-xl font-medium text-sm text-center block text-[#0B5B24] hover:underline">
+              <Link
+                href="/shop"
+                className="w-full py-2.5 rounded-xl font-medium text-sm text-center block text-[#0B5B24] hover:underline"
+              >
                 Continue Shopping
-              </button>
+              </Link>
             </div>
 
             <div className="flex items-center justify-center gap-2 mt-4 text-xs" style={{ color: '#0B5B24' }}>

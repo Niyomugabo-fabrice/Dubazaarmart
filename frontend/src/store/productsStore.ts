@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
-import { products as initialProducts, type Product } from '../data/products'
+import type { Product } from '../data/products'
 import { apiFetch, apiUrl, mediaUrl } from '../services/api-client'
 
 let currentProducts: Product[] = []
 let listeners: Array<() => void> = []
+let productsLoading = false
+let productsError: string | null = null
+let productsRequest: Promise<Product[]> | null = null
 
 function normalizeProduct(product: Product): Product {
   return {
@@ -22,19 +25,37 @@ function notify() {
 }
 
 export async function fetchProductsFromBackend(): Promise<Product[]> {
-  try {
-    const res = await apiFetch(apiUrl('/api/products'))
-    if (!res.ok) return currentProducts
-    const data = await res.json()
-    if (Array.isArray(data.products)) {
-      currentProducts = data.products.map(normalizeProduct)
+  if (productsRequest) return productsRequest
+
+  productsLoading = true
+  productsError = null
+  notify()
+
+  productsRequest = (async () => {
+    try {
+      const res = await apiFetch(apiUrl('/api/products'))
+      if (!res.ok) {
+        productsError = `Could not load products (HTTP ${res.status}).`
+        return currentProducts
+      }
+      const data = await res.json()
+      if (Array.isArray(data.products)) {
+        currentProducts = data.products.map(normalizeProduct)
+        return currentProducts
+      }
+      productsError = 'The product catalog response was invalid.'
+    } catch (err) {
+      productsError = 'Could not load products. Check your connection and try again.'
+      console.warn('Backend products fetch failed:', err)
+    } finally {
+      productsLoading = false
+      productsRequest = null
       notify()
-      return currentProducts
     }
-  } catch (err) {
-    console.warn('Backend products fetch fallback:', err)
-  }
-  return currentProducts
+    return currentProducts
+  })()
+
+  return productsRequest
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -101,18 +122,19 @@ export async function deleteProductFromBackend(id: string): Promise<boolean> {
   return false
 }
 
-// Automatically trigger background fetch once loaded in browser
-if (typeof window !== 'undefined') {
-  fetchProductsFromBackend()
-}
-
 export function useProducts() {
   const [productsList, setProductsList] = useState<Product[]>(currentProducts)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(productsLoading)
+  const [error, setError] = useState<string | null>(productsError)
 
   useEffect(() => {
-    const update = () => setProductsList([...currentProducts])
+    const update = () => {
+      setProductsList([...currentProducts])
+      setLoading(productsLoading)
+      setError(productsError)
+    }
     listeners.push(update)
+    update()
 
     // Sync on mount
     fetchProductsFromBackend()
@@ -125,6 +147,7 @@ export function useProducts() {
   return {
     products: productsList,
     loading,
+    error,
     refresh: fetchProductsFromBackend,
     addProduct: addProductToBackend,
     deleteProduct: deleteProductFromBackend,

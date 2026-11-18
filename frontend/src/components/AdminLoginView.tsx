@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import SiteLogo from './SiteLogo'
 
@@ -7,29 +9,28 @@ interface Props {
 }
 
 export default function AdminLoginView({ onLogin, onBack }: Props) {
-  const [email, setEmail] = useState('IntoreTech@gmail.com')
-  const [password, setPassword] = useState('Bahoo!123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!email.trim() || !password) {
+      setError('Please provide both administrator email and password.')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
-    const res = await onLogin(email, password)
+    const res = await onLogin(email.trim(), password)
     setLoading(false)
 
     if (!res.success) {
       setError(res.error || 'Authentication failed. Please verify your credentials.')
     }
-  }
-
-  function handleAutofill() {
-    setEmail('IntoreTech@gmail.com')
-    setPassword('Bahoo!123')
-    setError(null)
   }
 
   return (
@@ -58,62 +59,39 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
               🔒 ADMIN PORTAL
             </div>
             <h1 className="text-2xl font-bold text-[#111111]">Admin Workspace</h1>
-            <p className="text-xs sm:text-sm mt-1" style={{ color: '#0B5B24' }}>
-              Sign in to manage products, customer orders, and store operations.
+            <p className="text-xs text-[#0B5B24] mt-1.5">
+              Authorized personnel only. Sessions protected by JWT token pairs.
             </p>
           </div>
 
-          {/* Quick Credential Hint */}
-          <div
-            onClick={handleAutofill}
-            role="button"
-            tabIndex={0}
-            className="mb-6 p-3 rounded-2xl cursor-pointer transition-all hover:brightness-95 flex items-start gap-2.5 text-left"
-            style={{
-              background: '#FFF7E8',
-              border: '1px dashed #FFB800',
-            }}
-            title="Click to auto-fill credentials"
-          >
-            <span className="text-lg leading-none" aria-hidden="true">🔑</span>
-            <div className="text-xs leading-relaxed flex-1">
-              <div className="font-semibold text-[#111111]">Authorized Admin Credentials:</div>
-              <div className="mt-0.5 text-[#0B5B24]">
-                Email: <span className="font-mono font-bold text-[#FF6A00]">IntoreTech@gmail.com</span>
-              </div>
-              <div className="text-[#0B5B24]">
-                Password: <span className="font-mono font-bold text-[#FF6A00]">Bahoo!123</span>
-              </div>
-              <div className="text-[10px] text-black/50 mt-1">Tap to auto-fill</div>
-            </div>
-          </div>
-
+          {/* Error Banner */}
           {error && (
             <div
-              className="mb-5 p-3.5 rounded-xl text-xs font-medium flex items-center gap-2"
+              className="mb-6 p-4 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-fadeIn"
               style={{
                 background: 'rgba(233,75,0,0.08)',
-                border: '1px solid rgba(233,75,0,0.3)',
                 color: '#E94B00',
+                border: '1px solid rgba(233,75,0,0.3)',
               }}
             >
-              <span className="text-base">⚠️</span>
+              <span className="text-base flex-shrink-0">⚠️</span>
               <span>{error}</span>
             </div>
           )}
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5 text-[#111111]">
-                Admin Email
+              <label className="block text-xs font-semibold text-[#111111] mb-1.5">
+                Admin Email Address
               </label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="IntoreTech@gmail.com"
-                className="w-full px-4 py-3 rounded-xl text-sm transition-all focus:outline-none"
+                placeholder="admin@dubazaarmart.rw"
+                className="w-full px-4 py-3 rounded-xl text-sm"
                 style={{
                   background: '#FFF7E8',
                   border: '1px solid #FFB800',
@@ -123,7 +101,7 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1.5 text-[#111111]">
+              <label className="block text-xs font-semibold text-[#111111] mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -132,8 +110,8 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl text-sm transition-all focus:outline-none pr-12"
+                  placeholder="••••••••••••"
+                  className="w-full px-4 py-3 rounded-xl text-sm pr-16"
                   style={{
                     background: '#FFF7E8',
                     border: '1px solid #FFB800',

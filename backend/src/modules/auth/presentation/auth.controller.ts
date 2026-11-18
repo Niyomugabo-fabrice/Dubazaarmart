@@ -4,9 +4,13 @@ import type { Request } from 'express'
 import { AuthService } from '../application/auth.service'
 import { LoginDto } from './dto/login.dto'
 import { RefreshDto } from './dto/refresh.dto'
+import { CreateAdminDto } from './dto/create-admin.dto'
 import { Roles } from './auth.decorators'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { AccessControlGuard } from './guards/access-control.guard'
+import type { AdminIdentity } from '../domain/admin-account'
+
+type AuthenticatedRequest = Request & { user: AdminIdentity }
 
 @ApiTags('auth')
 @Controller('auth')
@@ -15,8 +19,8 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Sign in an administrator' })
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto.email, dto.password)
+  login(@Body() dto: LoginDto, @Req() request: Request) {
+    return this.auth.login(dto.email, dto.password, request.ip || request.socket.remoteAddress || 'unknown')
   }
 
   @Post('refresh')
@@ -39,5 +43,25 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify the current administrator access token' })
   verify(@Req() request: Request) {
     return this.auth.verifyRequest(request)
+  }
+
+  @Post('admins')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, AccessControlGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Provision a new administrator account (Admin only)' })
+  createAdmin(@Req() request: Request, @Body() dto: CreateAdminDto) {
+    const creator = (request as AuthenticatedRequest).user
+    return this.auth.createAdmin(creator, dto)
+  }
+
+  @Get('admins')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, AccessControlGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'List all administrator accounts (Admin only)' })
+  listAdmins(@Req() request: Request) {
+    const requester = (request as AuthenticatedRequest).user
+    return this.auth.listAdmins(requester)
   }
 }

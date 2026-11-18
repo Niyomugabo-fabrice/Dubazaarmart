@@ -22,6 +22,7 @@ function backendPath(path: string): string {
   else if (mapped === '/api/admin/logout') mapped = '/auth/logout'
   else if (mapped === '/api/admin/verify') mapped = '/auth/verify'
   else if (mapped === '/api/admin/refresh') mapped = '/auth/refresh'
+  else if (mapped === '/api/admin/admins') mapped = '/auth/admins'
   else if (mapped === '/api/upload') mapped = '/media/upload'
   else if (mapped === '/api/health') mapped = '/health'
   else if (mapped.startsWith('/api/admin/')) mapped = mapped.replace(/^\/api\/admin/, '/admin')
@@ -33,7 +34,12 @@ function backendPath(path: string): string {
 export function apiUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return new URL(backendPath(normalizedPath), `${apiBaseUrl()}/`).toString()
+  const route = backendPath(normalizedPath).replace(/^\/+/, '')
+  return new URL(route, `${apiBaseUrl()}/`).toString()
+}
+
+export function swaggerUrl(): string {
+  return new URL('/docs', apiBaseUrl()).toString()
 }
 
 export function mediaUrl(path: string | undefined): string {
@@ -52,8 +58,15 @@ function readSession(): StoredAdminSession | null {
   }
 }
 
-function isProtectedRequest(url: URL): boolean {
-  return url.pathname.includes('/api/v1/admin/') || url.pathname.endsWith('/api/v1/media/upload')
+function isProtectedRequest(url: URL, method = 'GET'): boolean {
+  const p = url.pathname.toLowerCase()
+  if (p.includes('/api/v1/admin/')) return true
+  if (p.includes('/api/v1/media/upload') || p.endsWith('/media/upload')) return true
+  if (p.includes('/api/v1/auth/verify') || p.endsWith('/auth/verify')) return true
+  if (p.includes('/api/v1/auth/logout') || p.endsWith('/auth/logout')) return true
+  if (p.includes('/api/v1/auth/admins') || p.endsWith('/auth/admins')) return true
+  if ((p.endsWith('/api/v1/products') || p.endsWith('/products')) && method !== 'GET' && method !== 'HEAD') return true
+  return false
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -89,10 +102,12 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const method = (init.method || 'GET').toUpperCase()
   const requestUrl = input instanceof URL ? input : new URL(String(input), typeof window === 'undefined' ? apiBaseUrl() : window.location.origin)
-  const protectedRequest = isProtectedRequest(requestUrl)
   const headers = new Headers(init.headers)
   const session = readSession()
+  const protectedRequest = isProtectedRequest(requestUrl, method) || headers.has('Authorization')
+
   if (protectedRequest && session?.token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${session.token}`)
   }

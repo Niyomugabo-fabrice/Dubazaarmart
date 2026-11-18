@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import type { Product } from '../data/products'
 
 export interface CartItem {
@@ -6,6 +6,8 @@ export interface CartItem {
   quantity: number
 }
 
+const EMPTY_CART_ITEMS: CartItem[] = []
+const EMPTY_WISHLIST: string[] = []
 const CART_KEY = 'dubazaarmart_cart'
 const WISHLIST_KEY = 'dubazaarmart_wishlist'
 
@@ -36,20 +38,33 @@ function saveWishlist(ids: string[]) {
 }
 
 let cartListeners: (() => void)[] = []
-let items: CartItem[] = loadCart()
-let wishlistIds: string[] = loadWishlist()
+let items: CartItem[] = []
+let wishlistIds: string[] = []
+let hasHydrated = false
 
 function notify() {
   cartListeners.forEach(fn => fn())
 }
 
+function hydrate() {
+  if (hasHydrated || typeof window === 'undefined') return
+  items = loadCart()
+  wishlistIds = loadWishlist()
+  hasHydrated = true
+  notify()
+}
+
 export const cartStore = {
   getItems: () => items,
   getWishlist: () => wishlistIds,
+  hydrate,
   add(product: Product, qty = 1) {
+    hydrate()
     const existing = items.find(i => i.product.id === product.id)
     if (existing) {
-      existing.quantity += qty
+      items = items.map(item => item.product.id === product.id
+        ? { ...item, quantity: item.quantity + qty }
+        : item)
     } else {
       items = [...items, { product, quantity: qty }]
     }
@@ -57,11 +72,13 @@ export const cartStore = {
     notify()
   },
   remove(productId: string) {
+    hydrate()
     items = items.filter(i => i.product.id !== productId)
     saveCart(items)
     notify()
   },
   updateQty(productId: string, qty: number) {
+    hydrate()
     if (qty <= 0) {
       this.remove(productId)
       return
@@ -71,11 +88,13 @@ export const cartStore = {
     notify()
   },
   clear() {
+    hydrate()
     items = []
     saveCart(items)
     notify()
   },
   toggleWishlist(productId: string) {
+    hydrate()
     if (wishlistIds.includes(productId)) {
       wishlistIds = wishlistIds.filter(id => id !== productId)
     } else {
@@ -91,10 +110,17 @@ export const cartStore = {
 }
 
 export function useCart() {
-  const [, forceUpdate] = useState(0)
-  useEffect(() => cartStore.subscribe(() => forceUpdate(n => n + 1)), [])
-  const cartItems = cartStore.getItems()
-  const wishlist = cartStore.getWishlist()
+  useEffect(() => cartStore.hydrate(), [])
+  const cartItems = useSyncExternalStore(
+    cartStore.subscribe,
+    cartStore.getItems,
+    () => EMPTY_CART_ITEMS,
+  )
+  const wishlist = useSyncExternalStore(
+    cartStore.subscribe,
+    cartStore.getWishlist,
+    () => EMPTY_WISHLIST,
+  )
   const subtotal = cartItems.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
   const delivery = cartItems.length > 0 ? 10_000 : 0
   const total = subtotal + delivery

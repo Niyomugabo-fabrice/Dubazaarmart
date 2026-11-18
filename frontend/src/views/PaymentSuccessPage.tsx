@@ -1,12 +1,14 @@
+"use client"
+
 import { useState, useEffect } from 'react'
 import type { CustomerOrderReceipt } from '../lib/dashboardApi'
+import { useAppNavigation } from '../lib/navigation'
 
-interface Props {
-  setPage: (p: string) => void
-  order: CustomerOrderReceipt | null
-}
+const ORDER_RECEIPT_KEY = 'dubazaar_order_receipt'
 
-export default function PaymentSuccessPage({ setPage, order }: Props) {
+export default function PaymentSuccessPage() {
+  const { navigate } = useAppNavigation()
+  const [order, setOrder] = useState<CustomerOrderReceipt | null>(null)
   const [timeLeft, setTimeLeft] = useState<{
     days: number
     hours: number
@@ -14,6 +16,15 @@ export default function PaymentSuccessPage({ setPage, order }: Props) {
     seconds: number
     isOverdue: boolean
   } | null>(null)
+
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem(ORDER_RECEIPT_KEY)
+      if (stored) setOrder(JSON.parse(stored) as CustomerOrderReceipt)
+    } catch {
+      setOrder(null)
+    }
+  }, [])
 
   useEffect(() => {
     if (!order?.requestedDeliveryTime) return
@@ -50,6 +61,22 @@ export default function PaymentSuccessPage({ setPage, order }: Props) {
 
   function formatPrice(amount: number) {
     return `${amount.toLocaleString()} RWF`
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-20" style={{ background: '#FFFFFF' }}>
+        <div className="w-full max-w-lg text-center">
+          <h1 className="text-2xl font-bold text-[#111111] mb-3">Order confirmation unavailable</h1>
+          <p className="text-sm mb-6" style={{ color: '#0B5B24' }}>
+            This browser session doesn’t have a saved order receipt.
+          </p>
+          <button onClick={() => navigate('shop')} className="rounded-xl px-6 py-3 font-bold btn-gold">
+            Continue shopping
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -159,7 +186,7 @@ export default function PaymentSuccessPage({ setPage, order }: Props) {
         </div>
 
         <div className="flex gap-3">
-          <button onClick={() => setPage('shop')} className="flex-1 rounded-xl py-3 font-bold btn-gold">
+          <button onClick={() => navigate('shop')} className="flex-1 rounded-xl py-3 font-bold btn-gold">
             Shop More Products →
           </button>
         </div>

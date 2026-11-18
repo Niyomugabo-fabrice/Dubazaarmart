@@ -1,24 +1,27 @@
-import { useState, useMemo } from 'react'
-import { categories, products as fallbackProducts } from '../data/products'
+"use client"
+
+import { useState, useMemo, useEffect } from 'react'
+import { categories } from '../data/products'
 import ProductCard from '../components/ProductCard'
-import type { Product } from '../data/products'
 import { useProducts } from '../store/productsStore'
 
 interface Props {
-  setPage: (p: string) => void
-  setSelectedProduct: (p: Product) => void
   initialCategory?: string
+  initialQuery?: string
 }
 
-export default function ShopPage({ setPage, setSelectedProduct, initialCategory }: Props) {
-  const { products: liveProducts } = useProducts()
+export default function ShopPage({ initialCategory, initialQuery = '' }: Props = {}) {
+  const { products: liveProducts, loading, error, refresh } = useProducts()
   const products = liveProducts
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
   const [sortBy, setSortBy] = useState('featured')
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 3_000_000])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(initialQuery)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => setSelectedCategory(initialCategory || 'all'), [initialCategory])
+  useEffect(() => setSearchQuery(initialQuery), [initialQuery])
 
   function formatPrice(n: number) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -36,7 +39,7 @@ export default function ShopPage({ setPage, setSelectedProduct, initialCategory 
     else if (sortBy === 'discount') list.sort((a, b) => b.discount - a.discount)
     else list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
     return list
-  }, [selectedCategory, sortBy, priceRange, searchQuery])
+  }, [products, selectedCategory, sortBy, priceRange, searchQuery])
 
   const Sidebar = () => (
     <div className="w-64 flex-shrink-0">
@@ -160,7 +163,18 @@ export default function ShopPage({ setPage, setSelectedProduct, initialCategory 
             </span>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-24" style={{ color: '#0B5B24' }} role="status" aria-live="polite">
+              <span className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[#FFB800] border-t-transparent mb-4" />
+              <div className="text-sm">Loading products…</div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-24" style={{ color: '#0B5B24' }} role="alert">
+              <div className="text-lg font-medium text-[#111111] mb-2">Products could not be loaded</div>
+              <p className="text-sm mb-4">{error}</p>
+              <button onClick={() => void refresh()} className="btn-gold px-5 py-2.5 rounded-xl font-semibold">Try again</button>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-24" style={{ color: '#0B5B24' }}>
               <div className="text-5xl mb-4">🔍</div>
               <div className="text-lg font-medium text-[#111111] mb-2">No products found</div>
@@ -169,11 +183,7 @@ export default function ShopPage({ setPage, setSelectedProduct, initialCategory 
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filtered.map(p => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  onView={prod => { setSelectedProduct(prod); setPage('product') }}
-                />
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           )}

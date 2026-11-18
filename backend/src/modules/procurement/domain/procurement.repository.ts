@@ -24,6 +24,6 @@ export interface ProcurementRepository {
   list(query: CompanyOrderQuery): Promise<CompanyOrderEntity[]>
   create(input: CreateCompanyOrderInput): Promise<CompanyOrderEntity>
   update(id: string, values: Partial<CompanyOrderEntity>): Promise<CompanyOrderEntity | null>
-  delete(id: string): Promise<boolean>
+  archive(id: string): Promise<boolean>
   receive(id: string, receivedItems: Array<{ itemId: string; quantityReceived: number }>): Promise<{ order: CompanyOrderEntity; addedCount: number } | null>
 }

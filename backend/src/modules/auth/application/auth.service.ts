@@ -1,5 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import type { Request } from 'express'
 import bcrypt from 'bcryptjs'
@@ -18,6 +27,8 @@ interface TokenClaims extends JwtPayload {
 
 @Injectable()
 export class AuthService {
+  private readonly loginAttempts = new Map<string, { count: number; expiresAt: number }>()
+  private loginAttemptChecks = 0
   private readonly accessSecret: string
   private readonly refreshSecret: string
   private readonly accessTtl: SignOptions['expiresIn']
@@ -36,11 +47,15 @@ export class AuthService {
     this.refreshTtlMs = durationToMilliseconds(String(this.refreshTtl))
   }
 
-  async login(email: string, password: string) {
-    const admin = await this.admins.findByEmail(email.trim().toLowerCase())
+  async login(email: string, password: string, clientIp: string) {
+    const normalizedEmail = email.trim().toLowerCase()
+    const attemptKey = createHash('sha256').update(`${clientIp}\0${normalizedEmail}`).digest('hex')
+    this.checkLoginRateLimit(attemptKey)
+    const admin = await this.admins.findByEmail(normalizedEmail)
     if (!admin || !(await bcrypt.compare(password, admin.passwordHash)) || admin.role !== 'admin') {
       throw new UnauthorizedException('Invalid admin credentials. Please verify your email and password.')
     }
+    this.loginAttempts.delete(attemptKey)
     const pair = this.createTokenPair(admin)
     await this.refreshTokens.save(pair.refreshRecord)
     return { success: true, token: pair.accessToken, refreshToken: pair.refreshToken, admin: this.identity(admin) }
@@ -82,6 +97,48 @@ export class AuthService {
     return { authenticated: true, admin }
   }
 
+  async createAdmin(creator: AdminIdentity, dto: { name: string; email: string; password: string }) {
+    if (creator.role !== 'admin') {
+      throw new ForbiddenException('Only administrators can create new admin accounts.')
+    }
+    const cleanEmail = dto.email.trim().toLowerCase()
+    const existing = await this.admins.findByEmail(cleanEmail)
+    if (existing) {
+      throw new ConflictException('An administrator with this email already exists.')
+    }
+    if (!dto.password || dto.password.length < 12) {
+      throw new BadRequestException('Password must be at least 12 characters long.')
+    }
+    const passwordHash = await bcrypt.hash(dto.password, 12)
+    let newAdmin: AdminAccount
+    try {
+      newAdmin = await this.admins.create({
+        name: dto.name.trim(),
+        email: cleanEmail,
+        passwordHash,
+        role: 'admin',
+      })
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('An administrator with this email already exists.')
+      }
+      throw error
+    }
+    return {
+      success: true,
+      message: 'Administrator account provisioned successfully',
+      admin: this.identity(newAdmin),
+    }
+  }
+
+  async listAdmins(requester: AdminIdentity) {
+    if (requester.role !== 'admin') {
+      throw new ForbiddenException('Only administrators can view admin accounts.')
+    }
+    const list = await this.admins.list()
+    return { success: true, admins: list }
+  }
+
   private createTokenPair(admin: AdminAccount) {
     const identity = this.identity(admin)
     const accessToken = jwt.sign({ ...identity, tokenUse: 'access' }, this.accessSecret, {
@@ -110,6 +167,33 @@ export class AuthService {
     return { id: admin.id, email: admin.email, name: admin.name || 'Admin', role: admin.role }
   }
 
+  private checkLoginRateLimit(key: string) {
+    const now = Date.now()
+    if (++this.loginAttemptChecks >= 128) {
+      for (const [attemptKey, attempt] of this.loginAttempts) {
+        if (attempt.expiresAt <= now) this.loginAttempts.delete(attemptKey)
+      }
+      this.loginAttemptChecks = 0
+    }
+
+    const attempt = this.loginAttempts.get(key)
+    if (attempt && attempt.expiresAt > now && attempt.count >= 10) {
+      throw new HttpException(
+        'Too many login attempts. Please try again in 15 minutes.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      )
+    }
+
+    if (this.loginAttempts.size >= 10_000 && !attempt) {
+      const oldestKey = this.loginAttempts.keys().next().value
+      if (oldestKey) this.loginAttempts.delete(oldestKey)
+    }
+    this.loginAttempts.set(key, {
+      count: attempt && attempt.expiresAt > now ? attempt.count + 1 : 1,
+      expiresAt: attempt && attempt.expiresAt > now ? attempt.expiresAt : now + 15 * 60_000,
+    })
+  }
+
   private verify(token: string, secret: string, tokenUse: TokenClaims['tokenUse']): TokenClaims | null {
     try {
       const claims = jwt.verify(token, secret, { issuer: 'dubazaarmart' }) as TokenClaims
@@ -133,6 +217,10 @@ function readToken(request: Request): string | null {
 
 function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
 }
 
 function durationToMilliseconds(value: string): number {

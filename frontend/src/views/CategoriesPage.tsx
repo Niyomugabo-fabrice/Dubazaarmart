@@ -1,10 +1,7 @@
+import Link from 'next/link'
 import { categories } from '../data/products'
 
-interface Props {
-  setPage: (p: string) => void
-}
-
-export default function CategoriesPage({ setPage }: Props) {
+export default function CategoriesPage() {
   return (
     <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
@@ -13,9 +10,9 @@ export default function CategoriesPage({ setPage }: Props) {
         <p className="mb-10" style={{ color: '#111111' }}>Browse our full range of electronics sourced from Dubai</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {categories.map(cat => (
-            <button
+            <Link
               key={cat.id}
-              onClick={() => setPage('shop')}
+              href={`/shop?category=${cat.id}`}
               className="card-hover flex flex-col items-center gap-4 p-6 rounded-2xl text-center"
               style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}
             >
@@ -26,7 +23,7 @@ export default function CategoriesPage({ setPage }: Props) {
                 <div className="font-semibold text-[#111111] text-sm mb-1">{cat.name}</div>
                 <div className="badge" style={{ color: '#FF6A00' }}>{cat.count} products</div>
               </div>
-            </button>
+            </Link>
           ))}
         </div>
       </div>

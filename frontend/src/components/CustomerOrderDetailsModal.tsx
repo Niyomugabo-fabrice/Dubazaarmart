@@ -17,10 +17,6 @@ export default function CustomerOrderDetailsModal({ order, onClose, onRecordPaym
     return `${n.toLocaleString()} RWF`
   }
 
-  const isOverdue = order.requestedDeliveryTime
-    ? new Date(order.requestedDeliveryTime).getTime() < Date.now() && order.status !== 'DELIVERED'
-    : false
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
       <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border-2 border-[#FFB800] my-8 max-h-[90vh] overflow-y-auto">

@@ -1,4 +1,4 @@
-import { Check, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Check, Column, CreateDateColumn, DeleteDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { CustomerEntity } from './customer.entity'
 import { OrderItemEntity } from './order-item.entity'
 
@@ -63,6 +63,9 @@ export class OrderEntity {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null
 
   @OneToMany(() => OrderItemEntity, (item) => item.order, { cascade: ['insert'] })
   items!: OrderItemEntity[]

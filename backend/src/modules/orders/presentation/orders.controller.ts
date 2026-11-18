@@ -7,6 +7,8 @@ import { AccessControlGuard } from '../../auth/presentation/guards/access-contro
 import { Roles } from '../../auth/presentation/auth.decorators'
 import { OrderService } from '../application/order.service'
 import { OrderEventsService } from '../application/order-events.service'
+import { CustomerRegistrationService } from '../application/customer-registration.service'
+import { RegisterCustomerDto } from './dto/register-customer.dto'
 
 @ApiTags('orders')
 @Controller('orders')
@@ -22,6 +24,18 @@ export class OrdersController {
   @Post('whatsapp')
   createWhatsApp(@Body() body: unknown) {
     return this.orders.createWhatsAppOrder(body)
+  }
+}
+
+@ApiTags('customers')
+@Controller('customers')
+export class CustomersController {
+  constructor(private readonly customers: CustomerRegistrationService) {}
+
+  @Post('register')
+  @ApiOperation({ summary: 'Create a customer account' })
+  register(@Body() dto: RegisterCustomerDto) {
+    return this.customers.register(dto)
   }
 }
 

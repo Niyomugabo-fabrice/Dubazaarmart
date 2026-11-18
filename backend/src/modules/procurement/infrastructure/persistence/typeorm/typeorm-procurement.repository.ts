@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
-import { DataSource } from 'typeorm'
+import { DataSource, IsNull } from 'typeorm'
 import type { CompanyOrderQuery, CreateCompanyOrderInput, ProcurementRepository } from '../../../domain/procurement.repository'
 import { CompanyOrderEntity } from './company-order.entity'
 import { CompanyOrderItemEntity } from './company-order-item.entity'
@@ -50,12 +50,12 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
 
   async update(id: string, values: Partial<CompanyOrderEntity>) {
     const repository = this.dataSource.getRepository(CompanyOrderEntity)
-    const result = await repository.update({ id }, values)
+    const result = await repository.update({ id, deletedAt: IsNull() }, values)
     return result.affected ? repository.findOne({ where: { id }, relations: { items: true } }) : null
   }
 
-  async delete(id: string) {
-    const result = await this.dataSource.getRepository(CompanyOrderEntity).delete({ id })
+  async archive(id: string) {
+    const result = await this.dataSource.getRepository(CompanyOrderEntity).softDelete({ id })
     return Boolean(result.affected)
   }
 

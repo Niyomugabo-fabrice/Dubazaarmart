@@ -11,8 +11,6 @@ interface Props {
 export default function CompanyOrderDetailsModal({ po, onClose, onAddStockClick, onDeletePo }: Props) {
   if (!po) return null
 
-  const isOverdue = new Date(po.expectedArrival).getTime() < Date.now() && po.status !== 'RECEIVED'
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
       <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border-2 border-[#FFB800] my-8 max-h-[90vh] overflow-y-auto">

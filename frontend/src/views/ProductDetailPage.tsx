@@ -1,31 +1,24 @@
+"use client"
+
 import { useState } from 'react'
+import Link from 'next/link'
 import { cartStore, useCart } from '../store/cartStore'
-import { products } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import type { Product } from '../data/products'
+import { useProducts } from '../store/productsStore'
+import { useAppNavigation } from '../lib/navigation'
 
 interface Props {
   product: Product
-  setPage: (p: string) => void
-  setSelectedProduct: (p: Product) => void
 }
 
-export default function ProductDetailPage({ product, setPage, setSelectedProduct }: Props) {
-  if (!product) {
-    return (
-      <div className="min-h-screen pt-24 text-center">
-        <h2 className="text-xl font-bold">No product selected</h2>
-        <button onClick={() => setPage('shop')} className="btn-gold px-6 py-2.5 rounded-xl mt-4 font-bold text-sm">
-          Browse Products →
-        </button>
-      </div>
-    )
-  }
-
+export default function ProductDetailPage({ product }: Props) {
   const [qty, setQty] = useState(1)
   const [activeImage, setActiveImage] = useState(0)
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'warranty'>('desc')
   const { wishlist } = useCart()
+  const { products } = useProducts()
+  const { navigate } = useAppNavigation()
   const inWishlist = wishlist.includes(product.id)
 
   const related = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4)
@@ -36,7 +29,7 @@ export default function ProductDetailPage({ product, setPage, setSelectedProduct
 
   function addAndGo() {
     cartStore.add(product, qty)
-    setPage('cart')
+    navigate('cart')
   }
 
   return (
@@ -44,9 +37,9 @@ export default function ProductDetailPage({ product, setPage, setSelectedProduct
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 py-6 text-sm" style={{ color: '#0B5B24' }}>
-          <button onClick={() => setPage('home')} className="hover:text-[#111111] transition-colors">Home</button>
+          <Link href="/" className="hover:text-[#111111] transition-colors">Home</Link>
           <span>/</span>
-          <button onClick={() => setPage('shop')} className="hover:text-[#111111] transition-colors">Shop</button>
+          <Link href="/shop" className="hover:text-[#111111] transition-colors">Shop</Link>
           <span>/</span>
           <span className="text-[#111111]">{product.name}</span>
         </div>
@@ -194,7 +187,7 @@ export default function ProductDetailPage({ product, setPage, setSelectedProduct
             <h2 className="text-2xl font-bold text-[#111111] mb-6">Related Products</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {related.map(p => (
-                <ProductCard key={p.id} product={p} onView={prod => { setSelectedProduct(prod); setPage('product') }} />
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           </div>

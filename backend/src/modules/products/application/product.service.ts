@@ -73,8 +73,8 @@ export class ProductService {
   }
 
   async remove(id: string) {
-    if (!(await this.products.delete(id))) throw new NotFoundException('Product not found')
-    return { success: true, message: 'Product deleted successfully' }
+    if (!(await this.products.archive(id))) throw new NotFoundException('Product not found')
+    return { success: true, message: 'Product archived successfully' }
   }
 
   private async save(product: Partial<ProductEntity>) {

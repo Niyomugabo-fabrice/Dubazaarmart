@@ -418,7 +418,7 @@ export async function fetchDashboardData(
   range: RevenueRange,
 ): Promise<{ data: DashboardData; isFallback: boolean; error?: string }> {
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       apiUrl(`/api/admin/dashboard?range=${range}`),
       {
         headers: { Accept: "application/json", ...getAdminAuthHeaders() },
@@ -775,4 +775,44 @@ export async function deleteAdminAnnouncement(id: string): Promise<boolean> {
     headers: { ...getAdminAuthHeaders() },
   })
   return response.ok
+}
+
+// Administrator Management APIs
+export interface AdminAccountRecord {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
+export async function fetchAdminAccounts(): Promise<AdminAccountRecord[]> {
+  const response = await apiFetch(apiUrl("/api/admin/admins"), {
+    method: "GET",
+    headers: { Accept: "application/json", ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to load administrators")
+  }
+  const result = await response.json()
+  return Array.isArray(result.admins) ? result.admins : []
+}
+
+export async function createAdminAccount(payload: {
+  name: string
+  email: string
+  password: string
+  role?: "admin"
+}): Promise<AdminAccountRecord> {
+  const response = await apiFetch(apiUrl("/api/admin/admins"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to provision administrator")
+  }
+  const result = await response.json()
+  return result.admin
 }

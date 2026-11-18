@@ -14,5 +14,5 @@ export interface ProductRepository {
   findById(id: string): Promise<ProductEntity | null>
   findActiveBySkus(skus: string[]): Promise<ProductEntity[]>
   save(product: Partial<ProductEntity>): Promise<ProductEntity>
-  delete(id: string): Promise<boolean>
+  archive(id: string): Promise<boolean>
 }

@@ -10,9 +10,12 @@ All API routes are under `/api/v1`. JSON validation errors and application error
 | GET, POST | `/products` | Browse catalog; create product requires administrator access |
 | POST | `/orders` | Place a customer order and update stock in one transaction |
 | POST | `/orders/whatsapp` | Build a WhatsApp checkout link |
+| POST | `/customers/register` | Create a customer account with a hashed password |
 | GET | `/settings` | Read public store settings |
 | GET | `/announcements/active` | Read current announcements |
 | POST | `/media/upload` | Upload product image to Cloudinary; administrator access required |
+
+Image uploads use `multipart/form-data` with a `file` field. JPEG, PNG, WebP, and GIF files up to 10MB are accepted; the server checks the file signature before forwarding it to Cloudinary. JSON and data-URL upload bodies are not supported.
 
 ## Authentication
 

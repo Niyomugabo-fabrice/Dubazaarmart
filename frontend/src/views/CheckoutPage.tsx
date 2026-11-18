@@ -1,18 +1,19 @@
+"use client"
+
 import { useState } from 'react'
 import { useCart, cartStore } from '../store/cartStore'
-import { createCustomerOrder, type CustomerOrderReceipt } from '../lib/dashboardApi'
-
-interface Props {
-  setPage: (p: string) => void
-  onOrderPlaced: (order: CustomerOrderReceipt) => void
-}
+import { createCustomerOrder } from '../lib/dashboardApi'
+import { useAppNavigation } from '../lib/navigation'
 
 const STEPS = ['Customer Info', 'Delivery', 'Review', 'Payment']
 
 const RW_PROVINCES = ['Kigali', 'Northern', 'Southern', 'Eastern', 'Western']
 
-export default function CheckoutPage({ setPage, onOrderPlaced }: Props) {
+const ORDER_RECEIPT_KEY = 'dubazaar_order_receipt'
+
+export default function CheckoutPage() {
   const { cartItems, subtotal, delivery, total } = useCart()
+  const { navigate } = useAppNavigation()
   const [step, setStep] = useState(0)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -76,9 +77,13 @@ export default function CheckoutPage({ setPage, onOrderPlaced }: Props) {
           quantity: item.quantity,
         })),
       })
-      onOrderPlaced(order)
+      try {
+        window.sessionStorage.setItem(ORDER_RECEIPT_KEY, JSON.stringify(order))
+      } catch {
+        // The order is already placed; still show the confirmation if storage is unavailable.
+      }
       cartStore.clear()
-      setPage('payment-success')
+      navigate('payment-success')
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'The order could not be submitted. Please try again.')
     } finally {
@@ -91,7 +96,7 @@ export default function CheckoutPage({ setPage, onOrderPlaced }: Props) {
       <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#FFFFFF' }}>
         <div className="text-center">
           <h2 className="text-2xl font-bold text-[#111111] mb-4">Nothing to checkout</h2>
-          <button onClick={() => setPage('shop')} className="btn-gold px-8 py-3 rounded-xl font-bold">Shop Now</button>
+          <button onClick={() => navigate('shop')} className="btn-gold px-8 py-3 rounded-xl font-bold">Shop Now</button>
         </div>
       </div>
     )

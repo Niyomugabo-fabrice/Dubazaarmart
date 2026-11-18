@@ -40,12 +40,12 @@ export class TypeOrmDashboardRepository implements DashboardRepository {
       this.dataSource.query(`SELECT id, name, sku, quantity FROM products ORDER BY quantity ASC, name ASC LIMIT 200`),
       range === '12m'
         ? this.dataSource.query(`
-            SELECT periods.period_start::date AS date, COALESCE(SUM(o.total_amount), 0) AS amount
+            SELECT TO_CHAR(periods.period_start::date, 'YYYY-MM-DD') AS date, COALESCE(SUM(o.total_amount), 0) AS amount
             FROM generate_series(date_trunc('month', CURRENT_DATE) - INTERVAL '11 months', date_trunc('month', CURRENT_DATE), INTERVAL '1 month') AS periods(period_start)
             LEFT JOIN orders o ON o.created_at >= periods.period_start AND o.created_at < periods.period_start + INTERVAL '1 month' AND o.payment_status = 'PAID'
             GROUP BY periods.period_start ORDER BY periods.period_start`)
         : this.dataSource.query(`
-            SELECT periods.period_start::date AS date, COALESCE(SUM(o.total_amount), 0) AS amount
+            SELECT TO_CHAR(periods.period_start::date, 'YYYY-MM-DD') AS date, COALESCE(SUM(o.total_amount), 0) AS amount
             FROM generate_series(CURRENT_DATE - (($1::int - 1) * INTERVAL '1 day'), CURRENT_DATE, INTERVAL '1 day') AS periods(period_start)
             LEFT JOIN orders o ON o.created_at >= periods.period_start AND o.created_at < periods.period_start + INTERVAL '1 day' AND o.payment_status = 'PAID'
             GROUP BY periods.period_start ORDER BY periods.period_start`, [days]),

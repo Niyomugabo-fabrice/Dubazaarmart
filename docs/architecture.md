@@ -24,7 +24,7 @@ The migration is intentionally not run automatically at application startup. Rev
 
 ## Authentication
 
-Administrator login uses bcrypt password hashes stored in the existing `admins` table. Access tokens and refresh tokens use separate secrets. Refresh tokens are stored as SHA-256 hashes, rotated transactionally, and revoked on logout. Protected routes enforce the existing administrator role on the backend. The current database has one `admin` role and no permission tables; the access guard supports permission metadata and maps the existing admin role to all current permissions.
+Administrator and staff login use bcrypt password hashes stored in the existing `admins` table. Access tokens and refresh tokens use separate secrets. Refresh tokens are stored as SHA-256 hashes, rotated transactionally, and revoked on logout. Administrators retain full access and are the only role allowed to provision accounts, view the customer directory, or update store settings. Staff accounts can manage orders, products and media, inventory, procurement, reports, and announcements; backend route guards enforce these limits, and report responses omit customer-directory details for staff. The existing `admins.role` column is text, so these roles require no schema migration.
 
 ## Operations
 

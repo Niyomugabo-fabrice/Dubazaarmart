@@ -8,7 +8,7 @@ import { Roles } from '../../auth/presentation/auth.decorators'
 @ApiTags('inventory')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AccessControlGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('admin/stock')
 export class InventoryController {
   constructor(private readonly inventory: InventoryService) {}

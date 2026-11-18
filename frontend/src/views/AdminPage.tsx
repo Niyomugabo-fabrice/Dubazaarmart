@@ -263,12 +263,13 @@ const STATUS_COLORS: Record<string, string> = {
   RETURNED: "#6B7280",        // Gray
 }
 
-type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "customers" | "inventory" | "settings"
+type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "customers" | "inventory" | "announcements" | "settings"
 
 export default function AdminPage() {
   const { navigate } = useAppNavigation()
   const toast = useToast()
   const { isAuthenticated, admin, token: adminToken, login, logout } = useAdminAuth()
+  const isAdmin = admin?.role === "admin"
   const { products: storeProducts, deleteProduct } = useProducts()
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
@@ -277,7 +278,7 @@ export default function AdminPage() {
   const [section, setSectionState] = useState<AdminSection>(() => {
     if (typeof window === "undefined") return "overview"
     const stored = sessionStorage.getItem("dubazaar_admin_section") as AdminSection
-    if (stored && ["overview", "orders", "companyOrders", "products", "customers", "inventory", "settings"].includes(stored)) {
+    if (stored && ["overview", "orders", "companyOrders", "products", "customers", "inventory", "announcements", "settings"].includes(stored)) {
       return stored
     }
     return "overview"
@@ -289,6 +290,13 @@ export default function AdminPage() {
       sessionStorage.setItem("dubazaar_admin_section", s)
     }
   }
+
+  useEffect(() => {
+    if (admin?.role === "staff" && (section === "settings" || section === "customers")) {
+      setSectionState("overview")
+      sessionStorage.setItem("dubazaar_admin_section", "overview")
+    }
+  }, [admin?.role, section])
   const [productSearch, setProductSearch] = useState("")
   const [orderSearch, setOrderSearch] = useState("")
   const [orderFilter, setOrderFilter] = useState("ALL")
@@ -587,12 +595,14 @@ export default function AdminPage() {
   }, [isAuthenticated, section, refreshToken])
 
   useEffect(() => {
-    if (!isAuthenticated || section !== "settings") return
+    if (!isAuthenticated || (section !== "settings" && section !== "announcements")) return
+    if (section === "settings" && !isAdmin) return
     let isMounted = true
-    Promise.all([fetchWebsiteSettings(), fetchAdminAnnouncements()])
+    const settingsRequest = section === "settings" ? fetchWebsiteSettings() : Promise.resolve(null)
+    Promise.all([settingsRequest, fetchAdminAnnouncements()])
       .then(([st, an]) => {
         if (isMounted) {
-          setSettingsData(st)
+          if (st) setSettingsData(st)
           setAnnouncementsData(an)
         }
       })
@@ -600,7 +610,7 @@ export default function AdminPage() {
     return () => {
       isMounted = false
     }
-  }, [isAuthenticated, section, refreshToken])
+  }, [isAuthenticated, isAdmin, section, refreshToken])
 
   // Always keep products in sync with the backend store
   useEffect(() => {
@@ -651,10 +661,14 @@ export default function AdminPage() {
     { id: "orders", label: "Customer Orders", icon: "📦" },
     { id: "companyOrders", label: "Company Orders", icon: "🚢" },
     { id: "products", label: "Products", icon: "🏷️" },
-    { id: "customers", label: "Customers", icon: "👥" },
     { id: "inventory", label: "Inventory & Stock", icon: "📋" },
-    { id: "settings", label: "Settings & Content", icon: "⚙️" },
   ]
+  if (isAdmin) navItems.push({ id: "customers", label: "Customers", icon: "👥" })
+  navItems.push(
+    isAdmin
+      ? { id: "settings", label: "Settings & Content", icon: "⚙️" }
+      : { id: "announcements", label: "Announcements", icon: "📣" },
+  )
 
   const filteredProducts = products.filter(
     (p) =>
@@ -766,13 +780,15 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <Link
-                href="/admin/register"
-                className="text-[11px] font-bold text-[#FF6A00] hover:text-[#E94B00] px-2 py-1 rounded bg-[#FF6A00]/10 flex-shrink-0"
-                title="Provision staff accounts"
-              >
-                + Staff
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin/register"
+                  className="text-[11px] font-bold text-[#FF6A00] hover:text-[#E94B00] px-2 py-1 rounded bg-[#FF6A00]/10 flex-shrink-0"
+                  title="Provision staff accounts"
+                >
+                  + Staff
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -2384,7 +2400,7 @@ export default function AdminPage() {
         )}
 
         {/* Customers */}
-        {section === "customers" && (
+        {section === "customers" && isAdmin && (
           <div>
             <div className="badge mb-1" style={{ color: "#FF6A00" }}>
               MANAGEMENT
@@ -2726,19 +2742,21 @@ export default function AdminPage() {
         )}
 
         {/* Settings & Content */}
-        {section === "settings" && (
+        {((section === "settings" && isAdmin) || section === "announcements") && (
           <div>
-            <div className="badge mb-2" style={{ color: "#FF6A00" }}>
-              STORE CONFIGURATION & CONTENT
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#111111] sm:text-4xl mb-2">
-              Settings & Content
-            </h1>
-            <p className="text-sm text-[#0B5B24] mb-8">
-              Update store contact channels, Mobile Money accounts, delivery pricing, and promotional banners.
-            </p>
+            {section === "settings" && (
+              <>
+                <div className="badge mb-2" style={{ color: "#FF6A00" }}>
+                  STORE CONFIGURATION & CONTENT
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight text-[#111111] sm:text-4xl mb-2">
+                  Settings & Content
+                </h1>
+                <p className="text-sm text-[#0B5B24] mb-8">
+                  Update store contact channels, Mobile Money accounts, delivery pricing, and promotional banners.
+                </p>
 
-            <form onSubmit={handleSaveSettings} className="space-y-6">
+                <form onSubmit={handleSaveSettings} className="space-y-6">
               {/* Store & Contacts */}
               <div className="p-6 rounded-2xl border" style={{ background: "#FFF7E8", borderColor: "#FFB800" }}>
                 <h3 className="font-bold text-[#111111] mb-4 text-base">Store Identity & Contact Channels</h3>
@@ -2852,10 +2870,12 @@ export default function AdminPage() {
                   {settingsSaving ? "Saving Settings…" : "Save Store Settings"}
                 </button>
               </div>
-            </form>
+                </form>
+              </>
+            )}
 
             {/* Announcements Manager */}
-            <div className="mt-10 p-6 rounded-2xl border" style={{ background: "#FFFFFF", borderColor: "#FFB800" }}>
+            <div className={`${section === "settings" ? "mt-10" : ""} p-6 rounded-2xl border`} style={{ background: "#FFFFFF", borderColor: "#FFB800" }}>
               <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <div>
                   <h3 className="font-bold text-[#111111] text-base">Store Announcements & Flash Deals</h3>

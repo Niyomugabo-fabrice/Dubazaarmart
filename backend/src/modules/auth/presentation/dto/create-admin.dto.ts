@@ -19,8 +19,8 @@ export class CreateAdminDto {
   @MinLength(12, { message: 'Password must be at least 12 characters long' })
   password!: string
 
-  @ApiProperty({ required: false, enum: ['admin'], default: 'admin' })
+  @ApiProperty({ required: false, enum: ['admin', 'staff'], default: 'admin' })
   @IsOptional()
-  @IsIn(['admin'])
-  role?: 'admin'
+  @IsIn(['admin', 'staff'])
+  role?: 'admin' | 'staff'
 }

@@ -39,8 +39,8 @@ export class AuthController {
   @Get('verify')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, AccessControlGuard)
-  @Roles('admin')
-  @ApiOperation({ summary: 'Verify the current administrator access token' })
+  @Roles('admin', 'staff')
+  @ApiOperation({ summary: 'Verify the current administrator or staff access token' })
   verify(@Req() request: Request) {
     return this.auth.verifyRequest(request)
   }
@@ -49,7 +49,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, AccessControlGuard)
   @Roles('admin')
-  @ApiOperation({ summary: 'Provision a new administrator account (Admin only)' })
+  @ApiOperation({ summary: 'Provision a new administrator or staff account (Admin only)' })
   createAdmin(@Req() request: Request, @Body() dto: CreateAdminDto) {
     const creator = (request as AuthenticatedRequest).user
     return this.auth.createAdmin(creator, dto)
@@ -59,7 +59,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, AccessControlGuard)
   @Roles('admin')
-  @ApiOperation({ summary: 'List all administrator accounts (Admin only)' })
+  @ApiOperation({ summary: 'List all administrator and staff accounts (Admin only)' })
   listAdmins(@Req() request: Request) {
     const requester = (request as AuthenticatedRequest).user
     return this.auth.listAdmins(requester)

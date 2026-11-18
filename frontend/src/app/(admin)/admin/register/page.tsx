@@ -13,6 +13,7 @@ export default function AdminRegisterPage() {
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [role, setRole] = useState<'admin' | 'staff'>('staff')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -25,14 +26,14 @@ export default function AdminRegisterPage() {
 
   // Load existing administrators if authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && admin?.role === 'admin') {
       setLoadingAdmins(true)
       fetchAdminAccounts()
         .then((list) => setExistingAdmins(list))
         .catch(() => {})
         .finally(() => setLoadingAdmins(false))
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, admin?.role])
 
   // Password strength calculation
   const hasLength = password.length >= 12
@@ -83,13 +84,15 @@ export default function AdminRegisterPage() {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
-        role: 'admin',
+        role,
       })
-      const successText = `Administrator "${newAdmin.name}" (${newAdmin.email}) has been provisioned successfully!`
+      const accountType = newAdmin.role === 'staff' ? 'Staff' : 'Administrator'
+      const successText = `${accountType} account "${newAdmin.name}" (${newAdmin.email}) has been provisioned successfully!`
       setSuccessMessage(successText)
-      toast.success(successText, 'Account Provisioned')
+      toast.success(successText, `${accountType} Account Provisioned`)
       setName('')
       setEmail('')
+      setRole('staff')
       setPassword('')
       setConfirmPassword('')
 
@@ -97,7 +100,7 @@ export default function AdminRegisterPage() {
       const updated = await fetchAdminAccounts()
       setExistingAdmins(updated)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to provision administrator account.'
+      const msg = err instanceof Error ? err.message : 'Failed to provision team account.'
       setErrorMessage(msg)
       toast.error(msg, 'Provisioning Error')
     } finally {
@@ -106,7 +109,8 @@ export default function AdminRegisterPage() {
   }
 
   // 1. Unauthenticated Security Gate
-  if (!isAuthenticated) {
+  if (!isAuthenticated || admin?.role !== 'admin') {
+    const isStaff = isAuthenticated && admin?.role === 'staff'
     return (
       <div
         className="min-h-screen flex flex-col justify-center items-center p-4 sm:p-6"
@@ -119,17 +123,19 @@ export default function AdminRegisterPage() {
             🛡️
           </div>
           <h2 className="text-2xl font-bold text-[#111111] mb-2">
-            Restricted Staff Provisioning
+            {isStaff ? 'Administrator access required' : 'Restricted Team Provisioning'}
           </h2>
           <p className="text-sm text-black/70 mb-6 leading-relaxed">
-            Public administrator registration is <strong>permanently disabled</strong>. Only an authenticated root administrator may provision new accounts.
+            {isStaff
+              ? 'Staff accounts cannot provision other accounts. Contact an administrator for access.'
+              : <>Public registration is <strong>disabled</strong>. Only an authenticated administrator may provision team accounts.</>}
           </p>
           <div className="space-y-3">
             <Link
-              href="/admin/login"
+              href={isStaff ? '/admin' : '/admin/login'}
               className="block w-full py-3.5 rounded-xl font-bold btn-gold text-sm transition-all"
             >
-              Sign In as Administrator →
+              {isStaff ? 'Return to Admin Workspace' : 'Sign In as Administrator →'}
             </Link>
             <Link
               href="/"
@@ -181,10 +187,10 @@ export default function AdminRegisterPage() {
               <div className="pb-4 mb-4 border-b border-[#F1FFF0]">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#FF6A00]">Authorized Action</div>
                 <h1 className="text-2xl font-bold text-[#111111] mt-0.5">
-                  Provision New Administrator
+                  Provision New Team Account
                 </h1>
                 <p className="text-xs text-black/60 mt-1">
-                  Creating credentials on behalf of authenticated admin: <strong>{admin?.name}</strong> ({admin?.email})
+                  Staff access covers orders, catalog/media, inventory, procurement, reports, and announcements. Only administrators can manage accounts and store settings.
                 </p>
               </div>
 
@@ -247,6 +253,23 @@ export default function AdminRegisterPage() {
                     className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]"
                     style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
                   />
+                </div>
+
+                <div>
+                  <label htmlFor="account-role" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1">
+                    Account Type
+                  </label>
+                  <select
+                    id="account-role"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value === 'admin' ? 'admin' : 'staff')}
+                    disabled={submitting}
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]"
+                    style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
+                  >
+                    <option value="staff">Staff — operational access</option>
+                    <option value="admin">Administrator — full access</option>
+                  </select>
                 </div>
 
                 <div>
@@ -337,7 +360,7 @@ export default function AdminRegisterPage() {
                       <span>Encrypting & Provisioning...</span>
                     </>
                   ) : (
-                    'Provision Administrator Account'
+                    role === 'staff' ? 'Provision Staff Account' : 'Provision Administrator Account'
                   )}
                 </button>
               </form>
@@ -352,8 +375,8 @@ export default function AdminRegisterPage() {
             >
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#F1FFF0]">
                 <div>
-                  <h3 className="font-bold text-[#111111] text-base">Active Administrators</h3>
-                  <p className="text-xs text-black/50">Current accounts with control center access</p>
+                  <h3 className="font-bold text-[#111111] text-base">Team Accounts</h3>
+                  <p className="text-xs text-black/50">Administrator and staff access</p>
                 </div>
                 <span className="badge px-2.5 py-1 rounded-full text-xs font-bold" style={{ background: '#FFF7E8', color: '#FF6A00' }}>
                   {existingAdmins.length} Total

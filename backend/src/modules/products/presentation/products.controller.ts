@@ -24,7 +24,7 @@ export class ProductsController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, AccessControlGuard)
-  @Roles('admin')
+  @Roles('admin', 'staff')
   @ApiOperation({ summary: 'Create a product' })
   create(@Body() dto: CreateProductDto) {
     return this.products.create(dto)
@@ -34,7 +34,7 @@ export class ProductsController {
 @ApiTags('products')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AccessControlGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('admin/products')
 export class AdminProductsController {
   constructor(private readonly products: ProductService) {}

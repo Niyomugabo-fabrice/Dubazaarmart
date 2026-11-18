@@ -6,7 +6,7 @@ import { DASHBOARD_REPOSITORY } from '../domain/dashboard.repository'
 export class DashboardService {
   constructor(@Inject(DASHBOARD_REPOSITORY) private readonly dashboard: DashboardRepository) {}
 
-  async getDashboard(requestedRange?: string) {
+  async getDashboard(requestedRange?: string, includeCustomerDetails = true) {
     const range: DashboardRange = requestedRange === '30d' || requestedRange === '12m' ? requestedRange : '7d'
     const result = await this.dashboard.read(range)
     const rows = result as any
@@ -25,7 +25,9 @@ export class DashboardService {
       ],
       recentOrders: rows.orders.map((row: any) => ({ ...row, id: String(row.id), amount: Number(row.amount), date: new Date(row.date).toISOString().slice(0, 10) })),
       products: rows.products.map((row: any) => ({ ...row, id: String(row.id), price: Number(row.price) })),
-      customers: rows.customers.map((row: any) => ({ ...row, orders: Number(row.orders), total: Number(row.total), joined: new Date(row.joined).toISOString().slice(0, 10) })),
+      customers: includeCustomerDetails
+        ? rows.customers.map((row: any) => ({ ...row, orders: Number(row.orders), total: Number(row.total), joined: new Date(row.joined).toISOString().slice(0, 10) }))
+        : [],
       inventory: rows.inventory.map((row: any) => ({ ...row, id: String(row.id) })),
       revenueTrend: rows.revenue.map((row: any) => ({ date: String(row.date).slice(0, 10), amount: Number(row.amount) })),
       orderPipeline: rows.orderPipeline.map((row: any) => ({ label: String(row.label), value: Number(row.value) })),

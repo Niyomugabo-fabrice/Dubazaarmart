@@ -8,7 +8,7 @@ import { Roles } from '../../auth/presentation/auth.decorators'
 @ApiTags('announcements')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AccessControlGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('admin/announcements')
 export class AdminAnnouncementsController {
   constructor(private readonly settings: SettingsService) {}

@@ -8,7 +8,7 @@ import { Roles } from '../../auth/presentation/auth.decorators'
 @ApiTags('procurement')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AccessControlGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('admin/company-orders')
 export class ProcurementController {
   constructor(private readonly procurement: ProcurementService) {}

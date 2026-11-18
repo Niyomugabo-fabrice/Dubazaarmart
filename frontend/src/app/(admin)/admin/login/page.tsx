@@ -141,7 +141,7 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
               <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">
-                Admin Email Address
+                Administrator or Staff Email Address
               </label>
               <input
                 type="email"

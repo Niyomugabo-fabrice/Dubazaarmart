@@ -6,15 +6,14 @@ import { memoryStorage } from 'multer'
 import { CloudinaryService } from '../../infrastructure/cloudinary/cloudinary.service'
 import { JwtAuthGuard } from '../auth/presentation/guards/jwt-auth.guard'
 import { AccessControlGuard } from '../auth/presentation/guards/access-control.guard'
-import { Permissions, Roles } from '../auth/presentation/auth.decorators'
+import { Roles } from '../auth/presentation/auth.decorators'
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
 @ApiTags('media')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AccessControlGuard)
-@Roles('admin')
-@Permissions('media:upload')
+@Roles('admin', 'staff')
 @Controller('media')
 export class MediaController {
   constructor(private readonly cloudinary: CloudinaryService) {}

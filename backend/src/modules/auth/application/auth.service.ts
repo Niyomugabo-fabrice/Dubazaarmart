@@ -25,6 +25,10 @@ interface TokenClaims extends JwtPayload {
   tokenUse: 'access' | 'refresh'
 }
 
+function isSupportedAccountRole(role: unknown): role is 'admin' | 'staff' {
+  return role === 'admin' || role === 'staff'
+}
+
 @Injectable()
 export class AuthService {
   private readonly loginAttempts = new Map<string, { count: number; expiresAt: number }>()
@@ -52,8 +56,8 @@ export class AuthService {
     const attemptKey = createHash('sha256').update(`${clientIp}\0${normalizedEmail}`).digest('hex')
     this.checkLoginRateLimit(attemptKey)
     const admin = await this.admins.findByEmail(normalizedEmail)
-    if (!admin || !(await bcrypt.compare(password, admin.passwordHash)) || admin.role !== 'admin') {
-      throw new UnauthorizedException('Invalid admin credentials. Please verify your email and password.')
+    if (!admin || !(await bcrypt.compare(password, admin.passwordHash)) || !isSupportedAccountRole(admin.role)) {
+      throw new UnauthorizedException('Invalid administrator or staff credentials.')
     }
     this.loginAttempts.delete(attemptKey)
     const pair = this.createTokenPair(admin)
@@ -65,7 +69,7 @@ export class AuthService {
     const claims = this.verify(refreshToken, this.refreshSecret, 'refresh')
     if (!claims?.jti) throw new UnauthorizedException('Refresh token is invalid or expired.')
     const admin = await this.admins.findById(claims.id)
-    if (!admin || admin.role !== 'admin') throw new UnauthorizedException('Refresh token is invalid or expired.')
+    if (!admin || !isSupportedAccountRole(admin.role)) throw new UnauthorizedException('Refresh token is invalid or expired.')
 
     const next = this.createTokenPair(admin)
     const rotated = await this.refreshTokens.rotate(
@@ -87,7 +91,7 @@ export class AuthService {
     const token = readToken(request)
     if (!token) return null
     const claims = this.verify(token, this.accessSecret, 'access')
-    if (!claims || claims.role !== 'admin') return null
+    if (!claims || !isSupportedAccountRole(claims.role)) return null
     return { id: claims.id, email: claims.email, name: claims.name, role: claims.role }
   }
 
@@ -97,14 +101,14 @@ export class AuthService {
     return { authenticated: true, admin }
   }
 
-  async createAdmin(creator: AdminIdentity, dto: { name: string; email: string; password: string }) {
+  async createAdmin(creator: AdminIdentity, dto: { name: string; email: string; password: string; role?: 'admin' | 'staff' }) {
     if (creator.role !== 'admin') {
-      throw new ForbiddenException('Only administrators can create new admin accounts.')
+      throw new ForbiddenException('Only administrators can provision accounts.')
     }
     const cleanEmail = dto.email.trim().toLowerCase()
     const existing = await this.admins.findByEmail(cleanEmail)
     if (existing) {
-      throw new ConflictException('An administrator with this email already exists.')
+      throw new ConflictException('An account with this email already exists.')
     }
     if (!dto.password || dto.password.length < 12) {
       throw new BadRequestException('Password must be at least 12 characters long.')
@@ -116,17 +120,17 @@ export class AuthService {
         name: dto.name.trim(),
         email: cleanEmail,
         passwordHash,
-        role: 'admin',
+        role: dto.role ?? 'admin',
       })
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new ConflictException('An administrator with this email already exists.')
+        throw new ConflictException('An account with this email already exists.')
       }
       throw error
     }
     return {
       success: true,
-      message: 'Administrator account provisioned successfully',
+      message: `${newAdmin.role === 'staff' ? 'Staff' : 'Administrator'} account provisioned successfully`,
       admin: this.identity(newAdmin),
     }
   }

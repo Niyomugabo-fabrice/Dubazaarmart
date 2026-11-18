@@ -792,7 +792,7 @@ export async function fetchAdminAccounts(): Promise<AdminAccountRecord[]> {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to load administrators")
+    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to load team accounts")
   }
   const result = await response.json()
   return Array.isArray(result.admins) ? result.admins : []
@@ -802,7 +802,7 @@ export async function createAdminAccount(payload: {
   name: string
   email: string
   password: string
-  role?: "admin"
+  role?: "admin" | "staff"
 }): Promise<AdminAccountRecord> {
   const response = await apiFetch(apiUrl("/api/admin/admins"), {
     method: "POST",
@@ -811,7 +811,7 @@ export async function createAdminAccount(payload: {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to provision administrator")
+    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to provision team account")
   }
   const result = await response.json()
   return result.admin

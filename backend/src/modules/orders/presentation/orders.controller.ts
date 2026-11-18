@@ -42,7 +42,7 @@ export class CustomersController {
 @ApiTags('admin orders')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, AccessControlGuard)
-@Roles('admin')
+@Roles('admin', 'staff')
 @Controller('admin/orders')
 export class AdminOrdersController {
   constructor(private readonly orders: OrderService, private readonly events: OrderEventsService) {}

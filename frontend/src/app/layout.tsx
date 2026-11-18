@@ -11,7 +11,8 @@ export const metadata: Metadata = {
   description:
     'Genuine Dubai-sourced smartphones, laptops, smartwatches, and electronics delivered same-day in Kigali, Rwanda.',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/site-logo.png',
+    apple: '/site-logo.png',
   },
   openGraph: {
     title: 'DubazaarMart - Dubai Wholesale Electronics',

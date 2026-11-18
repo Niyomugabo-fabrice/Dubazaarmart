@@ -4,7 +4,7 @@
 
 ### Frontend
 
-`frontend/` is the existing Next.js application. Its pages, components, styles, product types, local stores, and visual design remain in place. `src/services/api-client.ts` maps the existing UI request paths to the versioned NestJS endpoints, adds administrator access tokens, rotates refresh tokens after a 401 response, and builds absolute API URLs from `NEXT_PUBLIC_API_URL`.
+`frontend/` is the existing Next.js application. Its pages, components, styles, product types, local stores, and visual design remain in place. `src/services/api-client.ts` maps the existing UI request paths to the versioned NestJS endpoints, attaches in-memory manager/staff access tokens, refreshes them using an HttpOnly cookie after a 401 response, and builds absolute API URLs from `NEXT_PUBLIC_API_URL`.
 
 The frontend does not import TypeORM entities, connect to PostgreSQL, or contain business API handlers.
 
@@ -18,13 +18,13 @@ The dashboard reporting adapter keeps its read-only PostgreSQL aggregate queries
 
 The live legacy schema was inspected using read-only catalog queries before the entity mapping was created. It contains the existing admin, customer, product, order, inventory, procurement, settings, and announcement tables, plus their existing foreign keys, unique constraints, check constraints, and indexes. Business records were present during inspection.
 
-`synchronize`, `migrationsRun`, and `dropSchema` are disabled. The initial migration checks for all expected tables and columns. If it finds the complete legacy schema, it makes no business-table changes; if it finds an empty schema, it creates the initial structure; if it finds a partial schema, it stops before applying DDL. The refresh-token migration is additive and references the existing admins table with `ON DELETE CASCADE`.
+`synchronize`, `migrationsRun`, and `dropSchema` are disabled. The initial migration checks for all expected tables and columns. If it finds the complete legacy schema, it makes no business-table changes; if it finds an empty schema, it creates the initial structure; if it finds a partial schema, it stops before applying DDL. The manager/staff authentication migration copies legacy administrator identities into `users`, removes the legacy auth tables and customer password hashes, adds audit logs, and defaults staff registration to disabled. It preserves customer, order, and other business records, but is irreversible and must be reviewed and backed up before use.
 
 The migration is intentionally not run automatically at application startup. Review and apply it with the root workspace migration commands. The old Prisma schema and initial migration are retained as reference files only.
 
 ## Authentication
 
-Administrator and staff login use bcrypt password hashes stored in the existing `admins` table. Access tokens and refresh tokens use separate secrets. Refresh tokens are stored as SHA-256 hashes, rotated transactionally, and revoked on logout. Administrators retain full access and are the only role allowed to provision accounts, view the customer directory, or update store settings. Staff accounts can manage orders, products and media, inventory, procurement, reports, and announcements; backend route guards enforce these limits, and report responses omit customer-directory details for staff. The existing `admins.role` column is text, so these roles require no schema migration.
+Authentication supports only MANAGER and STAFF; customers do not have accounts, but guest checkout continues to preserve customer and order records. Passwords are bcrypt-hashed in `users`. Access JWTs are held in frontend memory, while stateless refresh JWTs use HttpOnly, secure production cookies. Every protected request loads current user status and permissions from PostgreSQL, so suspended or inactive users lose access immediately. Managers administer staff, permissions, registration availability, settings, customer records, and audit logs. Staff permissions are checked by backend guards and reflected in dashboard navigation.
 
 ## Operations
 

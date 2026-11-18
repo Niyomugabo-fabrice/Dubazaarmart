@@ -1,11 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import { useCallback, useEffect, useState } from "react"
 import {
   fetchAdminOrders,
   fetchDashboardData,
-  getAdminOrderEventsUrl,
+  streamAdminOrderEvents,
   fetchCompanyOrders,
   fetchStockSummary,
   fetchStockMovements,
@@ -49,6 +48,8 @@ import LiveCountdown from "../components/LiveCountdown"
 import type { StoredProduct } from "../types/product"
 import { useAppNavigation } from "../lib/navigation"
 import { useToast } from "../components/ui/Toast"
+import StaffManagementPanel from "./admin/StaffManagementPanel"
+import AuditLogPanel from "./admin/AuditLogPanel"
 
 function DashboardIcon({ name }: { name: string }) {
   const common = {
@@ -263,13 +264,17 @@ const STATUS_COLORS: Record<string, string> = {
   RETURNED: "#6B7280",        // Gray
 }
 
-type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "customers" | "inventory" | "announcements" | "settings"
+type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "customers" | "inventory" | "announcements" | "settings" | "staff" | "audit"
 
 export default function AdminPage() {
   const { navigate } = useAppNavigation()
   const toast = useToast()
   const { isAuthenticated, admin, token: adminToken, login, logout } = useAdminAuth()
-  const isAdmin = admin?.role === "admin"
+  const isManager = admin?.role === "MANAGER"
+  const hasPermission = useCallback(
+    (permission: string) => isManager || Boolean(admin?.permissions.includes(permission)),
+    [admin?.permissions, isManager],
+  )
   const { products: storeProducts, deleteProduct } = useProducts()
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
@@ -278,7 +283,7 @@ export default function AdminPage() {
   const [section, setSectionState] = useState<AdminSection>(() => {
     if (typeof window === "undefined") return "overview"
     const stored = sessionStorage.getItem("dubazaar_admin_section") as AdminSection
-    if (stored && ["overview", "orders", "companyOrders", "products", "customers", "inventory", "announcements", "settings"].includes(stored)) {
+    if (stored && ["overview", "orders", "companyOrders", "products", "customers", "inventory", "announcements", "settings", "staff", "audit"].includes(stored)) {
       return stored
     }
     return "overview"
@@ -292,11 +297,26 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (admin?.role === "staff" && (section === "settings" || section === "customers")) {
-      setSectionState("overview")
-      sessionStorage.setItem("dubazaar_admin_section", "overview")
+    const requiredPermissions: Partial<Record<AdminSection, string>> = {
+      overview: "reports.view",
+      orders: "orders.view",
+      companyOrders: "procurement.view",
+      products: "products.view",
+      inventory: "inventory.view",
+      announcements: "announcements.view",
     }
-  }, [admin?.role, section])
+    if (isManager || (section !== "settings" && section !== "customers" && section !== "staff" && section !== "audit" &&
+      (!requiredPermissions[section] || hasPermission(requiredPermissions[section] as string)))) return
+    const fallback: AdminSection = isManager
+      ? "overview"
+      : (["overview", "orders", "products", "inventory", "companyOrders", "announcements"] as AdminSection[])
+        .find((candidate) => {
+          const permission = requiredPermissions[candidate]
+          return permission !== undefined && hasPermission(permission)
+        }) ?? "overview"
+    setSectionState(fallback)
+    if (typeof window !== "undefined") sessionStorage.setItem("dubazaar_admin_section", fallback)
+  }, [admin, hasPermission, isManager, section])
   const [productSearch, setProductSearch] = useState("")
   const [orderSearch, setOrderSearch] = useState("")
   const [orderFilter, setOrderFilter] = useState("ALL")
@@ -497,20 +517,24 @@ export default function AdminPage() {
   }, [isAuthenticated, revenueRange, refreshToken])
 
   useEffect(() => {
-    if (!isAuthenticated) return
-    const eventSource = new EventSource(getAdminOrderEventsUrl())
-    eventSource.onopen = () => setLiveUpdatesConnected(true)
-    eventSource.onerror = () => setLiveUpdatesConnected(false)
-    eventSource.addEventListener("order-created", () => {
+    if (!isAuthenticated || !hasPermission("orders.view")) {
+      setLiveUpdatesConnected(false)
+      return
+    }
+    const controller = new AbortController()
+    void streamAdminOrderEvents(controller.signal, () => {
       setOrdersPage(1)
       setRefreshToken((value) => value + 1)
-    })
+    }, () => setLiveUpdatesConnected(true))
+      .catch(() => {
+        if (!controller.signal.aborted) setLiveUpdatesConnected(false)
+      })
 
     return () => {
-      eventSource.close()
+      controller.abort()
       setLiveUpdatesConnected(false)
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, hasPermission])
 
   useEffect(() => {
     if (!isAuthenticated || section !== "orders") return
@@ -596,7 +620,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isAuthenticated || (section !== "settings" && section !== "announcements")) return
-    if (section === "settings" && !isAdmin) return
+    if (section === "settings" && !isManager) return
     let isMounted = true
     const settingsRequest = section === "settings" ? fetchWebsiteSettings() : Promise.resolve(null)
     Promise.all([settingsRequest, fetchAdminAnnouncements()])
@@ -610,7 +634,7 @@ export default function AdminPage() {
     return () => {
       isMounted = false
     }
-  }, [isAuthenticated, isAdmin, section, refreshToken])
+  }, [isAuthenticated, isManager, section, refreshToken])
 
   // Always keep products in sync with the backend store
   useEffect(() => {
@@ -656,19 +680,23 @@ export default function AdminPage() {
     }).format(new Date())
   }
 
-  const navItems: { id: AdminSection; label: string; icon: string }[] = [
-    { id: "overview", label: "Overview", icon: "📊" },
-    { id: "orders", label: "Customer Orders", icon: "📦" },
-    { id: "companyOrders", label: "Company Orders", icon: "🚢" },
-    { id: "products", label: "Products", icon: "🏷️" },
-    { id: "inventory", label: "Inventory & Stock", icon: "📋" },
+  const navItems: { id: AdminSection; label: string; icon: string; permission?: string }[] = [
+    { id: "overview", label: "Overview", icon: "📊", permission: "reports.view" },
+    { id: "orders", label: "Customer Orders", icon: "📦", permission: "orders.view" },
+    { id: "companyOrders", label: "Company Orders", icon: "🚢", permission: "procurement.view" },
+    { id: "products", label: "Products", icon: "🏷️", permission: "products.view" },
+    { id: "inventory", label: "Inventory & Stock", icon: "📋", permission: "inventory.view" },
+    { id: "announcements", label: "Announcements", icon: "📣", permission: "announcements.view" },
   ]
-  if (isAdmin) navItems.push({ id: "customers", label: "Customers", icon: "👥" })
-  navItems.push(
-    isAdmin
-      ? { id: "settings", label: "Settings & Content", icon: "⚙️" }
-      : { id: "announcements", label: "Announcements", icon: "📣" },
-  )
+  if (isManager) {
+    navItems.push(
+      { id: "customers", label: "Customers", icon: "👥" },
+      { id: "settings", label: "Settings & Content", icon: "⚙️" },
+      { id: "staff", label: "Staff Management", icon: "🧑‍💼" },
+      { id: "audit", label: "Audit Log", icon: "🧾" },
+    )
+  }
+  const visibleNavItems = navItems.filter((item) => !item.permission || hasPermission(item.permission))
 
   const filteredProducts = products.filter(
     (p) =>
@@ -736,7 +764,7 @@ export default function AdminPage() {
             WORKSPACE
           </div>
           <nav className="space-y-1" aria-label="Admin navigation">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -775,19 +803,20 @@ export default function AdminPage() {
                 IT
               </div>
               <div className="min-w-0 text-left">
-                <div className="text-xs font-bold text-[#111111] truncate">{admin?.name || "IntoreTech Admin"}</div>
-                <div className="text-[10px] text-[#0B5B24] truncate">{admin?.email || "IntoreTech@gmail.com"}</div>
+                <div className="text-xs font-bold text-[#111111] truncate">{admin?.name || "Manager"}</div>
+                <div className="text-[10px] text-[#0B5B24] truncate">{admin?.email}</div>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              {isAdmin && (
-                <Link
-                  href="/admin/register"
+              {isManager && (
+                <button
+                  type="button"
+                  onClick={() => setSection("staff")}
                   className="text-[11px] font-bold text-[#FF6A00] hover:text-[#E94B00] px-2 py-1 rounded bg-[#FF6A00]/10 flex-shrink-0"
-                  title="Provision staff accounts"
+                  title="Manage staff accounts"
                 >
-                  + Staff
-                </Link>
+                  Staff
+                </button>
               )}
               <button
                 type="button"
@@ -2400,7 +2429,7 @@ export default function AdminPage() {
         )}
 
         {/* Customers */}
-        {section === "customers" && isAdmin && (
+        {section === "customers" && isManager && (
           <div>
             <div className="badge mb-1" style={{ color: "#FF6A00" }}>
               MANAGEMENT
@@ -2742,7 +2771,7 @@ export default function AdminPage() {
         )}
 
         {/* Settings & Content */}
-        {((section === "settings" && isAdmin) || section === "announcements") && (
+        {((section === "settings" && isManager) || section === "announcements") && (
           <div>
             {section === "settings" && (
               <>
@@ -2861,6 +2890,23 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              <div className="p-6 rounded-2xl border" style={{ background: "#FFF7E8", borderColor: "#FFB800" }}>
+                <h3 className="font-bold text-[#111111] mb-2 text-base">Staff registration</h3>
+                <label className="flex items-start gap-3 text-sm text-[#111111]">
+                  <input
+                    type="checkbox"
+                    checked={settingsData?.allowStaffRegistration ?? false}
+                    onChange={(event) => setSettingsData((previous) => previous
+                      ? { ...previous, allowStaffRegistration: event.target.checked }
+                      : null)}
+                    className="mt-1"
+                  />
+                  <span>
+                    Allow public staff registration. New accounts remain pending and receive no permissions until a manager activates and configures them.
+                  </span>
+                </label>
+              </div>
+
               <div className="flex justify-end">
                 <button
                   type="submit"
@@ -2881,13 +2927,15 @@ export default function AdminPage() {
                   <h3 className="font-bold text-[#111111] text-base">Store Announcements & Flash Deals</h3>
                   <p className="text-xs text-[#0B5B24]">Active announcements display at the top of the customer store.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAnnouncementModalOpen(true)}
-                  className="btn-gold px-4 py-2 rounded-xl text-xs font-bold shadow-sm"
-                >
-                  + New Announcement
-                </button>
+                {hasPermission("announcements.manage") && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAnnouncementModalOpen(true)}
+                    className="btn-gold px-4 py-2 rounded-xl text-xs font-bold shadow-sm"
+                  >
+                    + New Announcement
+                  </button>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -2910,13 +2958,15 @@ export default function AdminPage() {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ann.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
                         {ann.active ? "Active" : "Hidden"}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAnnouncement(ann.id)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#FF6A00] border border-[#FF6A00]/40 hover:bg-[#FF6A00]/10"
-                      >
-                        Delete
-                      </button>
+                      {hasPermission("announcements.manage") && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAnnouncement(ann.id)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#FF6A00] border border-[#FF6A00]/40 hover:bg-[#FF6A00]/10"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -2929,6 +2979,8 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+        {section === "staff" && isManager && <StaffManagementPanel />}
+        {section === "audit" && isManager && <AuditLogPanel />}
       </main>
 
       <AddProductModal

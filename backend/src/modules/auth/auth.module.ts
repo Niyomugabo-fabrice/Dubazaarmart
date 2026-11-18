@@ -1,28 +1,26 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { AdminEntity } from './infrastructure/persistence/typeorm/admin.entity'
-import { AdminRefreshTokenEntity } from './infrastructure/persistence/typeorm/admin-refresh-token.entity'
-import { TypeOrmAdminRepository } from './infrastructure/persistence/typeorm/typeorm-admin.repository'
-import { TypeOrmRefreshTokenRepository } from './infrastructure/persistence/typeorm/typeorm-refresh-token.repository'
-import { ADMIN_REPOSITORY } from './domain/auth.repository'
-import { REFRESH_TOKEN_REPOSITORY } from './domain/refresh-token.repository'
+import { UserManagementService } from './application/user-management.service'
 import { AuthService } from './application/auth.service'
+import { USER_REPOSITORY } from './domain/user.repository'
+import { TypeOrmUserRepository } from './infrastructure/persistence/typeorm/typeorm-user.repository'
+import { UserEntity } from './infrastructure/persistence/typeorm/user.entity'
 import { AuthController } from './presentation/auth.controller'
-import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard'
+import { UsersController } from './presentation/users.controller'
 import { AccessControlGuard } from './presentation/guards/access-control.guard'
+import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AdminEntity, AdminRefreshTokenEntity])],
-  controllers: [AuthController],
+  imports: [TypeOrmModule.forFeature([UserEntity])],
+  controllers: [AuthController, UsersController],
   providers: [
     AuthService,
-    TypeOrmAdminRepository,
-    TypeOrmRefreshTokenRepository,
-    { provide: ADMIN_REPOSITORY, useExisting: TypeOrmAdminRepository },
-    { provide: REFRESH_TOKEN_REPOSITORY, useExisting: TypeOrmRefreshTokenRepository },
+    UserManagementService,
+    TypeOrmUserRepository,
+    { provide: USER_REPOSITORY, useExisting: TypeOrmUserRepository },
     JwtAuthGuard,
     AccessControlGuard,
   ],
-  exports: [AuthService, JwtAuthGuard, AccessControlGuard],
+  exports: [AuthService, UserManagementService, JwtAuthGuard, AccessControlGuard],
 })
 export class AuthModule {}

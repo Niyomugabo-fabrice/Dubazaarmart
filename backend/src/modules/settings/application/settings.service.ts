@@ -15,6 +15,7 @@ const defaults = {
   standardDeliveryFee: 10000,
   expressDeliveryFee: 25000,
   freeDeliveryThreshold: 500000,
+  allowStaffRegistration: false,
 }
 
 @Injectable()
@@ -24,6 +25,11 @@ export class SettingsService {
   async getPublicSettings() {
     const row = await this.repository.getWebsiteSettings()
     return { settings: row ? serializeSettings(row) : defaults }
+  }
+
+  async isStaffRegistrationAllowed(): Promise<boolean> {
+    const row = await this.repository.getWebsiteSettings()
+    return row?.allowStaffRegistration ?? false
   }
 
   async getWhatsAppDetails(): Promise<{ shopName: string; whatsappNumber: string }> {
@@ -50,6 +56,12 @@ export class SettingsService {
       } else {
         ;(values as any)[field] = String(value)
       }
+    }
+    if (body.allowStaffRegistration !== undefined) {
+      if (typeof body.allowStaffRegistration !== 'boolean') {
+        throw new BadRequestException('allowStaffRegistration must be a boolean.')
+      }
+      values.allowStaffRegistration = body.allowStaffRegistration
     }
     const settings = await this.repository.saveWebsiteSettings(values)
     return { success: true, settings: serializeSettings(settings) }
@@ -122,6 +134,7 @@ function serializeSettings(row: WebsiteSettingsEntity) {
     standardDeliveryFee: Number(row.standardDeliveryFee),
     expressDeliveryFee: Number(row.expressDeliveryFee),
     freeDeliveryThreshold: Number(row.freeDeliveryThreshold),
+    allowStaffRegistration: row.allowStaffRegistration,
     updatedAt: row.updatedAt,
   }
 }

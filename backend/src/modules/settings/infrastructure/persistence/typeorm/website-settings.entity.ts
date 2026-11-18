@@ -38,6 +38,9 @@ export class WebsiteSettingsEntity {
   @Column({ name: 'free_delivery_threshold', type: 'numeric', precision: 14, scale: 2, default: 500000 })
   freeDeliveryThreshold!: string
 
+  @Column({ name: 'allow_staff_registration', type: 'boolean', default: false })
+  allowStaffRegistration!: boolean
+
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date
 }

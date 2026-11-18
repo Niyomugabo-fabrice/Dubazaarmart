@@ -1,19 +1,8 @@
 import { apiFetch, apiUrl, getStoredAdminSession, mediaUrl } from "../services/api-client"
 
 function getAdminAuthHeaders(): Record<string, string> {
-  if (typeof window === "undefined") return {}
-  try {
-    const raw = localStorage.getItem("dubazaar_admin_auth")
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (parsed.token) {
-        return { Authorization: `Bearer ${parsed.token}` }
-      }
-    }
-  } catch {
-    // Malformed or unavailable local session data is treated as unauthenticated.
-  }
-  return {}
+  const token = getStoredAdminSession().token
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export type DashboardStat = {
@@ -232,7 +221,34 @@ export type WebsiteSettings = {
   standardDeliveryFee: number
   expressDeliveryFee: number
   freeDeliveryThreshold: number
+  allowStaffRegistration: boolean
   updatedAt?: string
+}
+
+export type StaffUserRecord = {
+  id: string
+  firstName: string
+  lastName: string
+  name: string
+  email: string
+  phoneNumber: string | null
+  role: "STAFF"
+  status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING"
+  emailVerified: boolean
+  permissions: string[]
+  createdAt: string
+  lastLoginAt: string | null
+}
+
+export type AuditLogRecord = {
+  id: number
+  actorUserId: string | null
+  actorName: string | null
+  action: string
+  targetResource: string
+  targetId: string | null
+  metadata: Record<string, string | number | boolean | null>
+  createdAt: string
 }
 
 export type SiteAnnouncement = {
@@ -318,6 +334,13 @@ const emptyDashboardData: DashboardData = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
+}
+
+function getApiErrorMessage(value: unknown, fallback: string): string {
+  if (!isRecord(value)) return fallback
+  if (typeof value.error === "string") return value.error
+  if (typeof value.message === "string") return value.message
+  return fallback
 }
 
 async function readJsonResponse(response: Response): Promise<unknown> {
@@ -516,10 +539,47 @@ export async function fetchAdminOrders(
 }
 
 export function getAdminOrderEventsUrl() {
-  const url = apiUrl("/api/admin/orders/events")
-  const token = getStoredAdminSession()?.token
-  if (!token) return url
-  return `${url}?token=${encodeURIComponent(token)}`
+  return apiUrl("/api/admin/orders/events")
+}
+
+export async function streamAdminOrderEvents(
+  signal: AbortSignal,
+  onOrderCreated: () => void,
+  onConnected: () => void,
+): Promise<void> {
+  const response = await apiFetch(getAdminOrderEventsUrl(), {
+    headers: { Accept: "text/event-stream", ...getAdminAuthHeaders() },
+    signal,
+  })
+  if (!response.ok || !response.body) {
+    throw new Error(`Live order updates could not be connected (${response.status}).`)
+  }
+
+  onConnected()
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  while (!signal.aborted) {
+    let result: ReadableStreamReadResult<Uint8Array>
+    try {
+      result = await reader.read()
+    } catch (error) {
+      if (signal.aborted) return
+      throw error
+    }
+    const { done, value } = result
+    if (done) return
+    buffer = `${buffer}${decoder.decode(value, { stream: true })}`.replace(/\r\n/g, "\n")
+    let boundary = buffer.indexOf("\n\n")
+    while (boundary >= 0) {
+      const event = buffer.slice(0, boundary)
+      buffer = buffer.slice(boundary + 2)
+      if (event.split(/\r?\n/).some((line) => line === "event: order-created")) {
+        onOrderCreated()
+      }
+      boundary = buffer.indexOf("\n\n")
+    }
+  }
 }
 
 // WhatsApp Order
@@ -777,42 +837,82 @@ export async function deleteAdminAnnouncement(id: string): Promise<boolean> {
   return response.ok
 }
 
-// Administrator Management APIs
-export interface AdminAccountRecord {
-  id: string
-  name: string
-  email: string
-  role: string
-}
-
-export async function fetchAdminAccounts(): Promise<AdminAccountRecord[]> {
-  const response = await apiFetch(apiUrl("/api/admin/admins"), {
-    method: "GET",
+// Manager-only staff and audit APIs
+export async function fetchStaffUsers(options: { search?: string; status?: string; pageSize?: number } = {}) {
+  const params = new URLSearchParams({ pageSize: String(options.pageSize ?? 100) })
+  if (options.search) params.set("search", options.search)
+  if (options.status) params.set("status", options.status)
+  const response = await apiFetch(apiUrl(`/api/admin/users?${params}`), {
     headers: { Accept: "application/json", ...getAdminAuthHeaders() },
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to load team accounts")
+    throw new Error(getApiErrorMessage(data, "Failed to load staff accounts."))
   }
-  const result = await response.json()
-  return Array.isArray(result.admins) ? result.admins : []
+  return readJsonResponse(response) as Promise<{ items: StaffUserRecord[]; total: number; page: number; pageSize: number }>
 }
 
-export async function createAdminAccount(payload: {
-  name: string
+export async function createStaffUser(payload: {
+  firstName: string
+  lastName: string
   email: string
+  phoneNumber?: string
   password: string
-  role?: "admin" | "staff"
-}): Promise<AdminAccountRecord> {
-  const response = await apiFetch(apiUrl("/api/admin/admins"), {
+}): Promise<StaffUserRecord> {
+  const response = await apiFetch(apiUrl("/api/admin/users"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
     body: JSON.stringify(payload),
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to provision team account")
+    throw new Error(getApiErrorMessage(data, "Failed to create staff account."))
   }
-  const result = await response.json()
-  return result.admin
+  return response.json()
+}
+
+export async function updateStaffStatus(id: string, action: "activate" | "deactivate" | "suspend") {
+  const response = await apiFetch(apiUrl(`/api/admin/users/${id}/${action}`), {
+    method: "PATCH",
+    headers: { ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to update staff status."))
+  }
+}
+
+export async function updateStaffPermissions(id: string, permissions: string[]) {
+  const response = await apiFetch(apiUrl(`/api/admin/users/${id}/permissions`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
+    body: JSON.stringify({ permissions }),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to update staff permissions."))
+  }
+}
+
+export async function deleteStaffUser(id: string) {
+  const response = await apiFetch(apiUrl(`/api/admin/users/${id}`), {
+    method: "DELETE",
+    headers: { ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to delete staff account."))
+  }
+}
+
+export async function fetchAuditLogs(): Promise<AuditLogRecord[]> {
+  const response = await apiFetch(apiUrl("/api/admin/audit-logs?pageSize=50"), {
+    headers: { Accept: "application/json", ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to load audit logs."))
+  }
+  const result = await readJsonResponse(response)
+  return isRecord(result) && Array.isArray(result.items) ? result.items as AuditLogRecord[] : []
 }

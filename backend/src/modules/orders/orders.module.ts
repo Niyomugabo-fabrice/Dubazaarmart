@@ -12,15 +12,13 @@ import { TypeOrmOrderRepository } from './infrastructure/persistence/typeorm/typ
 import { ORDER_REPOSITORY } from './domain/order.repository'
 import { OrderEventsService } from './application/order-events.service'
 import { OrderService } from './application/order.service'
-import { CustomerRegistrationService } from './application/customer-registration.service'
-import { AdminOrdersController, CustomersController, OrdersController } from './presentation/orders.controller'
+import { AdminOrdersController, OrdersController } from './presentation/orders.controller'
 
 @Module({
   imports: [TypeOrmModule.forFeature([CustomerEntity, OrderEntity, OrderItemEntity, ProductEntity, StockMovementEntity]), AuthModule, ProductsModule, SettingsModule],
-  controllers: [OrdersController, CustomersController, AdminOrdersController],
+  controllers: [OrdersController, AdminOrdersController],
   providers: [
     OrderService,
-    CustomerRegistrationService,
     OrderEventsService,
     TypeOrmOrderRepository,
     { provide: ORDER_REPOSITORY, useExisting: TypeOrmOrderRepository },

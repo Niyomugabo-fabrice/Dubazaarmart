@@ -6,12 +6,23 @@ import { WebsiteSettingsEntity } from './infrastructure/persistence/typeorm/webs
 import { TypeOrmSettingsRepository } from './infrastructure/persistence/typeorm/typeorm-settings.repository'
 import { SETTINGS_REPOSITORY } from './domain/settings.repository'
 import { SettingsService } from './application/settings.service'
-import { ActiveAnnouncementsController, AdminSettingsController, PublicSettingsController } from './presentation/settings.controller'
+import {
+  ActiveAnnouncementsController,
+  AdminSettingsController,
+  PublicSettingsController,
+  StaffRegistrationController,
+} from './presentation/settings.controller'
 import { AdminAnnouncementsController } from './presentation/admin-announcements.controller'
 
 @Module({
   imports: [TypeOrmModule.forFeature([WebsiteSettingsEntity, AnnouncementEntity]), AuthModule],
-  controllers: [PublicSettingsController, AdminSettingsController, ActiveAnnouncementsController, AdminAnnouncementsController],
+  controllers: [
+    PublicSettingsController,
+    AdminSettingsController,
+    ActiveAnnouncementsController,
+    AdminAnnouncementsController,
+    StaffRegistrationController,
+  ],
   providers: [
     SettingsService,
     TypeOrmSettingsRepository,

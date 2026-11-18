@@ -7,19 +7,20 @@ import { useAdminAuth } from '@/store/adminAuthStore'
 
 export default function Page() {
   const router = useRouter()
-  const { isAuthenticated } = useAdminAuth()
+  const { isAuthenticated, isLoading } = useAdminAuth()
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     // Check authentication on client
+    if (isLoading) return
     if (!isAuthenticated) {
       router.replace('/admin/login')
     } else {
       setChecking(false)
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, isLoading, router])
 
-  if (!isAuthenticated || checking) {
+  if (isLoading || !isAuthenticated || checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FFFFFF]">
         <div className="text-center space-y-3">

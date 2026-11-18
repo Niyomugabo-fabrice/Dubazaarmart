@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS: WebsiteSettings = {
   standardDeliveryFee: 10000,
   expressDeliveryFee: 25000,
   freeDeliveryThreshold: 500000,
+  allowStaffRegistration: false,
 }
 
 let cachedSettings = DEFAULT_SETTINGS

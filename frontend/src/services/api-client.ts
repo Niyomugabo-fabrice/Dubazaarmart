@@ -1,13 +1,43 @@
-const AUTH_STORAGE_KEY = 'dubazaar_admin_auth'
 const DEFAULT_API_URL = 'http://localhost:3001/api/v1'
 
-interface StoredAdminSession {
-  token?: string | null
-  refreshToken?: string | null
-  admin?: unknown
+export interface AdminSessionUser {
+  id: string
+  firstName: string
+  lastName: string
+  name: string
+  email: string
+  phoneNumber: string | null
+  role: 'MANAGER' | 'STAFF'
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'
+  emailVerified: boolean
+  permissions: string[]
+  createdAt: string
+  lastLoginAt: string | null
 }
 
+interface StoredAdminSession {
+  token: string | null
+  user: AdminSessionUser | null
+}
+
+let adminSession: StoredAdminSession = { token: null, user: null }
 let refreshRequest: Promise<string | null> | null = null
+const sessionListeners = new Set<() => void>()
+
+export function setAdminSession(token: string, user: AdminSessionUser): void {
+  adminSession = { token, user }
+  sessionListeners.forEach((listener) => listener())
+}
+
+export function clearAdminSession(): void {
+  adminSession = { token: null, user: null }
+  sessionListeners.forEach((listener) => listener())
+}
+
+export function subscribeAdminSession(listener: () => void): () => void {
+  sessionListeners.add(listener)
+  return () => sessionListeners.delete(listener)
+}
 
 function apiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL
@@ -22,7 +52,6 @@ function backendPath(path: string): string {
   else if (mapped === '/api/admin/logout') mapped = '/auth/logout'
   else if (mapped === '/api/admin/verify') mapped = '/auth/verify'
   else if (mapped === '/api/admin/refresh') mapped = '/auth/refresh'
-  else if (mapped === '/api/admin/admins') mapped = '/auth/admins'
   else if (mapped === '/api/upload') mapped = '/media/upload'
   else if (mapped === '/api/health') mapped = '/health'
   else if (mapped.startsWith('/api/admin/')) mapped = mapped.replace(/^\/api\/admin/, '/admin')
@@ -48,49 +77,35 @@ export function mediaUrl(path: string | undefined): string {
   return apiUrl(path)
 }
 
-function readSession(): StoredAdminSession | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = window.localStorage.getItem(AUTH_STORAGE_KEY)
-    return raw ? JSON.parse(raw) as StoredAdminSession : null
-  } catch {
-    return null
-  }
-}
-
 function isProtectedRequest(url: URL, method = 'GET'): boolean {
-  const p = url.pathname.toLowerCase()
-  if (p.includes('/api/v1/admin/')) return true
-  if (p.includes('/api/v1/media/upload') || p.endsWith('/media/upload')) return true
-  if (p.includes('/api/v1/auth/verify') || p.endsWith('/auth/verify')) return true
-  if (p.includes('/api/v1/auth/logout') || p.endsWith('/auth/logout')) return true
-  if (p.includes('/api/v1/auth/admins') || p.endsWith('/auth/admins')) return true
-  if ((p.endsWith('/api/v1/products') || p.endsWith('/products')) && method !== 'GET' && method !== 'HEAD') return true
+  const path = url.pathname.toLowerCase()
+  if (path.includes('/api/v1/admin/')) return true
+  if (path.includes('/api/v1/media/upload') || path.endsWith('/media/upload')) return true
+  if (path.includes('/api/v1/auth/verify') || path.endsWith('/auth/verify')) return true
+  if (path.includes('/api/v1/auth/logout') || path.endsWith('/auth/logout')) return true
+  if ((path.endsWith('/api/v1/products') || path.endsWith('/products')) && method !== 'GET' && method !== 'HEAD') return true
   return false
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-  const session = readSession()
-  if (!session?.refreshToken) return null
   if (refreshRequest) return refreshRequest
-
   refreshRequest = (async () => {
     try {
       const response = await fetch(apiUrl('/api/admin/refresh'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ refreshToken: session.refreshToken }),
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
       })
-      if (!response.ok) return null
-      const payload = await response.json() as { token?: string; refreshToken?: string; admin?: unknown }
-      if (!payload.token || !payload.refreshToken) return null
-      const nextSession = {
-        ...session,
-        token: payload.token,
-        refreshToken: payload.refreshToken,
-        admin: payload.admin ?? session.admin,
+      if (!response.ok) {
+        clearAdminSession()
+        return null
       }
-      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession))
+      const payload = await response.json() as { token?: string; user?: AdminSessionUser }
+      if (!payload.token || !payload.user) {
+        clearAdminSession()
+        return null
+      }
+      setAdminSession(payload.token, payload.user)
       return payload.token
     } catch {
       return null
@@ -103,25 +118,27 @@ async function refreshAccessToken(): Promise<string | null> {
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const method = (init.method || 'GET').toUpperCase()
-  const requestUrl = input instanceof URL ? input : new URL(String(input), typeof window === 'undefined' ? apiBaseUrl() : window.location.origin)
+  const requestUrl = input instanceof URL
+    ? input
+    : new URL(String(input), typeof window === 'undefined' ? apiBaseUrl() : window.location.origin)
   const headers = new Headers(init.headers)
-  const session = readSession()
   const protectedRequest = isProtectedRequest(requestUrl, method) || headers.has('Authorization')
 
-  if (protectedRequest && session?.token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${session.token}`)
+  if (protectedRequest && adminSession.token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${adminSession.token}`)
   }
 
-  const response = await fetch(input, { ...init, headers })
-  if (!protectedRequest || response.status !== 401 || !session?.refreshToken) return response
+  const response = await fetch(input, { ...init, headers, credentials: 'include' })
+  const isAuthEndpoint = /\/auth\/(login|refresh|logout)$/i.test(requestUrl.pathname)
+  if (!protectedRequest || isAuthEndpoint || response.status !== 401) return response
 
   const token = await refreshAccessToken()
   if (!token) return response
   const retryHeaders = new Headers(init.headers)
   retryHeaders.set('Authorization', `Bearer ${token}`)
-  return fetch(input, { ...init, headers: retryHeaders })
+  return fetch(input, { ...init, headers: retryHeaders, credentials: 'include' })
 }
 
-export function getStoredAdminSession(): StoredAdminSession | null {
-  return readSession()
+export function getStoredAdminSession(): StoredAdminSession {
+  return adminSession
 }

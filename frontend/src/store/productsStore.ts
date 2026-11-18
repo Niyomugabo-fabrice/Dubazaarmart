@@ -58,29 +58,12 @@ export async function fetchProductsFromBackend(): Promise<Product[]> {
   return productsRequest
 }
 
-function getAuthHeader(): Record<string, string> {
-  if (typeof window === 'undefined') return {}
-  try {
-    const raw = localStorage.getItem('dubazaar_admin_auth')
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (parsed.token) {
-        return { Authorization: `Bearer ${parsed.token}` }
-      }
-    }
-  } catch {
-    // Malformed or unavailable local session data is treated as unauthenticated.
-  }
-  return {}
-}
-
 export async function addProductToBackend(productData: Partial<Product>): Promise<Product | null> {
   try {
     const res = await apiFetch(apiUrl('/api/products'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAuthHeader(),
       },
       body: JSON.stringify(productData),
     })
@@ -107,9 +90,6 @@ export async function deleteProductFromBackend(id: string): Promise<boolean> {
   try {
     const res = await apiFetch(apiUrl(`/api/admin/products/${id}`), {
       method: 'DELETE',
-      headers: {
-        ...getAuthHeader(),
-      },
     })
     if (res.ok) {
       currentProducts = currentProducts.filter(p => p.id !== id)

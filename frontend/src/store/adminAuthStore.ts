@@ -1,89 +1,99 @@
-import { useState, useEffect } from 'react'
-import { apiFetch, apiUrl } from '../services/api-client'
+import { useEffect, useState } from 'react'
+import {
+  apiFetch,
+  apiUrl,
+  clearAdminSession,
+  getStoredAdminSession,
+  setAdminSession,
+  subscribeAdminSession,
+  type AdminSessionUser,
+} from '../services/api-client'
 
-export interface AdminUser {
-  email: string
-  name: string
-  role?: string
-}
+export type AdminUser = AdminSessionUser
 
-const AUTH_STORAGE_KEY = 'dubazaar_admin_auth'
-
-function getInitialAuth(): { token: string | null; refreshToken: string | null; admin: AdminUser | null } {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY)
-    if (!raw) return { token: null, refreshToken: null, admin: null }
-    const parsed = JSON.parse(raw)
-    return { token: parsed.token ?? null, refreshToken: parsed.refreshToken ?? null, admin: parsed.admin ?? null }
-  } catch {
-    return { token: null, refreshToken: null, admin: null }
-  }
-}
-
-let authState = getInitialAuth()
+let authState = getStoredAdminSession()
 let listeners: Array<() => void> = []
+let restoreRequest: Promise<void> | null = null
+let authVersion = 0
 
 function notify() {
-  for (const listener of listeners) {
-    listener()
-  }
+  authState = getStoredAdminSession()
+  for (const listener of listeners) listener()
 }
 
-export async function loginAdmin(email: string, pass: string): Promise<{ success: boolean; error?: string }> {
+subscribeAdminSession(notify)
+
+export async function restoreAdminSession(): Promise<void> {
+  if (authState.token || restoreRequest) return restoreRequest ?? Promise.resolve()
+  const version = authVersion
+  restoreRequest = (async () => {
+    try {
+      const response = await fetch(apiUrl('/api/admin/refresh'), {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
+      })
+      if (!response.ok || version !== authVersion) return
+      const payload = await response.json() as { token?: string; user?: AdminUser }
+      if (payload.token && payload.user && version === authVersion) {
+        setAdminSession(payload.token, payload.user)
+      }
+    } catch {
+      // The visitor may have no manager/staff session; remain signed out.
+    } finally {
+      restoreRequest = null
+    }
+  })()
+  return restoreRequest
+}
+
+export async function loginAdmin(email: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await apiFetch(apiUrl('/api/admin/login'), {
+    const response = await apiFetch(apiUrl('/api/admin/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), password: pass }),
+      body: JSON.stringify({ email: email.trim(), password }),
     })
-
-    const data = await res.json()
-    if (!res.ok) {
-      return { success: false, error: data.error || 'Invalid credentials' }
+    const data = await response.json() as { token?: string; user?: AdminUser; message?: string; error?: string }
+    if (!response.ok || !data.token || !data.user) {
+      return { success: false, error: data.message || data.error || 'Invalid email or password.' }
     }
-
-    authState = {
-      token: data.token,
-      refreshToken: data.refreshToken ?? null,
-      admin: data.admin,
-    }
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authState))
-    notify()
+    authVersion += 1
+    setAdminSession(data.token, data.user)
     return { success: true }
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Network error' }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Network error.' }
   }
 }
 
-export function logoutAdmin() {
-  const session = authState
-  if (session.refreshToken) {
-    apiFetch(apiUrl('/api/admin/logout'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: session.refreshToken }),
-    }).catch(() => {})
-  }
-  authState = { token: null, refreshToken: null, admin: null }
-  localStorage.removeItem(AUTH_STORAGE_KEY)
-  notify()
+export function logoutAdmin(): void {
+  authVersion += 1
+  clearAdminSession()
+  void apiFetch(apiUrl('/api/admin/logout'), { method: 'POST' }).catch(() => undefined)
 }
 
 export function useAdminAuth() {
   const [current, setCurrent] = useState(authState)
+  const [isLoading, setIsLoading] = useState(!authState.token)
 
   useEffect(() => {
-    const update = () => setCurrent({ ...authState })
+    let active = true
+    const update = () => setCurrent(getStoredAdminSession())
     listeners.push(update)
+    void restoreAdminSession().finally(() => {
+      if (active) setIsLoading(false)
+    })
     return () => {
-      listeners = listeners.filter(l => l !== update)
+      active = false
+      listeners = listeners.filter((listener) => listener !== update)
     }
   }, [])
 
   return {
     token: current.token,
-    admin: current.admin,
-    isAuthenticated: Boolean(current.token && current.admin),
+    admin: current.user,
+    isLoading,
+    isAuthenticated: Boolean(current.token && current.user),
     login: loginAdmin,
     logout: logoutAdmin,
   }

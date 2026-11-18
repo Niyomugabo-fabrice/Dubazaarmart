@@ -10,6 +10,7 @@ import { SettingsModule } from './modules/settings/settings.module'
 import { DashboardModule } from './modules/dashboard/dashboard.module'
 import { HealthModule } from './modules/health/health.module'
 import { MediaModule } from './modules/media/media.module'
+import { AuditModule } from './modules/audit/audit.module'
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MediaModule } from './modules/media/media.module'
     DashboardModule,
     HealthModule,
     MediaModule,
+    AuditModule,
   ],
 })
 export class AppModule {}
@@ -40,6 +42,9 @@ function validateEnvironment(environment: Record<string, unknown>) {
   }
   if (String(environment.JWT_SECRET).length < 32 || String(environment.JWT_REFRESH_SECRET).length < 32) {
     throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must each contain at least 32 characters.')
+  }
+  if (environment.JWT_SECRET === environment.JWT_REFRESH_SECRET) {
+    throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be different values.')
   }
   return environment
 }

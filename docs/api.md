@@ -1,19 +1,19 @@
 # REST API
 
-All API routes are under `/api/v1`. JSON validation errors and application errors use `{ "error": "..." }`. Product, order, inventory, dashboard, settings, announcement, and upload response fields retain the shapes consumed by the current storefront and admin UI.
+All API routes are under `/api/v1`. Product, order, inventory, dashboard, settings, announcement, and upload response fields retain the shapes consumed by the current storefront and admin UI. Customers do not authenticate; checkout remains available to guests and stores customer details with each order.
 
 ## Public routes
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/health` | API and PostgreSQL health |
-| GET, POST | `/products` | Browse catalog; create product requires administrator access |
+| GET | `/products` | Browse catalog |
 | POST | `/orders` | Place a customer order and update stock in one transaction |
 | POST | `/orders/whatsapp` | Build a WhatsApp checkout link |
-| POST | `/customers/register` | Create a customer account with a hashed password |
 | GET | `/settings` | Read public store settings |
 | GET | `/announcements/active` | Read current announcements |
-| POST | `/media/upload` | Upload product image to Cloudinary; administrator access required |
+| POST | `/auth/register` | Submit a pending STAFF registration request when manager-enabled |
+| POST | `/media/upload` | Upload product image to Cloudinary; requires `media.upload` or MANAGER |
 
 Image uploads use `multipart/form-data` with a `file` field. JPEG, PNG, WebP, and GIF files up to 10MB are accepted; the server checks the file signature before forwarding it to Cloudinary. JSON and data-URL upload bodies are not supported.
 
@@ -21,35 +21,33 @@ Image uploads use `multipart/form-data` with a `file` field. JPEG, PNG, WebP, an
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/auth/login` | Verify administrator email and password; return access and refresh tokens |
-| POST | `/auth/refresh` | Rotate a refresh token and issue a new token pair |
-| POST | `/auth/logout` | Revoke a refresh token |
-| GET | `/auth/verify` | Verify an administrator access token |
+| POST | `/auth/login` | Sign in an active MANAGER or STAFF; returns a short-lived access token and sets an HttpOnly refresh cookie |
+| POST | `/auth/refresh` | Issue a new access token using the refresh cookie |
+| POST | `/auth/logout` | Clear the refresh cookie |
+| GET | `/auth/verify` | Verify the current MANAGER or STAFF access token |
 
-Protected requests use `Authorization: Bearer <access-token>`. The order events stream also accepts the access token as a query parameter for browser `EventSource` clients.
+Protected requests use `Authorization: Bearer <access-token>`. Browser requests must use credentials for the refresh cookie; refresh/logout requests validate the configured `FRONTEND_URL` origin. The order events stream uses an authenticated fetch stream, not a token in the URL.
 
-## Administrator routes
+## Manager and staff routes
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET, POST | `/admin/products` | List and create products |
-| PATCH, DELETE | `/admin/products/:id` | Edit or delete a product |
-| GET, POST | `/admin/orders` | Filter/paginate orders; create a manual order |
-| GET | `/admin/orders/events` | Server-sent order-created events |
-| PATCH | `/admin/orders/:id/status` | Update order or payment status |
-| PATCH | `/admin/orders/:id/payment` | Record a manual payment |
-| PATCH | `/admin/orders/:id/cancel` | Cancel an order |
-| DELETE | `/admin/orders/:id` | Delete an order |
-| GET, POST | `/admin/company-orders` | List and create supplier purchase orders |
+| GET, POST | `/admin/products` | View/create products (`products.view`, `products.create`) |
+| POST | `/products` | Create a product (`products.create`) |
+| PATCH, DELETE | `/admin/products/:id` | Update/delete products (`products.update`, `products.delete`) |
+| GET, POST | `/admin/orders` | View/create orders (`orders.view`, `orders.create`) |
+| GET | `/admin/orders/events` | Authenticated server-sent order-created events |
+| PATCH, DELETE | `/admin/orders/:id/*` | Update or delete orders (`orders.update`, `orders.delete`) |
+| GET, POST | `/admin/company-orders` | View/manage supplier purchase orders (`procurement.view`, `procurement.manage`) |
 | POST | `/admin/company-orders/:id/receive` | Receive items and update stock transactionally |
-| PATCH, DELETE | `/admin/company-orders/:id` | Edit or delete a purchase order |
-| GET | `/admin/stock` | Read stock summary |
-| GET | `/admin/stock/movements` | Read stock movement history |
-| POST | `/admin/stock/remove` | Remove stock and record the movement transactionally |
-| PATCH | `/admin/stock/:productId` | Update stock targets and cost |
-| POST | `/admin/settings` | Update store settings |
-| GET, POST | `/admin/announcements` | List and create announcements |
-| PATCH, DELETE | `/admin/announcements/:id` | Edit or delete an announcement |
-| GET | `/admin/dashboard` | Read dashboard analytics (`7d`, `30d`, or `12m`) |
+| GET, POST, PATCH | `/admin/stock*` | View/update inventory (`inventory.view`, `inventory.update`) |
+| POST | `/admin/settings` | Update store settings and staff-registration availability (MANAGER only) |
+| GET, POST | `/admin/announcements` | View/manage announcements (`announcements.view`, `announcements.manage`) |
+| GET | `/admin/dashboard` | Read dashboard analytics (`reports.view`; `7d`, `30d`, or `12m`) |
+| GET, POST | `/admin/users` | List/create STAFF accounts (MANAGER only) |
+| GET, PATCH, DELETE | `/admin/users/:id` | Update STAFF details, status, permissions, or soft-delete (MANAGER only) |
+| GET | `/admin/audit-logs` | Read append-only sign-in and administrative audit records (MANAGER only) |
+
+MANAGER users bypass staff permissions. New public registrations are always pending with no permissions. The valid permission keys are `products.view`, `products.create`, `products.update`, `products.delete`, `media.upload`, `inventory.view`, `inventory.update`, `orders.view`, `orders.create`, `orders.update`, `orders.delete`, `procurement.view`, `procurement.manage`, `reports.view`, `announcements.view`, and `announcements.manage`.
 
 Interactive OpenAPI documentation is served from `/docs`.

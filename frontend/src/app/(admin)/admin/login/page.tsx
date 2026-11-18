@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation'
 import SiteLogo from '@/components/SiteLogo'
 import { useAdminAuth } from '@/store/adminAuthStore'
 import { useToast } from '@/components/ui/Toast'
+import { apiFetch, apiUrl } from '@/services/api-client'
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const toast = useToast()
-  const { isAuthenticated, login } = useAdminAuth()
+  const { isAuthenticated, isLoading: isAuthLoading, login } = useAdminAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,13 +19,28 @@ export default function AdminLoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [staffRegistrationEnabled, setStaffRegistrationEnabled] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isAuthLoading && isAuthenticated) {
       router.replace('/admin')
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, isAuthLoading, router])
+
+  useEffect(() => {
+    let active = true
+    apiFetch(apiUrl('/api/settings'))
+      .then(async (response) => {
+        if (!response.ok) return
+        const payload = await response.json() as { settings?: { allowStaffRegistration?: boolean } }
+        if (active) setStaffRegistrationEnabled(payload.settings?.allowStaffRegistration === true)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Load remembered email
   useEffect(() => {
@@ -224,7 +240,7 @@ export default function AdminLoginPage() {
               </label>
 
               <span className="text-[11px] font-medium text-black/50">
-                JWT Refresh Session
+                Secure staff session
               </span>
             </div>
 
@@ -250,14 +266,16 @@ export default function AdminLoginPage() {
           {/* Security Notice */}
           <div className="mt-7 pt-5 border-t border-[#F1FFF0] text-center">
             <p className="text-[11px] text-black/55 leading-relaxed">
-              <strong>Need a staff account?</strong> Public administrator signups are disabled. Authorized staff must be provisioned by a root administrator.
+              <strong>Need staff access?</strong> Registration is manager-controlled. New accounts require manager approval.
             </p>
-            <Link
-              href="/admin/register"
-              className="inline-block mt-3 text-xs font-semibold text-[#FF6A00] hover:underline"
-            >
-              Create account
-            </Link>
+            {staffRegistrationEnabled && (
+              <Link
+                href="/admin/register"
+                className="inline-block mt-3 text-xs font-semibold text-[#FF6A00] hover:underline"
+              >
+                Request staff access
+              </Link>
+            )}
           </div>
         </div>
       </div>

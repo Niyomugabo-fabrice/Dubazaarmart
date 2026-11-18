@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import AccountPage from '@/views/AccountPage'
+import WishlistPage from '@/views/WishlistPage'
 
 export const metadata: Metadata = {
   title: 'Wishlist',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <AccountPage initialTab="wishlist" />
+  return <WishlistPage />
 }

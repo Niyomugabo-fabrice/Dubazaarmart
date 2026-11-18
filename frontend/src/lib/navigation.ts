@@ -29,8 +29,6 @@ export function pageToPath(page: string): string {
       return '/checkout'
     case 'payment-success':
       return '/checkout/success'
-    case 'account':
-      return '/account'
     case 'wishlist':
       return '/wishlist'
     case 'admin':

@@ -1,5 +1,5 @@
-import { AdminEntity } from '../modules/auth/infrastructure/persistence/typeorm/admin.entity'
-import { AdminRefreshTokenEntity } from '../modules/auth/infrastructure/persistence/typeorm/admin-refresh-token.entity'
+import { UserEntity } from '../modules/auth/infrastructure/persistence/typeorm/user.entity'
+import { AuditLogEntity } from '../modules/audit/infrastructure/persistence/typeorm/audit-log.entity'
 import { ProductEntity } from '../modules/products/infrastructure/persistence/typeorm/product.entity'
 import { CustomerEntity } from '../modules/orders/infrastructure/persistence/typeorm/customer.entity'
 import { OrderEntity } from '../modules/orders/infrastructure/persistence/typeorm/order.entity'
@@ -11,8 +11,8 @@ import { WebsiteSettingsEntity } from '../modules/settings/infrastructure/persis
 import { AnnouncementEntity } from '../modules/settings/infrastructure/persistence/typeorm/announcement.entity'
 
 export const databaseEntities = [
-  AdminEntity,
-  AdminRefreshTokenEntity,
+  UserEntity,
+  AuditLogEntity,
   ProductEntity,
   CustomerEntity,
   OrderEntity,

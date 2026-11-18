@@ -1,6 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   HttpException,
@@ -13,26 +12,20 @@ import { ConfigService } from '@nestjs/config'
 import type { Request } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken'
-import type { AdminAccount, AdminIdentity } from '../domain/admin-account'
-import { ADMIN_REPOSITORY, type AdminRepository } from '../domain/auth.repository'
-import { REFRESH_TOKEN_REPOSITORY, type RefreshTokenRepository } from '../domain/refresh-token.repository'
+import type { UserIdentity } from '../domain/user-account'
+import { USER_REPOSITORY, type UserRepository } from '../domain/user.repository'
+import type { RegisterStaffDto } from '../presentation/dto/register-staff.dto'
+import { isUniqueViolation, validatePassword } from './user-validation'
 
 interface TokenClaims extends JwtPayload {
-  id: string
-  email: string
-  name: string
-  role: string
+  sub: string
   tokenUse: 'access' | 'refresh'
-}
-
-function isSupportedAccountRole(role: unknown): role is 'admin' | 'staff' {
-  return role === 'admin' || role === 'staff'
 }
 
 @Injectable()
 export class AuthService {
-  private readonly loginAttempts = new Map<string, { count: number; expiresAt: number }>()
-  private loginAttemptChecks = 0
+  private readonly attempts = new Map<string, { count: number; expiresAt: number }>()
+  private attemptChecks = 0
   private readonly accessSecret: string
   private readonly refreshSecret: string
   private readonly accessTtl: SignOptions['expiresIn']
@@ -40,8 +33,7 @@ export class AuthService {
   private readonly refreshTtlMs: number
 
   constructor(
-    @Inject(ADMIN_REPOSITORY) private readonly admins: AdminRepository,
-    @Inject(REFRESH_TOKEN_REPOSITORY) private readonly refreshTokens: RefreshTokenRepository,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     config: ConfigService,
   ) {
     this.accessSecret = config.getOrThrow<string>('JWT_SECRET')
@@ -53,146 +45,120 @@ export class AuthService {
 
   async login(email: string, password: string, clientIp: string) {
     const normalizedEmail = email.trim().toLowerCase()
-    const attemptKey = createHash('sha256').update(`${clientIp}\0${normalizedEmail}`).digest('hex')
-    this.checkLoginRateLimit(attemptKey)
-    const admin = await this.admins.findByEmail(normalizedEmail)
-    if (!admin || !(await bcrypt.compare(password, admin.passwordHash)) || !isSupportedAccountRole(admin.role)) {
-      throw new UnauthorizedException('Invalid administrator or staff credentials.')
+    const attemptKey = hashKey(`login\0${clientIp}\0${normalizedEmail}`)
+    this.checkRateLimit(attemptKey, 10)
+
+    const user = await this.users.findByEmail(normalizedEmail)
+    if (!user || !(await bcrypt.compare(password, user.passwordHash)) || user.status !== 'ACTIVE' || !user.emailVerified) {
+      throw new UnauthorizedException('Invalid email or password, or the account is not active.')
     }
-    this.loginAttempts.delete(attemptKey)
-    const pair = this.createTokenPair(admin)
-    await this.refreshTokens.save(pair.refreshRecord)
-    return { success: true, token: pair.accessToken, refreshToken: pair.refreshToken, admin: this.identity(admin) }
+
+    this.attempts.delete(attemptKey)
+    const lastLoginAt = new Date()
+    await this.users.updateLastLogin(user.id, lastLoginAt)
+    const identity = identityOf({ ...user, lastLoginAt })
+    const pair = this.createTokenPair(user.id)
+    return { success: true, token: pair.accessToken, user: identity, refreshToken: pair.refreshToken }
   }
 
   async refresh(refreshToken: string) {
     const claims = this.verify(refreshToken, this.refreshSecret, 'refresh')
-    if (!claims?.jti) throw new UnauthorizedException('Refresh token is invalid or expired.')
-    const admin = await this.admins.findById(claims.id)
-    if (!admin || !isSupportedAccountRole(admin.role)) throw new UnauthorizedException('Refresh token is invalid or expired.')
-
-    const next = this.createTokenPair(admin)
-    const rotated = await this.refreshTokens.rotate(
-      claims.jti,
-      hashToken(refreshToken),
-      next.refreshRecord,
-    )
-    if (!rotated) throw new UnauthorizedException('Refresh token has already been used or revoked.')
-    return { success: true, token: next.accessToken, refreshToken: next.refreshToken, admin: this.identity(admin) }
+    if (!claims) throw new UnauthorizedException('Refresh token is invalid or expired.')
+    const user = await this.users.findIdentityById(claims.sub)
+    if (!isActiveUser(user)) throw new UnauthorizedException('Refresh token is invalid or expired.')
+    const pair = this.createTokenPair(user.id)
+    return { success: true, token: pair.accessToken, user, refreshToken: pair.refreshToken }
   }
 
-  async logout(refreshToken?: string): Promise<void> {
-    if (!refreshToken) return
-    const claims = this.verify(refreshToken, this.refreshSecret, 'refresh')
-    if (claims?.jti) await this.refreshTokens.revoke(claims.jti, hashToken(refreshToken))
+  async logout(): Promise<void> {
+    // Refresh tokens are stateless; the client clears the HttpOnly cookie.
   }
 
-  authenticateRequest(request: Request): AdminIdentity | null {
-    const token = readToken(request)
-    if (!token) return null
-    const claims = this.verify(token, this.accessSecret, 'access')
-    if (!claims || !isSupportedAccountRole(claims.role)) return null
-    return { id: claims.id, email: claims.email, name: claims.name, role: claims.role }
-  }
+  async registerStaff(dto: RegisterStaffDto, clientIp: string, registrationEnabled: boolean) {
+    if (!registrationEnabled) throw new ForbiddenException('Staff registration is currently disabled.')
+    this.checkRateLimit(hashKey(`register\0${clientIp}`), 5)
 
-  async verifyRequest(request: Request) {
-    const admin = this.authenticateRequest(request)
-    if (!admin) throw new UnauthorizedException('Authentication token required or expired.')
-    return { authenticated: true, admin }
-  }
-
-  async createAdmin(creator: AdminIdentity, dto: { name: string; email: string; password: string; role?: 'admin' | 'staff' }) {
-    if (creator.role !== 'admin') {
-      throw new ForbiddenException('Only administrators can provision accounts.')
-    }
-    const cleanEmail = dto.email.trim().toLowerCase()
-    const existing = await this.admins.findByEmail(cleanEmail)
-    if (existing) {
+    const email = dto.email.trim().toLowerCase()
+    if (await this.users.findByEmail(email)) {
       throw new ConflictException('An account with this email already exists.')
     }
-    if (!dto.password || dto.password.length < 12) {
-      throw new BadRequestException('Password must be at least 12 characters long.')
-    }
-    const passwordHash = await bcrypt.hash(dto.password, 12)
-    let newAdmin: AdminAccount
+    validatePassword(dto.password)
     try {
-      newAdmin = await this.admins.create({
-        name: dto.name.trim(),
-        email: cleanEmail,
-        passwordHash,
-        role: dto.role ?? 'admin',
+      await this.users.createStaff({
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        email,
+        phoneNumber: dto.phoneNumber,
+        passwordHash: await bcrypt.hash(dto.password, 12),
+        status: 'PENDING',
+        emailVerified: false,
+        permissions: [],
       })
     } catch (error) {
-      if (isUniqueViolation(error)) {
-        throw new ConflictException('An account with this email already exists.')
-      }
+      if (isUniqueViolation(error)) throw new ConflictException('An account with this email already exists.')
       throw error
     }
     return {
       success: true,
-      message: `${newAdmin.role === 'staff' ? 'Staff' : 'Administrator'} account provisioned successfully`,
-      admin: this.identity(newAdmin),
+      message: 'Registration submitted. A manager must activate your staff account before you can sign in.',
     }
   }
 
-  async listAdmins(requester: AdminIdentity) {
-    if (requester.role !== 'admin') {
-      throw new ForbiddenException('Only administrators can view admin accounts.')
-    }
-    const list = await this.admins.list()
-    return { success: true, admins: list }
+  async authenticateRequest(request: Request): Promise<UserIdentity | null> {
+    const token = readAccessToken(request)
+    if (!token) return null
+    const claims = this.verify(token, this.accessSecret, 'access')
+    if (!claims) return null
+    const user = await this.users.findIdentityById(claims.sub)
+    return isActiveUser(user) ? user : null
   }
 
-  private createTokenPair(admin: AdminAccount) {
-    const identity = this.identity(admin)
-    const accessToken = jwt.sign({ ...identity, tokenUse: 'access' }, this.accessSecret, {
+  verifyRequest(request: Request) {
+    const user = (request as Request & { user?: UserIdentity }).user
+    if (!user) throw new UnauthorizedException('Authentication token required or expired.')
+    return { authenticated: true, user }
+  }
+
+  getRefreshTtlMs(): number {
+    return this.refreshTtlMs
+  }
+
+  private createTokenPair(userId: string) {
+    const accessToken = jwt.sign({ tokenUse: 'access' }, this.accessSecret, {
+      subject: userId,
       expiresIn: this.accessTtl,
       issuer: 'dubazaarmart',
     })
-    const tokenId = randomUUID()
-    const refreshToken = jwt.sign({ ...identity, tokenUse: 'refresh' }, this.refreshSecret, {
+    const refreshToken = jwt.sign({ tokenUse: 'refresh' }, this.refreshSecret, {
+      subject: userId,
       expiresIn: this.refreshTtl,
       issuer: 'dubazaarmart',
-      jwtid: tokenId,
     })
-    return {
-      accessToken,
-      refreshToken,
-      refreshRecord: {
-        id: tokenId,
-        adminId: admin.id,
-        tokenHash: hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + this.refreshTtlMs),
-      },
-    }
+    return { accessToken, refreshToken }
   }
 
-  private identity(admin: AdminAccount): AdminIdentity {
-    return { id: admin.id, email: admin.email, name: admin.name || 'Admin', role: admin.role }
-  }
-
-  private checkLoginRateLimit(key: string) {
+  private checkRateLimit(key: string, limit: number) {
     const now = Date.now()
-    if (++this.loginAttemptChecks >= 128) {
-      for (const [attemptKey, attempt] of this.loginAttempts) {
-        if (attempt.expiresAt <= now) this.loginAttempts.delete(attemptKey)
+    if (++this.attemptChecks >= 128) {
+      for (const [attemptKey, attempt] of this.attempts) {
+        if (attempt.expiresAt <= now) this.attempts.delete(attemptKey)
       }
-      this.loginAttemptChecks = 0
+      this.attemptChecks = 0
     }
 
-    const attempt = this.loginAttempts.get(key)
-    if (attempt && attempt.expiresAt > now && attempt.count >= 10) {
+    const attempt = this.attempts.get(key)
+    if (attempt && attempt.expiresAt > now && attempt.count >= limit) {
       throw new HttpException(
-        'Too many login attempts. Please try again in 15 minutes.',
+        'Too many attempts. Please try again in 15 minutes.',
         HttpStatus.TOO_MANY_REQUESTS,
       )
     }
 
-    if (this.loginAttempts.size >= 10_000 && !attempt) {
-      const oldestKey = this.loginAttempts.keys().next().value
-      if (oldestKey) this.loginAttempts.delete(oldestKey)
+    if (this.attempts.size >= 10_000 && !attempt) {
+      const oldestKey = this.attempts.keys().next().value
+      if (oldestKey) this.attempts.delete(oldestKey)
     }
-    this.loginAttempts.set(key, {
+    this.attempts.set(key, {
       count: attempt && attempt.expiresAt > now ? attempt.count + 1 : 1,
       expiresAt: attempt && attempt.expiresAt > now ? attempt.expiresAt : now + 15 * 60_000,
     })
@@ -200,31 +166,56 @@ export class AuthService {
 
   private verify(token: string, secret: string, tokenUse: TokenClaims['tokenUse']): TokenClaims | null {
     try {
-      const claims = jwt.verify(token, secret, { issuer: 'dubazaarmart' }) as TokenClaims
-      if (claims.tokenUse !== tokenUse || !claims.id || !claims.email || !claims.role) return null
-      return claims
+      const claims = jwt.verify(token, secret, { issuer: 'dubazaarmart' })
+      if (typeof claims !== 'object' || !claims.sub || claims.tokenUse !== tokenUse) return null
+      return claims as TokenClaims
     } catch {
       return null
     }
   }
 }
 
-function readToken(request: Request): string | null {
+function isActiveUser(user: UserIdentity | null): user is UserIdentity {
+  return Boolean(user && user.status === 'ACTIVE' && user.emailVerified && (user.role === 'MANAGER' || user.role === 'STAFF'))
+}
+
+function identityOf(user: {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phoneNumber: string | null
+  role: 'MANAGER' | 'STAFF'
+  status: UserIdentity['status']
+  emailVerified: boolean
+  permissions: UserIdentity['permissions']
+  createdAt: Date
+  lastLoginAt: Date | null
+}): UserIdentity {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: [user.firstName, user.lastName].filter(Boolean).join(' '),
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    role: user.role,
+    status: user.status,
+    emailVerified: user.emailVerified,
+    permissions: user.permissions,
+    createdAt: user.createdAt,
+    lastLoginAt: user.lastLoginAt,
+  }
+}
+
+function readAccessToken(request: Request): string | null {
   const authorization = request.headers.authorization
-  if (authorization?.toLowerCase().startsWith('bearer ')) return authorization.slice(7).trim()
-  const queryToken = typeof request.query.token === 'string' ? request.query.token : null
-  if (queryToken) return queryToken
-  const cookieHeader = request.headers.cookie || ''
-  const cookieToken = cookieHeader.match(/(?:^|;\s*)admin_token=([^;]+)/)?.[1]
-  return typeof cookieToken === 'string' ? decodeURIComponent(cookieToken) : null
+  if (!authorization?.toLowerCase().startsWith('bearer ')) return null
+  return authorization.slice(7).trim() || null
 }
 
-function hashToken(token: string) {
-  return createHash('sha256').update(token).digest('hex')
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505'
+function hashKey(value: string): string {
+  return createHash('sha256').update(value).digest('hex')
 }
 
 function durationToMilliseconds(value: string): number {

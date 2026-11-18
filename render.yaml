@@ -24,7 +24,7 @@ services:
       - key: JWT_REFRESH_TTL
         value: 30d
       - key: FRONTEND_URL
-        sync: false
+        value: https://dubazaarmart.vercel.app
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

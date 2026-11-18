@@ -72,16 +72,6 @@ function DashboardIcon({ name }: { name: string }) {
       </svg>
     )
   }
-  if (name === "customers") {
-    return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
-        <path
-          {...common}
-          d="M16 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-3A4.5 4.5 0 0 0 4 18.5V20M10 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7-1a3 3 0 0 1 0 6m3 5v-1a4 4 0 0 0-2.2-3.6"
-        />
-      </svg>
-    )
-  }
   if (name === "inventory") {
     return (
       <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
@@ -264,7 +254,7 @@ const STATUS_COLORS: Record<string, string> = {
   RETURNED: "#6B7280",        // Gray
 }
 
-type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "customers" | "inventory" | "announcements" | "settings" | "staff" | "audit"
+type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "inventory" | "announcements" | "settings" | "staff" | "audit"
 
 export default function AdminPage() {
   const { navigate } = useAppNavigation()
@@ -272,8 +262,11 @@ export default function AdminPage() {
   const { isAuthenticated, admin, token: adminToken, login, logout } = useAdminAuth()
   const isManager = admin?.role === "MANAGER"
   const hasPermission = useCallback(
-    (permission: string) => isManager || Boolean(admin?.permissions.includes(permission)),
-    [admin?.permissions, isManager],
+    (permission: string) => isManager || (
+      permission !== "announcements.manage" &&
+      (admin?.role === "STAFF" || Boolean(admin?.permissions.includes(permission)))
+    ),
+    [admin, isManager],
   )
   const { products: storeProducts, deleteProduct } = useProducts()
   const [isAddProductOpen, setIsAddProductOpen] = useState(false)
@@ -283,7 +276,7 @@ export default function AdminPage() {
   const [section, setSectionState] = useState<AdminSection>(() => {
     if (typeof window === "undefined") return "overview"
     const stored = sessionStorage.getItem("dubazaar_admin_section") as AdminSection
-    if (stored && ["overview", "orders", "companyOrders", "products", "customers", "inventory", "announcements", "settings", "staff", "audit"].includes(stored)) {
+    if (stored && ["overview", "orders", "companyOrders", "products", "inventory", "announcements", "settings", "staff", "audit"].includes(stored)) {
       return stored
     }
     return "overview"
@@ -305,7 +298,7 @@ export default function AdminPage() {
       inventory: "inventory.view",
       announcements: "announcements.view",
     }
-    if (isManager || (section !== "settings" && section !== "customers" && section !== "staff" && section !== "audit" &&
+    if (isManager || (section !== "settings" && section !== "staff" && section !== "audit" &&
       (!requiredPermissions[section] || hasPermission(requiredPermissions[section] as string)))) return
     const fallback: AdminSection = isManager
       ? "overview"
@@ -363,7 +356,9 @@ export default function AdminPage() {
   // Settings & Announcements State
   const [settingsData, setSettingsData] = useState<WebsiteSettings | null>(null)
   const [announcementsData, setAnnouncementsData] = useState<SiteAnnouncement[]>([])
+  const [announcementsError, setAnnouncementsError] = useState<string | null>(null)
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false)
+  const [announcementToEdit, setAnnouncementToEdit] = useState<SiteAnnouncement | null>(null)
   const [settingsSaving, setSettingsSaving] = useState(false)
 
   // Confirmation Modals State
@@ -472,6 +467,7 @@ export default function AdminPage() {
       setTimeout(() => setActionSuccess(null), 3000)
     } catch (err) {
       console.error("Failed to delete announcement", err)
+      toast.error(err instanceof Error ? err.message : "The announcement could not be deleted.", "Delete Failed")
     } finally {
       setConfirmDeleteAnnouncement(null)
     }
@@ -628,9 +624,15 @@ export default function AdminPage() {
         if (isMounted) {
           if (st) setSettingsData(st)
           setAnnouncementsData(an)
+          setAnnouncementsError(null)
         }
       })
-      .catch((err) => console.error("Error loading settings or announcements", err))
+      .catch((err) => {
+        console.error("Error loading settings or announcements", err)
+        if (isMounted) {
+          setAnnouncementsError(err instanceof Error ? err.message : "Announcements could not be loaded.")
+        }
+      })
     return () => {
       isMounted = false
     }
@@ -645,7 +647,6 @@ export default function AdminPage() {
   const stats = dashboardData?.stats ?? []
   const recentOrders = dashboardData?.recentOrders ?? []
   const products = storeProducts
-  const customers = dashboardData?.customers ?? []
   const revenueTrend = dashboardData?.revenueTrend ?? []
   const orderPipeline = dashboardData?.orderPipeline ?? []
   const paymentBreakdown = dashboardData?.paymentBreakdown ?? []
@@ -657,8 +658,6 @@ export default function AdminPage() {
     0,
   )
   const maxRevenue = Math.max(0, ...revenueTrend.map((point) => point.amount))
-  const customerStat = stats.find((stat) => stat.label === "Total Customers")
-
   function formatPrice(n: number) {
     return `RWF ${n.toLocaleString()}`
   }
@@ -690,7 +689,6 @@ export default function AdminPage() {
   ]
   if (isManager) {
     navItems.push(
-      { id: "customers", label: "Customers", icon: "👥" },
       { id: "settings", label: "Settings & Content", icon: "⚙️" },
       { id: "staff", label: "Staff Management", icon: "🧑‍💼" },
       { id: "audit", label: "Audit Log", icon: "🧾" },
@@ -2428,98 +2426,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Customers */}
-        {section === "customers" && isManager && (
-          <div>
-            <div className="badge mb-1" style={{ color: "#FF6A00" }}>
-              MANAGEMENT
-            </div>
-            <h1 className="text-3xl font-bold text-[#111111] mb-8">Customers</h1>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              {[
-                [customerStat?.value ?? "—", "Total Customers"],
-                [
-                  stats.find((stat) => stat.label === "Total Orders")?.value ??
-                    "—",
-                  "Total Orders",
-                ],
-                [
-                  stats.find((stat) => stat.label === "Paid-order revenue")
-                    ?.value ?? "—",
-                  "Paid-order revenue",
-                ],
-              ].map(([v, l]) => (
-                <div
-                  key={l}
-                  className="p-5 rounded-2xl"
-                  style={{ background: "#FFF7E8", border: "1px solid #FFB800" }}
-                >
-                  <div className="text-xl font-bold text-[#111111] mb-1">{v}</div>
-                  <div className="text-xs" style={{ color: "#0B5B24" }}>
-                    {l}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div
-              className="p-6 rounded-2xl"
-              style={{ background: "#FFF7E8", border: "1px solid #FFB800" }}
-            >
-              <h3 className="font-bold text-[#111111] mb-4">Recent Customers</h3>
-              <div className="space-y-3">
-                {customers.map((c) => (
-                  <div
-                    key={c.email}
-                    className="flex items-center gap-4 py-3"
-                    style={{ borderBottom: "1px solid #F1FFF0" }}
-                  >
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
-                      style={{
-                        background: "rgba(255,106,0,0.15)",
-                        color: "#FF6A00",
-                      }}
-                    >
-                      {c.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .slice(0, 2)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-[#111111]">
-                        {c.name}
-                      </div>
-                      <div className="text-xs" style={{ color: "#0B5B24" }}>
-                        {c.email}
-                      </div>
-                    </div>
-                    <div className="text-right hidden sm:block">
-                      <div className="text-sm font-medium text-[#111111]">
-                        {formatPrice(c.total)}
-                      </div>
-                      <div className="text-xs" style={{ color: "#0B5B24" }}>
-                        {c.orders} orders
-                      </div>
-                    </div>
-                    <div className="text-xs" style={{ color: "#0B5B24" }}>
-                      {c.joined}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {customers.length === 0 && (
-                <div
-                  className="py-8 text-center text-sm"
-                  style={{ color: "#0B5B24" }}
-                >
-                  No customer records are available.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Inventory */}
         {section === "inventory" && (
           <div>
@@ -2930,7 +2836,10 @@ export default function AdminPage() {
                 {hasPermission("announcements.manage") && (
                   <button
                     type="button"
-                    onClick={() => setIsAnnouncementModalOpen(true)}
+                    onClick={() => {
+                      setAnnouncementToEdit(null)
+                      setIsAnnouncementModalOpen(true)
+                    }}
                     className="btn-gold px-4 py-2 rounded-xl text-xs font-bold shadow-sm"
                   >
                     + New Announcement
@@ -2939,6 +2848,11 @@ export default function AdminPage() {
               </div>
 
               <div className="space-y-3">
+                {announcementsError && (
+                  <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    {announcementsError}
+                  </div>
+                )}
                 {announcementsData.map((ann) => (
                   <div
                     key={ann.id}
@@ -2959,18 +2873,30 @@ export default function AdminPage() {
                         {ann.active ? "Active" : "Hidden"}
                       </span>
                       {hasPermission("announcements.manage") && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAnnouncement(ann.id)}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#FF6A00] border border-[#FF6A00]/40 hover:bg-[#FF6A00]/10"
-                        >
-                          Delete
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAnnouncementToEdit(ann)
+                              setIsAnnouncementModalOpen(true)
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAnnouncement(ann.id)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#FF6A00] border border-[#FF6A00]/40 hover:bg-[#FF6A00]/10"
+                          >
+                            Delete
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
                 ))}
-                {announcementsData.length === 0 && (
+                {!announcementsError && announcementsData.length === 0 && (
                   <div className="text-center py-6 text-xs text-[#0B5B24] border border-dashed rounded-xl" style={{ borderColor: "#FFB800" }}>
                     No announcements currently configured.
                   </div>
@@ -3104,11 +3030,17 @@ export default function AdminPage() {
 
       <AnnouncementsModal
         isOpen={isAnnouncementModalOpen}
-        onClose={() => setIsAnnouncementModalOpen(false)}
-        onAnnouncementCreated={(ann) => {
-          setActionSuccess(`New announcement "${ann.title}" published!`)
+        announcement={announcementToEdit}
+        onClose={() => {
+          setIsAnnouncementModalOpen(false)
+          setAnnouncementToEdit(null)
+        }}
+        onAnnouncementSaved={(ann, isUpdate) => {
+          setAnnouncementsData((current) => isUpdate
+            ? current.map((item) => item.id === ann.id ? ann : item)
+            : [ann, ...current])
+          setActionSuccess(isUpdate ? `Announcement "${ann.title}" updated.` : `New announcement "${ann.title}" published!`)
           setTimeout(() => setActionSuccess(null), 3500)
-          setRefreshToken((v) => v + 1)
         }}
       />
 

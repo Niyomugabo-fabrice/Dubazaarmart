@@ -1,147 +1,205 @@
-import { useState } from 'react'
-import { createAdminAnnouncement, type SiteAnnouncement } from '../lib/dashboardApi'
+"use client"
+
+import { useEffect, useState } from "react"
+import {
+  createAdminAnnouncement,
+  updateAdminAnnouncement,
+  type SiteAnnouncement,
+} from "../lib/dashboardApi"
 
 interface Props {
   isOpen: boolean
+  announcement?: SiteAnnouncement | null
   onClose: () => void
-  onAnnouncementCreated: (ann: SiteAnnouncement) => void
+  onAnnouncementSaved: (announcement: SiteAnnouncement, isUpdate: boolean) => void
 }
 
-export default function AnnouncementsModal({ isOpen, onClose, onAnnouncementCreated }: Props) {
-  const [title, setTitle] = useState('')
-  const [message, setMessage] = useState('')
-  const [tag, setTag] = useState('Flash Friday')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+function toDateInputValue(value?: string): string {
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+function toDateTime(value: string, endOfDay = false): string | null {
+  if (!value) return null
+  const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00"}`)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
+export default function AnnouncementsModal({ isOpen, announcement, onClose, onAnnouncementSaved }: Props) {
+  const [title, setTitle] = useState("")
+  const [message, setMessage] = useState("")
+  const [tag, setTag] = useState("Flash Friday")
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [active, setActive] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isEditing = Boolean(announcement)
+
+  useEffect(() => {
+    if (!isOpen) return
+    setTitle(announcement?.title ?? "")
+    setMessage(announcement?.message ?? "")
+    setTag(announcement?.tag ?? "Flash Friday")
+    setStartDate(toDateInputValue(announcement?.startDate))
+    setEndDate(toDateInputValue(announcement?.endDate))
+    setActive(announcement?.active ?? true)
+    setError(null)
+  }, [announcement, isOpen])
 
   if (!isOpen) return null
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     if (!title.trim() || !message.trim()) {
-      setError('Title and message are required.')
+      setError("Title and message are required.")
+      return
+    }
+    if (startDate && endDate && startDate > endDate) {
+      setError("The end date must be on or after the start date.")
       return
     }
 
     try {
       setLoading(true)
       setError(null)
-      const ann = await createAdminAnnouncement({
+      const payload = {
         title: title.trim(),
         message: message.trim(),
-        tag: tag.trim() || 'Announcement',
-        startDate: startDate ? new Date(startDate).toISOString() : undefined,
-        endDate: endDate ? new Date(endDate).toISOString() : undefined,
-      })
-      onAnnouncementCreated(ann)
+        tag: tag.trim() || "Announcement",
+        startDate: toDateTime(startDate),
+        endDate: toDateTime(endDate, true),
+        active,
+      }
+      const saved = announcement
+        ? await updateAdminAnnouncement(announcement.id, payload)
+        : await createAdminAnnouncement({
+            ...payload,
+            startDate: payload.startDate ?? undefined,
+            endDate: payload.endDate ?? undefined,
+          })
+      onAnnouncementSaved(saved, Boolean(announcement))
       onClose()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to publish announcement')
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "The announcement could not be saved.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border-2 border-[#FFB800]">
-        <div className="flex items-center justify-between pb-3 border-b">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-[#FF6A00] font-bold">
-              📢
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-lg text-amber-800" aria-hidden="true">
+              {isEditing ? "✎" : "📢"}
             </span>
-            <h3 className="font-bold text-gray-900">New Website Announcement</h3>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Store communications</p>
+              <h2 className="mt-1 text-lg font-bold text-slate-900">
+                {isEditing ? "Edit announcement" : "New announcement"}
+              </h2>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 font-bold text-lg"
+            disabled={loading}
+            aria-label="Close announcement editor"
+            className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Tag / Category *</label>
+            <label htmlFor="announcement-tag" className="mb-1.5 block text-sm font-semibold text-slate-700">Tag / category</label>
             <input
+              id="announcement-tag"
               required
-              type="text"
+              maxLength={40}
               value={tag}
-              onChange={(e) => setTag(e.target.value)}
-              placeholder="e.g. Flash Friday, Special Offer, Holiday Notice"
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs"
+              onChange={(event) => setTag(event.target.value)}
+              placeholder="Flash Friday, Special Offer, Holiday Notice"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Title *</label>
+            <label htmlFor="announcement-title" className="mb-1.5 block text-sm font-semibold text-slate-700">Title</label>
             <input
+              id="announcement-title"
               required
-              type="text"
+              maxLength={120}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. ⚡ Flash Friday Dubai Deals"
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm font-semibold"
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Write a concise announcement title"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Message *</label>
+            <label htmlFor="announcement-message" className="mb-1.5 block text-sm font-semibold text-slate-700">Message</label>
             <textarea
+              id="announcement-message"
               required
-              rows={3}
+              maxLength={1000}
+              rows={4}
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="e.g. Get up to 25% off authentic electronics direct from Dubai wholesalers! Free nationwide delivery on orders over RWF 500,000."
-              className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm resize-none"
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="Share the details customers need to know."
+              className="w-full resize-y rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-[11px] font-semibold text-gray-700 mb-1">Start Date (Optional)</label>
+              <label htmlFor="announcement-start-date" className="mb-1.5 block text-sm font-semibold text-slate-700">Start date</label>
               <input
+                id="announcement-start-date"
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs"
+                onChange={(event) => setStartDate(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-gray-700 mb-1">End Date (Optional)</label>
+              <label htmlFor="announcement-end-date" className="mb-1.5 block text-sm font-semibold text-slate-700">End date</label>
               <input
+                id="announcement-end-date"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs"
+                onChange={(event) => setEndDate(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
               />
             </div>
           </div>
 
-          {error && (
-            <div className="p-2.5 rounded-lg bg-red-50 text-red-700 text-xs font-medium">
-              {error}
-            </div>
-          )}
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(event) => setActive(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-amber-600"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-slate-800">Visible in the storefront</span>
+              <span className="block text-xs text-slate-500">Hidden announcements remain saved and can be re-enabled later.</span>
+            </span>
+          </label>
 
-          <div className="flex gap-2 pt-2 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="flex-1 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-100"
-            >
+          {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+
+          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <button type="button" onClick={onClose} disabled={loading} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-sm"
-            >
-              {loading ? 'Publishing...' : 'Publish Announcement'}
+            <button type="submit" disabled={loading} className="rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60">
+              {loading ? "Saving…" : isEditing ? "Save changes" : "Publish announcement"}
             </button>
           </div>
         </form>

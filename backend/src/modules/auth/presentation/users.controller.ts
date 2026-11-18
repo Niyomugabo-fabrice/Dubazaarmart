@@ -10,7 +10,6 @@ import {
   CreateStaffDto,
   ListStaffQueryDto,
   UpdateStaffDto,
-  UpdateStaffPermissionsDto,
 } from './dto/create-staff.dto'
 
 type AuthenticatedRequest = Request & { user: UserIdentity }
@@ -53,22 +52,19 @@ export class UsersController {
     return this.users.deactivateStaff((request as AuthenticatedRequest).user, id)
   }
 
+  @Patch(':id/verify')
+  verify(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.users.verifyStaff((request as AuthenticatedRequest).user, id)
+  }
+
+  @Patch(':id/promote-to-manager')
+  promoteToManager(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.users.promoteStaffToManager((request as AuthenticatedRequest).user, id)
+  }
+
   @Patch(':id/suspend')
   suspend(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.users.suspendStaff((request as AuthenticatedRequest).user, id)
-  }
-
-  @Patch(':id/permissions')
-  updatePermissions(
-    @Req() request: Request,
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: UpdateStaffPermissionsDto,
-  ) {
-    return this.users.updatePermissions(
-      (request as AuthenticatedRequest).user,
-      id,
-      dto.permissions,
-    )
   }
 
   @Delete(':id')

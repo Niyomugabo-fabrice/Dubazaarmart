@@ -1,4 +1,4 @@
-export const STAFF_PERMISSION_KEYS = [
+export const STAFF_OPERATIONAL_PERMISSION_KEYS = [
   'products.view',
   'products.create',
   'products.update',
@@ -14,6 +14,10 @@ export const STAFF_PERMISSION_KEYS = [
   'procurement.manage',
   'reports.view',
   'announcements.view',
+] as const
+
+export const STAFF_PERMISSION_KEYS = [
+  ...STAFF_OPERATIONAL_PERMISSION_KEYS,
   'announcements.manage',
 ] as const
 

@@ -24,7 +24,7 @@ The migration is intentionally not run automatically at application startup. Rev
 
 ## Authentication
 
-Authentication supports only MANAGER and STAFF; customers do not have accounts, but guest checkout continues to preserve customer and order records. Passwords are bcrypt-hashed in `users`. Access JWTs are held in frontend memory, while stateless refresh JWTs use HttpOnly, secure production cookies. Every protected request loads current user status and permissions from PostgreSQL, so suspended or inactive users lose access immediately. Managers administer staff, permissions, registration availability, settings, customer records, and audit logs. Staff permissions are checked by backend guards and reflected in dashboard navigation.
+Authentication supports only MANAGER and STAFF; customers do not have accounts, but guest checkout continues to preserve customer and order records. Passwords are bcrypt-hashed in `users`. Access JWTs are held in frontend memory, while stateless refresh JWTs use HttpOnly, secure production cookies. Every protected request loads current user status from PostgreSQL, so suspended or inactive users lose access immediately. Staff have full operational access but cannot administer staff, access audit logs, or change store settings/content, including announcements. Only a manager can promote an active, verified staff member to manager.
 
 ## Operations
 

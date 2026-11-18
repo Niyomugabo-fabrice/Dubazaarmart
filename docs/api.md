@@ -42,12 +42,13 @@ Protected requests use `Authorization: Bearer <access-token>`. Browser requests 
 | POST | `/admin/company-orders/:id/receive` | Receive items and update stock transactionally |
 | GET, POST, PATCH | `/admin/stock*` | View/update inventory (`inventory.view`, `inventory.update`) |
 | POST | `/admin/settings` | Update store settings and staff-registration availability (MANAGER only) |
-| GET, POST | `/admin/announcements` | View/manage announcements (`announcements.view`, `announcements.manage`) |
+| GET, POST, PATCH, DELETE | `/admin/announcements` | View announcements; manager-only changes (`announcements.manage`) |
 | GET | `/admin/dashboard` | Read dashboard analytics (`reports.view`; `7d`, `30d`, or `12m`) |
 | GET, POST | `/admin/users` | List/create STAFF accounts (MANAGER only) |
-| GET, PATCH, DELETE | `/admin/users/:id` | Update STAFF details, status, permissions, or soft-delete (MANAGER only) |
+| GET, PATCH, DELETE | `/admin/users/:id` | Read/update STAFF details or soft-delete (MANAGER only) |
+| PATCH | `/admin/users/:id/activate`, `/deactivate`, `/suspend`, `/verify`, `/promote-to-manager` | Manage STAFF status, verify email, or promote an active verified STAFF account (MANAGER only) |
 | GET | `/admin/audit-logs` | Read append-only sign-in and administrative audit records (MANAGER only) |
 
-MANAGER users bypass staff permissions. New public registrations are always pending with no permissions. The valid permission keys are `products.view`, `products.create`, `products.update`, `products.delete`, `media.upload`, `inventory.view`, `inventory.update`, `orders.view`, `orders.create`, `orders.update`, `orders.delete`, `procurement.view`, `procurement.manage`, `reports.view`, `announcements.view`, and `announcements.manage`.
+STAFF accounts have full operational access except staff management, audit logs, and settings/content management (including announcement changes), which remain MANAGER-only. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER.
 
 Interactive OpenAPI documentation is served from `/docs`.

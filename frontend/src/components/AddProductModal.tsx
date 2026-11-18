@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Product } from '../data/products'
 import { categories } from '../data/products'
 import ImageUploader from './ImageUploader'
@@ -26,6 +26,24 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
   const [featured, setFeatured] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploaderKey, setUploaderKey] = useState(0)
+
+  useEffect(() => {
+    if (!isOpen) return
+    setName('')
+    setCategory('smartphones')
+    setBrand('Samsung')
+    setPrice('')
+    setOriginalPrice('')
+    setQuantity('15')
+    setSku('')
+    setBadge('New Arrival')
+    setImage('')
+    setDescription('')
+    setFeatured(true)
+    setError(null)
+    setUploaderKey((key) => key + 1)
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -251,6 +269,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
           </div>
 
           <ImageUploader
+            key={uploaderKey}
             value={image}
             onChange={setImage}
             label="Product Image (Upload Photo from Device)"

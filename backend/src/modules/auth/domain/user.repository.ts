@@ -18,7 +18,7 @@ export interface UpdateStaffRecord {
   lastName?: string
   email?: string
   phoneNumber?: string | null
-  permissions?: StaffPermission[]
+  emailVerified?: boolean
   status?: UserStatus
 }
 
@@ -46,6 +46,7 @@ export interface UserRepository {
   createStaff(record: CreateUserRecord): Promise<UserAccount>
   updateStaff(id: string, values: UpdateStaffRecord): Promise<UserAccount | null>
   updateStatus(id: string, status: UserStatus): Promise<UserAccount | null>
+  promoteStaffToManager(id: string): Promise<UserIdentity | null>
   softDeleteStaff(id: string): Promise<boolean>
   updateLastLogin(id: string, at: Date): Promise<void>
 }

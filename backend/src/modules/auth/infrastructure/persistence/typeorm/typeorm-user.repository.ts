@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { IsNull, Repository } from 'typeorm'
-import type { StaffPermission, UserAccount, UserIdentity } from '../../../domain/user-account'
+import { STAFF_OPERATIONAL_PERMISSION_KEYS, type StaffPermission, type UserAccount, type UserIdentity } from '../../../domain/user-account'
 import type {
   CreateUserRecord,
   StaffListQuery,
@@ -97,7 +97,7 @@ export class TypeOrmUserRepository implements UserRepository {
     if (values.firstName !== undefined) user.firstName = values.firstName.trim()
     if (values.lastName !== undefined) user.lastName = values.lastName.trim()
     if (values.phoneNumber !== undefined) user.phoneNumber = values.phoneNumber?.trim() || null
-    if (values.permissions !== undefined) user.permissions = values.permissions
+    if (values.emailVerified !== undefined) user.emailVerified = values.emailVerified
     if (values.status !== undefined) user.status = values.status
     if (values.email !== undefined && values.email.trim().toLowerCase() !== user.email) {
       user.email = values.email.trim().toLowerCase()
@@ -114,8 +114,20 @@ export class TypeOrmUserRepository implements UserRepository {
       .getOne()
     if (!user) return null
     user.status = status
-    if (status === 'ACTIVE') user.emailVerified = true
     return this.toAccount(await this.users.save(user))
+  }
+
+  async promoteStaffToManager(id: string): Promise<UserIdentity | null> {
+    const result = await this.users.createQueryBuilder()
+      .update(UserEntity)
+      .set({ role: 'MANAGER' })
+      .where(
+        "id = :id AND role = 'STAFF' AND status = 'ACTIVE' AND email_verified = true AND deleted_at IS NULL",
+        { id },
+      )
+      .execute()
+    if (!result.affected) return null
+    return this.findIdentityById(id)
   }
 
   async softDeleteStaff(id: string): Promise<boolean> {
@@ -150,7 +162,7 @@ export class TypeOrmUserRepository implements UserRepository {
       role: user.role,
       status: user.status,
       emailVerified: user.emailVerified,
-      permissions: user.permissions as StaffPermission[],
+      permissions: user.role === 'STAFF' ? [...STAFF_OPERATIONAL_PERMISSION_KEYS] : user.permissions as StaffPermission[],
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
     }

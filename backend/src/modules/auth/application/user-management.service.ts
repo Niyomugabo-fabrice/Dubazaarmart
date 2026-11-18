@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import bcrypt from 'bcryptjs'
-import type { StaffPermission, UserIdentity, UserStatus } from '../domain/user-account'
+import type { UserIdentity, UserStatus } from '../domain/user-account'
 import { USER_REPOSITORY, type UserRepository } from '../domain/user.repository'
 import type { CreateStaffDto, ListStaffQueryDto, UpdateStaffDto } from '../presentation/dto/create-staff.dto'
 import { isUniqueViolation, validatePassword } from './user-validation'
@@ -43,7 +43,6 @@ export class UserManagementService {
         passwordHash: await bcrypt.hash(dto.password, 12),
         status: dto.status ?? 'PENDING',
         emailVerified: dto.status === 'ACTIVE',
-        permissions: dto.permissions,
       })
       return identityOf(user)
     } catch (error) {
@@ -69,11 +68,23 @@ export class UserManagementService {
     }
   }
 
-  async updatePermissions(actor: UserIdentity, id: string, permissions: StaffPermission[]): Promise<UserIdentity> {
+  async verifyStaff(actor: UserIdentity, id: string): Promise<UserIdentity> {
     this.assertManager(actor)
-    const user = await this.users.updateStaff(id, { permissions })
+    const user = await this.users.updateStaff(id, { emailVerified: true })
     if (!user) throw new NotFoundException('Staff account not found.')
     return identityOf(user)
+  }
+
+  async promoteStaffToManager(actor: UserIdentity, id: string): Promise<UserIdentity> {
+    this.assertManager(actor)
+    const target = await this.users.findById(id)
+    if (!target || target.role !== 'STAFF') throw new NotFoundException('Staff account not found.')
+    if (target.status !== 'ACTIVE' || !target.emailVerified) {
+      throw new BadRequestException('Only active, verified staff can be promoted to manager.')
+    }
+    const promoted = await this.users.promoteStaffToManager(id)
+    if (!promoted) throw new ConflictException('This staff account can no longer be promoted.')
+    return promoted
   }
 
   activateStaff(actor: UserIdentity, id: string) {

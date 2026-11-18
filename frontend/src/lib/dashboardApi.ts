@@ -232,7 +232,7 @@ export type StaffUserRecord = {
   name: string
   email: string
   phoneNumber: string | null
-  role: "STAFF"
+  role: "MANAGER" | "STAFF"
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING"
   emailVerified: boolean
   permissions: string[]
@@ -797,7 +797,7 @@ export async function fetchActiveAnnouncements(): Promise<SiteAnnouncement[]> {
   const response = await apiFetch(apiUrl("/api/announcements/active"))
   if (!response.ok) return []
   const data = await response.json()
-  return data.announcements || []
+  return Array.isArray(data.announcements) ? data.announcements : []
 }
 
 export async function fetchAdminAnnouncements(): Promise<SiteAnnouncement[]> {
@@ -806,7 +806,7 @@ export async function fetchAdminAnnouncements(): Promise<SiteAnnouncement[]> {
   })
   if (!response.ok) throw new Error("Failed to load announcements")
   const data = await response.json()
-  return data.announcements || []
+  return Array.isArray(data.announcements) ? data.announcements : []
 }
 
 export async function createAdminAnnouncement(payload: {
@@ -815,6 +815,7 @@ export async function createAdminAnnouncement(payload: {
   tag?: string
   startDate?: string
   endDate?: string
+  active?: boolean
 }): Promise<SiteAnnouncement> {
   const response = await apiFetch(apiUrl("/api/admin/announcements"), {
     method: "POST",
@@ -829,17 +830,53 @@ export async function createAdminAnnouncement(payload: {
   return result.announcement
 }
 
+export async function updateAdminAnnouncement(
+  id: string,
+  payload: {
+    title: string
+    message: string
+    tag: string
+    active: boolean
+    startDate: string | null
+    endDate: string | null
+  },
+): Promise<SiteAnnouncement> {
+  const response = await apiFetch(apiUrl(`/api/admin/announcements/${id}`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to update announcement."))
+  }
+  const result = await response.json()
+  return result.announcement
+}
+
 export async function deleteAdminAnnouncement(id: string): Promise<boolean> {
   const response = await apiFetch(apiUrl(`/api/admin/announcements/${id}`), {
     method: "DELETE",
     headers: { ...getAdminAuthHeaders() },
   })
-  return response.ok
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to delete announcement."))
+  }
+  return true
 }
 
 // Manager-only staff and audit APIs
-export async function fetchStaffUsers(options: { search?: string; status?: string; pageSize?: number } = {}) {
-  const params = new URLSearchParams({ pageSize: String(options.pageSize ?? 100) })
+export async function fetchStaffUsers(options: {
+  search?: string
+  status?: string
+  page?: number
+  pageSize?: number
+} = {}) {
+  const params = new URLSearchParams({
+    page: String(options.page ?? 1),
+    pageSize: String(options.pageSize ?? 20),
+  })
   if (options.search) params.set("search", options.search)
   if (options.status) params.set("status", options.status)
   const response = await apiFetch(apiUrl(`/api/admin/users?${params}`), {
@@ -871,6 +908,22 @@ export async function createStaffUser(payload: {
   return response.json()
 }
 
+export async function updateStaffUser(
+  id: string,
+  payload: { firstName: string; lastName: string; email: string; phoneNumber: string | null },
+): Promise<StaffUserRecord> {
+  const response = await apiFetch(apiUrl(`/api/admin/users/${id}`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to update staff account."))
+  }
+  return response.json()
+}
+
 export async function updateStaffStatus(id: string, action: "activate" | "deactivate" | "suspend") {
   const response = await apiFetch(apiUrl(`/api/admin/users/${id}/${action}`), {
     method: "PATCH",
@@ -882,16 +935,28 @@ export async function updateStaffStatus(id: string, action: "activate" | "deacti
   }
 }
 
-export async function updateStaffPermissions(id: string, permissions: string[]) {
-  const response = await apiFetch(apiUrl(`/api/admin/users/${id}/permissions`), {
+export async function verifyStaffUser(id: string): Promise<StaffUserRecord> {
+  const response = await apiFetch(apiUrl(`/api/admin/users/${id}/verify`), {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
-    body: JSON.stringify({ permissions }),
+    headers: { ...getAdminAuthHeaders() },
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to update staff permissions."))
+    throw new Error(getApiErrorMessage(data, "Failed to verify staff account."))
   }
+  return response.json()
+}
+
+export async function promoteStaffUserToManager(id: string): Promise<StaffUserRecord> {
+  const response = await apiFetch(apiUrl(`/api/admin/users/${id}/promote-to-manager`), {
+    method: "PATCH",
+    headers: { ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to promote staff account."))
+  }
+  return response.json()
 }
 
 export async function deleteStaffUser(id: string) {
@@ -905,8 +970,19 @@ export async function deleteStaffUser(id: string) {
   }
 }
 
-export async function fetchAuditLogs(): Promise<AuditLogRecord[]> {
-  const response = await apiFetch(apiUrl("/api/admin/audit-logs?pageSize=50"), {
+export async function fetchAuditLogs(options: {
+  page?: number
+  pageSize?: number
+  action?: string
+  targetResource?: string
+} = {}): Promise<{ items: AuditLogRecord[]; total: number; page: number; pageSize: number }> {
+  const params = new URLSearchParams({
+    page: String(options.page ?? 1),
+    pageSize: String(options.pageSize ?? 25),
+  })
+  if (options.action) params.set("action", options.action)
+  if (options.targetResource) params.set("targetResource", options.targetResource)
+  const response = await apiFetch(apiUrl(`/api/admin/audit-logs?${params}`), {
     headers: { Accept: "application/json", ...getAdminAuthHeaders() },
   })
   if (!response.ok) {
@@ -914,5 +990,13 @@ export async function fetchAuditLogs(): Promise<AuditLogRecord[]> {
     throw new Error(getApiErrorMessage(data, "Failed to load audit logs."))
   }
   const result = await readJsonResponse(response)
-  return isRecord(result) && Array.isArray(result.items) ? result.items as AuditLogRecord[] : []
+  if (!isRecord(result) || !Array.isArray(result.items)) {
+    throw new Error("The audit log service returned an invalid response.")
+  }
+  return {
+    items: result.items as AuditLogRecord[],
+    total: typeof result.total === "number" ? result.total : 0,
+    page: typeof result.page === "number" ? result.page : options.page ?? 1,
+    pageSize: typeof result.pageSize === "number" ? result.pageSize : options.pageSize ?? 25,
+  }
 }

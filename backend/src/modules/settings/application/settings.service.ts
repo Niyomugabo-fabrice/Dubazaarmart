@@ -82,14 +82,24 @@ export class SettingsService {
   }
 
   async createAnnouncement(body: Record<string, any>) {
-    if (!body.title || !body.message) throw new BadRequestException('Title and message are required')
+    if (typeof body.title !== 'string' || !body.title.trim() || typeof body.message !== 'string' || !body.message.trim()) {
+      throw new BadRequestException('Title and message are required.')
+    }
+    if (body.active !== undefined && typeof body.active !== 'boolean') {
+      throw new BadRequestException('active must be a boolean.')
+    }
+    const startDate = parseOptionalDate(body.startDate)
+    const endDate = parseOptionalDate(body.endDate)
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException('The end date must be on or after the start date.')
+    }
     const announcement = await this.repository.saveAnnouncement({
-      title: String(body.title),
-      message: String(body.message),
-      tag: body.tag ? String(body.tag) : 'Announcement',
-      startDate: parseOptionalDate(body.startDate),
-      endDate: parseOptionalDate(body.endDate),
-      active: true,
+      title: body.title.trim(),
+      message: body.message.trim(),
+      tag: typeof body.tag === 'string' && body.tag.trim() ? body.tag.trim() : 'Announcement',
+      startDate,
+      endDate,
+      active: body.active ?? true,
     })
     return { success: true, announcement: serializeAnnouncement(announcement) }
   }
@@ -98,14 +108,30 @@ export class SettingsService {
     const current = await this.repository.findAnnouncement(id)
     if (!current) throw new NotFoundException('Announcement not found')
     const values: Partial<AnnouncementEntity> = {}
-    if (body.title !== undefined) values.title = String(body.title)
-    if (body.message !== undefined) values.message = String(body.message)
-    if (body.tag !== undefined) values.tag = String(body.tag)
-    if (body.active !== undefined) values.active = Boolean(body.active)
+    if (body.title !== undefined) {
+      if (typeof body.title !== 'string' || !body.title.trim()) throw new BadRequestException('Title is required.')
+      values.title = body.title.trim()
+    }
+    if (body.message !== undefined) {
+      if (typeof body.message !== 'string' || !body.message.trim()) throw new BadRequestException('Message is required.')
+      values.message = body.message.trim()
+    }
+    if (body.tag !== undefined) {
+      if (typeof body.tag !== 'string') throw new BadRequestException('Tag must be a string.')
+      values.tag = body.tag.trim() || 'Announcement'
+    }
+    if (body.active !== undefined) {
+      if (typeof body.active !== 'boolean') throw new BadRequestException('active must be a boolean.')
+      values.active = body.active
+    }
     if (body.startDate !== undefined) values.startDate = parseOptionalDate(body.startDate)
     if (body.endDate !== undefined) values.endDate = parseOptionalDate(body.endDate)
     if (!Object.keys(values).length) throw new BadRequestException('No fields to update')
-    return { success: true, announcement: serializeAnnouncement(await this.repository.saveAnnouncement({ ...current, ...values })) }
+    const updated = { ...current, ...values }
+    if (updated.startDate && updated.endDate && updated.startDate > updated.endDate) {
+      throw new BadRequestException('The end date must be on or after the start date.')
+    }
+    return { success: true, announcement: serializeAnnouncement(await this.repository.saveAnnouncement(updated)) }
   }
 
   async deleteAnnouncement(id: string) {

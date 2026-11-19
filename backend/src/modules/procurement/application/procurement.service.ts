@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
-import type { ProcurementRepository } from '../domain/procurement.repository'
-import { PROCUREMENT_REPOSITORY } from '../domain/procurement.repository'
+import type { ProcurementRepository, UpdateCompanyOrderInput } from '../domain/procurement.repository'
+import { PROCUREMENT_REPOSITORY, PurchaseOrderUpdateError } from '../domain/procurement.repository'
 import type { CompanyOrderEntity } from '../infrastructure/persistence/typeorm/company-order.entity'
 
 @Injectable()
@@ -56,19 +56,30 @@ export class ProcurementService {
   }
 
   async update(id: string, body: Record<string, any>) {
-    const values: Partial<CompanyOrderEntity> = {}
-    if (body.status) values.status = String(body.status)
-    if (body.paymentStatus) values.paymentStatus = String(body.paymentStatus)
-    if (body.shippingCompany) values.shippingCompany = String(body.shippingCompany)
-    if (body.expectedArrival) {
-      const date = new Date(body.expectedArrival)
-      if (Number.isNaN(date.getTime())) throw new BadRequestException('Expected arrival date is invalid.')
-      values.expectedArrival = date
+    const values: UpdateCompanyOrderInput = {}
+    if (body.supplierName !== undefined) values.supplierName = requireText(body.supplierName, 'Supplier name')
+    if (body.supplierContact !== undefined) values.supplierContact = requireText(body.supplierContact, 'Supplier contact', true)
+    if (body.shippingCompany !== undefined) values.shippingCompany = requireText(body.shippingCompany, 'Shipping company', true)
+    if (body.expectedArrival !== undefined) values.expectedArrival = parseDate(body.expectedArrival)
+    if (body.shippingCost !== undefined) values.shippingCost = parseNonNegativeNumber(body.shippingCost, 'Shipping cost')
+    if (body.otherCharges !== undefined) values.otherCharges = parseNonNegativeNumber(body.otherCharges, 'Other charges')
+    if (body.notes !== undefined) values.notes = requireText(body.notes, 'Notes', true)
+    if (body.status !== undefined) {
+      values.status = requireChoice(body.status, ['ORDERED', 'SHIPPED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CANCELLED'], 'Status')
     }
+    if (body.paymentStatus !== undefined) {
+      values.paymentStatus = requireChoice(body.paymentStatus, ['PAID', 'PENDING', 'PARTIAL'], 'Payment status')
+    }
+    if (body.items !== undefined) values.items = normalizeUpdateItems(body.items)
     if (!Object.keys(values).length) throw new BadRequestException('No fields to update')
-    const order = await this.procurement.update(id, values)
-    if (!order) throw new NotFoundException('Company order not found')
-    return { success: true, companyOrder: serializeCompanyOrder(order) }
+    try {
+      const order = await this.procurement.update(id, values)
+      if (!order) throw new NotFoundException('Company order not found')
+      return { success: true, companyOrder: serializeCompanyOrder(order) }
+    } catch (error) {
+      if (error instanceof PurchaseOrderUpdateError) throw new BadRequestException(error.message)
+      throw error
+    }
   }
 
   async remove(id: string) {
@@ -103,6 +114,69 @@ export class ProcurementService {
       throw error
     }
   }
+}
+
+function requireText(value: unknown, label: string, allowEmpty = false): string {
+  if (typeof value !== 'string' || (!allowEmpty && !value.trim())) {
+    throw new BadRequestException(`${label} must be ${allowEmpty ? 'a string' : 'provided'}.`)
+  }
+  return value.trim()
+}
+
+function parseDate(value: unknown): Date {
+  if (typeof value !== 'string' && !(value instanceof Date)) {
+    throw new BadRequestException('Expected arrival date is invalid.')
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) throw new BadRequestException('Expected arrival date is invalid.')
+  return date
+}
+
+function parseNonNegativeNumber(value: unknown, label: string): number {
+  if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) {
+    throw new BadRequestException(`${label} must be a non-negative number.`)
+  }
+  const number = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(number) || number < 0) {
+    throw new BadRequestException(`${label} must be a non-negative number.`)
+  }
+  return number
+}
+
+function requireChoice<T extends string>(value: unknown, choices: readonly T[], label: string): T {
+  if (typeof value !== 'string' || !choices.includes(value as T)) {
+    throw new BadRequestException(`${label} is invalid.`)
+  }
+  return value as T
+}
+
+function normalizeUpdateItems(value: unknown): NonNullable<UpdateCompanyOrderInput['items']> {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new BadRequestException('At least one purchase order item is required.')
+  }
+  const seenIds = new Set<string>()
+  return value.map((item: unknown) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new BadRequestException('Each purchase order item must be an object.')
+    }
+    const input = item as Record<string, unknown>
+    const productName = requireText(input.productName, 'Product name')
+    const category = input.category === undefined ? 'electronics' : requireText(input.category, 'Category', true)
+    const unitPrice = parseNonNegativeNumber(input.unitPrice, 'Unit price')
+    const quantityOrdered = Number(input.quantityOrdered)
+    if (!Number.isInteger(quantityOrdered) || quantityOrdered <= 0) {
+      throw new BadRequestException('Item quantity must be a positive whole number.')
+    }
+    let id: string | undefined
+    if (input.id !== undefined) {
+      if (typeof input.id !== 'string' || !input.id.trim() || seenIds.has(input.id)) {
+        throw new BadRequestException('Purchase order item identifiers must be unique strings.')
+      }
+      id = input.id
+      seenIds.add(id)
+    }
+    return { id, productName, category, unitPrice, quantityOrdered }
+  })
 }
 
 function serializeCompanyOrder(row: CompanyOrderEntity) {

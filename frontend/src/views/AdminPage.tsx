@@ -41,7 +41,7 @@ const CreateOrderModal = dynamic(() => import("../components/CreateOrderModal"))
 const CustomerOrderDetailsModal = dynamic(() => import("../components/CustomerOrderDetailsModal"))
 const CancelOrderModal = dynamic(() => import("../components/CancelOrderModal"))
 const CreateCompanyOrderModal = dynamic(() => import("../components/CreateCompanyOrderModal"))
-const CompanyOrderDetailsModal = dynamic(() => import("../components/CompanyOrderDetailsModal"))
+const EditCompanyOrderModal = dynamic(() => import("../components/EditCompanyOrderModal"))
 const ReceiveCompanyOrderModal = dynamic(() => import("../components/ReceiveCompanyOrderModal"))
 const RemoveStockModal = dynamic(() => import("../components/RemoveStockModal"))
 const EditStockItemModal = dynamic(() => import("../components/EditStockItemModal"))
@@ -371,8 +371,10 @@ export default function AdminPage() {
   const [companyOrderStatusFilter, setCompanyOrderStatusFilter] = useState("ALL")
   const [companyOrdersLoading, setCompanyOrdersLoading] = useState(false)
   const [isCreateCompanyOrderOpen, setIsCreateCompanyOrderOpen] = useState(false)
-  const [selectedPoForDetails, setSelectedPoForDetails] = useState<CompanyOrder | null>(null)
+  const [poForEdit, setPoForEdit] = useState<CompanyOrder | null>(null)
   const [poForReceive, setPoForReceive] = useState<CompanyOrder | null>(null)
+  const [visibleCompanyOrderCount, setVisibleCompanyOrderCount] = useState(5)
+  const [expandedCompanyOrderIds, setExpandedCompanyOrderIds] = useState<string[]>([])
 
   // Inventory & Stock State
   const [stockOverview, setStockOverview] = useState<StockOverview | null>(null)
@@ -603,6 +605,14 @@ export default function AdminPage() {
       isMounted = false
     }
   }, [isAuthenticated, section, companyOrderSearch, companyOrderStatusFilter, refreshToken])
+
+  useEffect(() => {
+    setVisibleCompanyOrderCount(5)
+  }, [companyOrderSearch, companyOrderStatusFilter])
+
+  useEffect(() => {
+    if (section === "companyOrders") setVisibleCompanyOrderCount(5)
+  }, [section])
 
   useEffect(() => {
     if (!isAuthenticated || section !== "inventory") return
@@ -2141,10 +2151,9 @@ export default function AdminPage() {
               </select>
             </div>
 
-            {/* Orders list */}
-            <div className="space-y-6">
+            <div className="space-y-3">
               {companyOrdersLoading && (
-                <div className="h-44 animate-pulse rounded-2xl border" style={{ background: "#FFF7E8", borderColor: "#FFB800" }} />
+                <div className="h-32 animate-pulse rounded-2xl border" style={{ background: "#FFF7E8", borderColor: "#FFB800" }} />
               )}
               {!companyOrdersLoading && companyOrders.length === 0 && (
                 <div className="rounded-2xl border border-dashed p-12 text-center" style={{ borderColor: "#FFB800", color: "#0B5B24" }}>
@@ -2153,212 +2162,146 @@ export default function AdminPage() {
                   <div className="text-xs mt-1">Click "+ Create Purchase Order" to log a supplier order in USD.</div>
                 </div>
               )}
-              {companyOrders.map((po, poIndex) => {
+              {!companyOrdersLoading && companyOrders.slice(0, visibleCompanyOrderCount).map((po) => {
+                const isExpanded = expandedCompanyOrderIds.includes(po.id)
                 const statusColor =
                   po.status === "RECEIVED" ? "#10B981" :
                   po.status === "SHIPPED" ? "#2563EB" :
                   po.status === "PARTIALLY_RECEIVED" ? "#F59E0B" :
                   po.status === "CANCELLED" ? "#DC2626" : "#EA580C"
-                const totalPoCount = companyOrders.length
+                const placedDate = new Date(po.createdAt || po.orderDate)
+                const formattedPlacedDate = Number.isNaN(placedDate.getTime())
+                  ? "—"
+                  : placedDate.toLocaleDateString("en-RW", { dateStyle: "medium" })
 
                 return (
-                  <div key={po.id} className="space-y-4">
-                    <article
-                      className="overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:shadow-2xl"
-                      style={{
-                        border: "2px solid #94A3B8",
-                        borderLeft: `10px solid ${statusColor}`,
-                        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
-                      }}
-                    >
-                      {/* Top Header Identity Strip */}
-                      <div className="bg-slate-900 text-white px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold tracking-wider">
-                        <div className="flex items-center gap-2.5">
-                          <span className="bg-[#10B981] text-white font-black px-2.5 py-0.5 rounded text-[11px] tracking-wide">
-                            PURCHASE ORDER #{poIndex + 1} OF {totalPoCount}
-                          </span>
-                          <span className="font-mono text-slate-300">#{po.poNumber}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-400 font-normal">PO Total:</span>
-                          <span className="text-[#10B981] font-black text-sm">${po.totalAmount.toLocaleString()} USD</span>
-                        </div>
+                  <article
+                    key={po.id}
+                    className="overflow-hidden rounded-2xl border bg-white shadow-sm"
+                    style={{ borderColor: "#E2E8F0", borderLeft: `5px solid ${statusColor}` }}
+                  >
+                    <div className="grid gap-4 p-4 sm:grid-cols-2 sm:items-center lg:grid-cols-[1.1fr_1.5fr_1fr_1fr_1fr_auto]">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">PO number</div>
+                        <div className="font-mono text-sm font-bold text-slate-900">#{po.poNumber}</div>
                       </div>
-
-                      {/* Top Header Banner */}
-                      <div
-                        className="flex flex-wrap items-start justify-between gap-4 border-b-2 p-5 sm:p-6"
-                        style={{
-                          background: "linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%)",
-                          borderColor: "#E2E8F0",
-                        }}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-3 flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-xs font-black px-3 py-1 rounded-lg bg-[#111111] text-[#FFB800] tracking-wider shadow-xs">
-                              #{po.poNumber}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 border border-slate-300 text-slate-700">
-                              PO #{poIndex + 1} of {totalPoCount}
-                            </span>
-                            <span
-                              className="rounded-full px-3 py-1 text-xs font-bold"
-                              style={{
-                                background: `${statusColor}15`,
-                                color: statusColor,
-                                border: `1px solid ${statusColor}60`,
-                              }}
-                            >
-                              {po.status.replace(/_/g, " ")}
-                            </span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#064D1A] bg-[#10B981]/15 px-2.5 py-1 rounded-md border border-[#10B981]/30">
-                              SUPPLIER PURCHASE (USD)
-                            </span>
-                          </div>
-                          <div className="font-bold text-lg text-slate-900 flex items-center gap-2">
-                            <span>🏢 {po.supplierName}</span>
-                            {po.supplierContact && <span className="text-xs text-slate-500 font-normal">({po.supplierContact})</span>}
-                          </div>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
-                            <span>🚢 Carrier: <strong className="text-slate-900">{po.shippingCompany}</strong></span>
-                            <span>📅 Placed: {new Date(po.createdAt || po.orderDate).toLocaleDateString("en-RW", { dateStyle: "medium" })}</span>
-                          </div>
-
-                          {/* Live Cargo Arrival Countdown */}
-                          <div className="mt-3 flex flex-wrap items-center gap-2.5 p-2.5 rounded-xl border border-blue-300/80 bg-blue-50/80">
-                            <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                              <span>🚢</span> Shipment Arrival Countdown:
-                            </span>
-                            <span className="text-slate-700 font-semibold text-xs">
-                              {po.expectedArrival
-                                ? new Intl.DateTimeFormat("en-RW", {
-                                    dateStyle: "medium",
-                                    timeStyle: "short",
-                                    timeZone: "Africa/Kigali",
-                                  }).format(new Date(po.expectedArrival))
-                                : "Pending carrier ETA"}
-                            </span>
-                            <LiveCountdown
-                              targetDate={po.expectedArrival}
-                              isCompleted={po.status === "RECEIVED"}
-                              completedText="Cargo Received in Stock"
-                              variant="company"
-                            />
-                          </div>
-                        </div>
-                        <div className="text-left sm:text-right min-w-[180px]">
-                          <div className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                            Total Cost (USD)
-                          </div>
-                          <div className="mt-1 text-2xl font-black text-[#FF6A00]">
-                            ${po.totalAmount.toLocaleString()}
-                          </div>
-                          <div className="mt-1 text-xs text-slate-600 font-medium">
-                            {po.items.length} product(s) ordered
-                          </div>
-                        </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Supplier</div>
+                        <div className="truncate text-sm font-semibold text-slate-900">{po.supplierName}</div>
                       </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Date</div>
+                        <div className="text-sm text-slate-700">{formattedPlacedDate}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total</div>
+                        <div className="text-sm font-bold text-[#FF6A00]">${po.totalAmount.toLocaleString()} USD</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Status</div>
+                        <span
+                          className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold"
+                          style={{ background: `${statusColor}15`, color: statusColor }}
+                        >
+                          {po.status.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCompanyOrderIds((current) => (
+                            isExpanded ? current.filter((id) => id !== po.id) : [...current, po.id]
+                          ))}
+                          aria-expanded={isExpanded}
+                          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                          {isExpanded ? "Hide details" : "View details"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPoForEdit(po)}
+                          className="rounded-lg border border-[#FFB800] bg-[#FFF7E8] px-3 py-2 text-xs font-bold text-slate-800 hover:bg-[#FFB800]/20"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCompanyOrder(po.id, po.poNumber)}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
 
-                      {/* Framed Items table */}
-                      <div className="m-4 sm:m-6 overflow-x-auto rounded-xl border-2 border-slate-200 bg-white shadow-xs">
-                        <table className="w-full min-w-[620px] text-sm">
-                          <thead>
-                            <tr className="text-left text-[11px] font-bold uppercase tracking-wider bg-slate-100 border-b-2 border-slate-200 text-slate-800">
-                              <th className="py-3 px-4 font-bold">Product</th>
-                              <th className="py-3 px-4 font-bold">Category</th>
-                              <th className="py-3 px-4 text-right font-bold">Ordered Qty</th>
-                              <th className="py-3 px-4 text-right font-bold">Received Qty</th>
-                              <th className="py-3 px-4 text-right font-bold">Unit Cost (USD)</th>
-                              <th className="py-3 px-4 text-right font-bold">Line Total (USD)</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {po.items.map((item) => (
-                              <tr key={item.id} className="transition-colors hover:bg-slate-50">
-                                <td className="py-3 px-4 font-bold text-slate-900">{item.productName}</td>
-                                <td className="py-3 px-4 text-xs font-semibold">
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700">
-                                    {item.category}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-right font-bold text-slate-900">{item.quantityOrdered}</td>
-                                <td className="py-3 px-4 text-right font-bold" style={{ color: item.quantityReceived >= item.quantityOrdered ? "#10B981" : "#EA580C" }}>
-                                  {item.quantityReceived}
-                                </td>
-                                <td className="py-3 px-4 text-right font-medium text-slate-700">${item.unitPrice.toLocaleString()}</td>
-                                <td className="py-3 px-4 text-right font-black text-[#FF6A00]">${item.totalPrice.toLocaleString()}</td>
+                    {isExpanded && (
+                      <div className="space-y-4 border-t bg-slate-50 p-4">
+                        <div className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                          <div><span className="font-bold text-slate-500">Supplier contact</span><div className="mt-1 text-slate-900">{po.supplierContact || "—"}</div></div>
+                          <div><span className="font-bold text-slate-500">Shipping company</span><div className="mt-1 text-slate-900">{po.shippingCompany || "—"}</div></div>
+                          <div><span className="font-bold text-slate-500">Expected arrival</span><div className="mt-1 text-slate-900">{po.expectedArrival ? new Date(po.expectedArrival).toLocaleString("en-RW", { dateStyle: "medium", timeStyle: "short" }) : "—"}</div></div>
+                          <div><span className="font-bold text-slate-500">Payment status</span><div className="mt-1 text-slate-900">{po.paymentStatus}</div></div>
+                        </div>
+                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                          <table className="w-full min-w-[620px] text-xs">
+                            <thead className="bg-[#FFF7E8] text-left text-[10px] uppercase tracking-wide text-slate-600">
+                              <tr>
+                                <th className="px-3 py-2">Item</th>
+                                <th className="px-3 py-2">Category</th>
+                                <th className="px-3 py-2 text-right">Quantity</th>
+                                <th className="px-3 py-2 text-right">Received</th>
+                                <th className="px-3 py-2 text-right">Unit price</th>
+                                <th className="px-3 py-2 text-right">Line total</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Bottom Actions */}
-                      <div
-                        className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-slate-200 bg-slate-50 px-5 py-4 sm:px-6 text-xs font-medium text-slate-700"
-                      >
-                        <div className="flex items-center gap-3">
-                          {po.notes ? (
-                            <span>Notes: <strong className="text-slate-900">{po.notes}</strong></span>
-                          ) : (
-                            <span>Company PO strictly denominated in USD ($)</span>
-                          )}
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {po.items.map((item) => (
+                                <tr key={item.id}>
+                                  <td className="px-3 py-2 font-semibold text-slate-900">{item.productName}</td>
+                                  <td className="px-3 py-2 text-slate-600">{item.category}</td>
+                                  <td className="px-3 py-2 text-right font-semibold">{item.quantityOrdered}</td>
+                                  <td className="px-3 py-2 text-right">{item.quantityReceived}</td>
+                                  <td className="px-3 py-2 text-right">${item.unitPrice.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right font-bold">${item.totalPrice.toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPoForDetails(po)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 transition-colors shadow-xs"
-                          >
-                            👁️ View More
-                          </button>
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                          <div className="text-slate-700">
+                            Shipping: ${po.shippingCost.toFixed(2)} · Other charges: ${po.otherCharges.toFixed(2)}
+                            <div className="mt-1 whitespace-pre-wrap"><strong>Notes:</strong> {po.notes || "—"}</div>
+                          </div>
                           {po.status !== "RECEIVED" && po.status !== "CANCELLED" && (
                             <button
                               type="button"
                               onClick={() => setPoForReceive(po)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#10B981]/15 border border-[#10B981] text-[#065F46] hover:bg-[#10B981]/25 transition-colors shadow-xs flex items-center gap-1"
+                              className="rounded-lg border border-[#10B981] bg-[#10B981]/15 px-3 py-2 text-xs font-bold text-[#065F46] hover:bg-[#10B981]/25"
                             >
-                              <span>📦</span> Add to Stock
+                              Add to Stock
                             </button>
                           )}
-                          {po.status === "RECEIVED" && (
-                            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#10B981]/20 text-[#064D1A] border border-[#10B981]">
-                              ✓ Added to Stock
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCompanyOrder(po.id, po.poNumber)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 transition-colors shadow-xs flex items-center gap-1"
-                            title="Permanently delete this purchase order"
-                          >
-                            <span>🗑️</span> Delete
-                          </button>
                         </div>
                       </div>
-
-                      {/* Bottom PO Boundary Strip */}
-                      <div className="px-5 py-2 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <span>DubazaarMart Supplier Purchase Order</span>
-                        <span className="text-slate-500 font-extrabold tracking-widest">▲ END OF PURCHASE ORDER #{po.poNumber} ▲</span>
-                        <span>{po.items.length} Product(s) Total</span>
-                      </div>
-                    </article>
-
-                    {/* Distinct Separator between consecutive purchase orders */}
-                    {poIndex < totalPoCount - 1 && (
-                      <div className="my-10 flex items-center justify-center gap-4">
-                        <div className="h-0.5 bg-slate-300 flex-1"></div>
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-700 bg-white px-5 py-2 rounded-full border-2 border-slate-300 shadow-sm flex items-center gap-2">
-                          <span>⬇️</span> NEXT PURCHASE ORDER BELOW ({poIndex + 2} of {totalPoCount})
-                        </span>
-                        <div className="h-0.5 bg-slate-300 flex-1"></div>
-                      </div>
                     )}
-                  </div>
+                  </article>
                 )
               })}
             </div>
+            {!companyOrdersLoading && companyOrders.length > 5 && (
+              <div className="mt-5 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCompanyOrderCount((current) => (
+                    current >= companyOrders.length ? 5 : Math.min(current + 5, companyOrders.length)
+                  ))}
+                  className="rounded-xl border border-[#FFB800] bg-white px-5 py-2.5 text-xs font-bold text-[#0B5B24] shadow-sm hover:bg-[#FFF7E8]"
+                >
+                  {visibleCompanyOrderCount >= companyOrders.length ? "Show less" : "View more"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -2966,16 +2909,13 @@ export default function AdminPage() {
         }}
       />
 
-      <CompanyOrderDetailsModal
-        po={selectedPoForDetails}
-        onClose={() => setSelectedPoForDetails(null)}
-        onAddStockClick={(po) => {
-          setSelectedPoForDetails(null)
-          setPoForReceive(po)
-        }}
-        onDeletePo={(poId, poNumber) => {
-          setSelectedPoForDetails(null)
-          handleDeleteCompanyOrder(poId, poNumber)
+      <EditCompanyOrderModal
+        po={poForEdit}
+        onClose={() => setPoForEdit(null)}
+        onOrderSaved={(saved) => {
+          setCompanyOrders((current) => current.map((po) => po.id === saved.id ? saved : po))
+          setActionSuccess(`Purchase Order #${saved.poNumber} updated successfully.`)
+          setTimeout(() => setActionSuccess(null), 3500)
         }}
       />
 

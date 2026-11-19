@@ -169,6 +169,25 @@ export type CompanyOrder = {
   updatedAt: string
 }
 
+export type UpdateCompanyOrderPayload = {
+  supplierName: string
+  supplierContact: string
+  shippingCompany: string
+  expectedArrival: string
+  shippingCost: number
+  otherCharges: number
+  status: CompanyOrder["status"]
+  paymentStatus: CompanyOrder["paymentStatus"]
+  notes: string
+  items: Array<{
+    id?: string
+    productName: string
+    category: string
+    unitPrice: number
+    quantityOrdered: number
+  }>
+}
+
 export type StockItemSummary = {
   id: string
   name: string
@@ -682,6 +701,27 @@ export async function createCompanyOrder(payload: {
   if (!response.ok) {
     const data = await readJsonResponse(response)
     throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to create company order")
+  }
+  const result = await response.json()
+  return result.companyOrder
+}
+
+export async function updateCompanyOrder(
+  poId: string,
+  payload: UpdateCompanyOrderPayload,
+): Promise<CompanyOrder> {
+  const response = await apiFetch(apiUrl(`/api/admin/company-orders/${poId}`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(isRecord(data) && typeof data.message === "string"
+      ? data.message
+      : isRecord(data) && typeof data.error === "string"
+        ? data.error
+        : "Failed to update purchase order")
   }
   const result = await response.json()
   return result.companyOrder

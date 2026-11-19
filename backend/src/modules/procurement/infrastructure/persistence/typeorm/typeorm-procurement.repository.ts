@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
-import { DataSource, IsNull } from 'typeorm'
-import type { CompanyOrderQuery, CreateCompanyOrderInput, ProcurementRepository } from '../../../domain/procurement.repository'
+import { DataSource } from 'typeorm'
+import {
+  PurchaseOrderUpdateError,
+  type CompanyOrderQuery,
+  type CreateCompanyOrderInput,
+  type ProcurementRepository,
+  type UpdateCompanyOrderInput,
+} from '../../../domain/procurement.repository'
 import { CompanyOrderEntity } from './company-order.entity'
 import { CompanyOrderItemEntity } from './company-order-item.entity'
 import { ProductEntity } from '../../../../products/infrastructure/persistence/typeorm/product.entity'
@@ -48,10 +54,84 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
     }))
   }
 
-  async update(id: string, values: Partial<CompanyOrderEntity>) {
-    const repository = this.dataSource.getRepository(CompanyOrderEntity)
-    const result = await repository.update({ id, deletedAt: IsNull() }, values)
-    return result.affected ? repository.findOne({ where: { id }, relations: { items: true } }) : null
+  async update(id: string, values: UpdateCompanyOrderInput) {
+    return this.dataSource.transaction(async (manager) => {
+      const orderRepository = manager.getRepository(CompanyOrderEntity)
+      const order = await orderRepository.createQueryBuilder('po')
+        .setLock('pessimistic_write')
+        .where('po.id = :id', { id })
+        .getOne()
+      if (!order) return null
+
+      const itemsRepository = manager.getRepository(CompanyOrderItemEntity)
+      const existingItems = values.items
+        ? await itemsRepository.createQueryBuilder('item')
+          .setLock('pessimistic_write')
+          .where('item.orderId = :id', { id })
+          .getMany()
+        : []
+
+      if (values.items) {
+        const existingById = new Map(existingItems.map((item) => [item.id, item]))
+        const retainedIds = new Set<string>()
+        const updatedItems = values.items.map((input) => {
+          const existing = input.id ? existingById.get(input.id) : undefined
+          if (input.id && !existing) {
+            throw new PurchaseOrderUpdateError('An item does not belong to this purchase order.')
+          }
+          if (existing) {
+            if (input.quantityOrdered < existing.quantityReceived) {
+              throw new PurchaseOrderUpdateError(`Quantity for ${existing.productName} cannot be less than the quantity already received.`)
+            }
+            if (existing.quantityReceived > 0 && input.productName !== existing.productName) {
+              throw new PurchaseOrderUpdateError(`The name of ${existing.productName} cannot change after items have been received.`)
+            }
+            retainedIds.add(existing.id)
+          }
+          const unitPriceCents = amountInCents(input.unitPrice)
+          return itemsRepository.create({
+            ...(existing ?? {}),
+            orderId: id,
+            productName: input.productName,
+            category: input.category,
+            unitPrice: (unitPriceCents / 100).toFixed(2),
+            quantityOrdered: input.quantityOrdered,
+            quantityReceived: existing?.quantityReceived ?? 0,
+            totalPrice: (unitPriceCents * input.quantityOrdered / 100).toFixed(2),
+            addedToStock: existing?.addedToStock ?? false,
+          })
+        })
+        const removedItems = existingItems.filter((item) => !retainedIds.has(item.id))
+        const receivedItem = removedItems.find((item) => item.quantityReceived > 0)
+        if (receivedItem) {
+          throw new PurchaseOrderUpdateError(`Received item ${receivedItem.productName} cannot be removed from a purchase order.`)
+        }
+        if (removedItems.length > 0) await itemsRepository.delete(removedItems.map((item) => item.id))
+        order.items = await itemsRepository.save(updatedItems)
+      } else {
+        order.items = await itemsRepository.findBy({ orderId: id })
+      }
+
+      if (values.supplierName !== undefined) order.supplierName = values.supplierName
+      if (values.supplierContact !== undefined) order.supplierContact = values.supplierContact
+      if (values.shippingCompany !== undefined) order.shippingCompany = values.shippingCompany
+      if (values.expectedArrival !== undefined) order.expectedArrival = values.expectedArrival
+      if (values.status !== undefined) order.status = values.status
+      if (values.paymentStatus !== undefined) order.paymentStatus = values.paymentStatus
+      if (values.notes !== undefined) order.notes = values.notes
+
+      const shippingCostCents = amountInCents(values.shippingCost ?? Number(order.shippingCost))
+      const otherChargesCents = amountInCents(values.otherCharges ?? Number(order.otherCharges))
+      order.shippingCost = (shippingCostCents / 100).toFixed(2)
+      order.otherCharges = (otherChargesCents / 100).toFixed(2)
+      const itemsTotalCents = order.items.reduce(
+        (sum, item) => sum + amountInCents(Number(item.unitPrice)) * item.quantityOrdered,
+        0,
+      )
+      order.totalAmount = ((itemsTotalCents + shippingCostCents + otherChargesCents) / 100).toFixed(2)
+
+      return orderRepository.save(order)
+    })
   }
 
   async archive(id: string) {
@@ -108,4 +188,8 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
       return { order: saved, addedCount }
     })
   }
+}
+
+function amountInCents(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100)
 }

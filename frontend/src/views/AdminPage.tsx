@@ -277,10 +277,7 @@ export default function AdminPage() {
     .join("")
     .toUpperCase()
   const hasPermission = useCallback(
-    (permission: string) => isManager || (
-      permission !== "announcements.manage" &&
-      (admin?.role === "STAFF" || Boolean(admin?.permissions.includes(permission)))
-    ),
+    (permission: string) => isManager || admin?.role === "STAFF" || Boolean(admin?.permissions.includes(permission)),
     [admin, isManager],
   )
   const { products: storeProducts, deleteProduct } = useProducts()

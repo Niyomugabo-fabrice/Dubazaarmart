@@ -103,9 +103,9 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
       <div
-        className="w-full max-w-2xl my-8 rounded-3xl p-6 sm:p-8 overflow-hidden shadow-2xl animate-scaleUp"
+        className="max-h-[calc(100dvh_-_2rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-3xl p-6 shadow-2xl animate-scaleUp sm:p-8"
         style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
       >
         <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: '#F1FFF0' }}>

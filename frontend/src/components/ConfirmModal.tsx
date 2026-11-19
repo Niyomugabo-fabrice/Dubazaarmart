@@ -60,7 +60,7 @@ export default function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fadeIn"
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto p-4 animate-fadeIn sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
@@ -74,7 +74,7 @@ export default function ConfirmModal({
 
       {/* Modal card */}
       <div
-        className="relative w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-scaleUp"
+        className="relative max-h-[calc(100dvh_-_2rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-3xl shadow-2xl animate-scaleUp"
         style={{
           background: '#FFFFFF',
           border: `1px solid ${danger ? '#FF6A00' : '#FFB800'}`,

@@ -61,8 +61,8 @@ export default function RemoveStockModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border-2 border-[#FF6A00]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center">
+      <div className="max-h-[calc(100dvh_-_2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border-2 border-[#FF6A00] bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b">
           <div className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-[#FF6A00] text-lg font-bold">

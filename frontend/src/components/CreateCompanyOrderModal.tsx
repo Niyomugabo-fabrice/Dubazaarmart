@@ -96,8 +96,8 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl border-2 border-[#FFB800] my-8 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center">
+      <div className="max-h-[calc(100dvh_-_2rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-2xl border-2 border-[#FFB800] bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between pb-4 border-b">
           <div>
             <div className="flex items-center gap-2">

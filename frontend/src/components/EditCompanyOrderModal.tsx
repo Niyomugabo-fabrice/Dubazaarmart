@@ -143,12 +143,12 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-company-order-title"
-        className="my-8 max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border-2 border-[#FFB800] bg-white p-6 shadow-2xl"
+        className="max-h-[calc(100dvh_-_2rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-2xl border-2 border-[#FFB800] bg-white p-6 shadow-2xl"
       >
         <div className="flex items-center justify-between border-b pb-4">
           <div>

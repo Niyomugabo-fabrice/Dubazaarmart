@@ -88,13 +88,13 @@ export default function PromptModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm animate-fadeIn sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="prompt-modal-title"
     >
       <div
-        className="w-full max-w-md my-8 rounded-3xl p-6 sm:p-7 overflow-hidden shadow-2xl animate-scaleUp"
+        className="max-h-[calc(100dvh_-_2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-3xl p-6 shadow-2xl animate-scaleUp sm:p-7"
         style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
       >
         <div className="flex items-center justify-between pb-3.5 border-b" style={{ borderColor: '#F1FFF0' }}>

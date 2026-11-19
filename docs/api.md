@@ -1,6 +1,6 @@
 # REST API
 
-All API routes are under `/api/v1`. Product, order, inventory, dashboard, settings, announcement, and upload response fields retain the shapes consumed by the current storefront and admin UI. Customers do not authenticate; checkout remains available to guests and stores customer details with each order.
+All API routes are under `/api/v1`. Product, order, inventory, dashboard, settings, announcement, testimonial, category image, and upload response fields retain the shapes consumed by the current storefront and admin UI. Customers do not authenticate; checkout remains available to guests and stores customer details with each order.
 
 ## Public routes
 
@@ -12,10 +12,12 @@ All API routes are under `/api/v1`. Product, order, inventory, dashboard, settin
 | POST | `/orders/whatsapp` | Build a WhatsApp checkout link |
 | GET | `/settings` | Read public store settings |
 | GET | `/announcements/active` | Read current announcements |
+| GET | `/testimonials` | Read testimonials visible on the storefront |
+| GET | `/categories/images` | Read public category image URLs |
 | POST | `/auth/register` | Submit a pending STAFF registration request when manager-enabled |
-| POST | `/media/upload` | Upload product image to Cloudinary; requires `media.upload` or MANAGER |
+| POST | `/media/upload` | Upload a product or testimonial image to Cloudinary; requires `media.upload` or MANAGER |
 
-Image uploads use `multipart/form-data` with a `file` field. JPEG, PNG, WebP, and GIF files up to 10MB are accepted; the server checks the file signature before forwarding it to Cloudinary. JSON and data-URL upload bodies are not supported.
+Image uploads use `multipart/form-data` with a `file` field. JPEG, PNG, WebP, and GIF files up to 10MB are accepted; the server checks the file signature before forwarding it to Cloudinary. Testimonial images are compressed in the browser and resized to a maximum of 300x300 pixels. JSON and data-URL upload bodies are not supported.
 
 ## Authentication
 
@@ -43,12 +45,16 @@ Protected requests use `Authorization: Bearer <access-token>`. Browser requests 
 | GET, POST, PATCH | `/admin/stock*` | View/update inventory (`inventory.view`, `inventory.update`) |
 | POST | `/admin/settings` | Update store settings and staff-registration availability (MANAGER only) |
 | GET, POST, PATCH, DELETE | `/admin/announcements` | View announcements; manager-only changes (`announcements.manage`) |
+| GET, POST, PATCH, DELETE | `/admin/testimonials` | List, add, edit, delete, and control testimonial visibility (`testimonials.*`) |
+| POST | `/admin/categories/:id/image` | Upload or replace a category image (`categories.manage`; JPG, PNG, or WebP up to 2MB) |
 | GET | `/admin/dashboard` | Read dashboard analytics (`reports.view`; `7d`, `30d`, or `12m`) |
 | GET, POST | `/admin/users` | List/create STAFF accounts (MANAGER only) |
 | GET, PATCH, DELETE | `/admin/users/:id` | Read/update STAFF details or soft-delete (MANAGER only) |
 | PATCH | `/admin/users/:id/activate`, `/deactivate`, `/suspend`, `/verify`, `/promote-to-manager` | Manage STAFF status, verify email, or promote an active verified STAFF account (MANAGER only) |
 | GET | `/admin/audit-logs` | Read append-only sign-in and administrative audit records (MANAGER only) |
 
-STAFF accounts have full operational access except user management, audit logs, and settings/content management (including announcement changes), which remain MANAGER-only. Managers can manage staff and other manager accounts; an account cannot deactivate, suspend, or remove itself. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER. Customer contact information is stored on orders; customers do not have sign-in accounts.
+Category images are optimized in the browser to 400x400 pixels or smaller and converted to WebP when supported.
+
+STAFF accounts have full operational access, including testimonial and category image management, except user management, audit logs, settings, and announcement changes, which remain MANAGER-only. Managers can manage staff and other manager accounts; an account cannot deactivate, suspend, or remove itself. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER. Customer contact information is stored on orders; customers do not have sign-in accounts.
 
 Interactive OpenAPI documentation is served from `/docs`.

@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect } from 'react'
 import { categories } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import { useProducts } from '../store/productsStore'
+import { useCategoryImages } from '../store/categoryImagesStore'
+import Image from 'next/image'
 
 interface Props {
   initialCategory?: string
@@ -12,6 +14,7 @@ interface Props {
 
 export default function ShopPage({ initialCategory, initialQuery = '' }: Props = {}) {
   const { products: liveProducts, loading, error, refresh } = useProducts()
+  const { categoryImages } = useCategoryImages()
   const products = liveProducts
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
@@ -56,19 +59,35 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
           <span>All Products</span>
           <span className="badge" style={{ color: 'inherit' }}>{products.length}</span>
         </button>
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            type="button"
-            onClick={() => setSelectedCategory(cat.id)}
-            aria-pressed={selectedCategory === cat.id}
-            className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
-            style={selectedCategory === cat.id ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
-          >
-            <span>{cat.icon} {cat.name}</span>
-            <span className="badge" style={{ color: 'inherit' }}>{cat.count}</span>
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const imageUrl = categoryImages[cat.id]
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategory(cat.id)}
+              aria-pressed={selectedCategory === cat.id}
+              className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
+              style={selectedCategory === cat.id ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
+            >
+              <span className="flex items-center gap-2">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-200">
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt=""
+                      width={36}
+                      height={36}
+                      unoptimized
+                      className="h-9 w-9 object-cover"
+                    />
+                  ) : null}
+                </span>
+                <span>{cat.name}</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Price range */}

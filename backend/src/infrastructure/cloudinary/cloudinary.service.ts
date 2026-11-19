@@ -13,18 +13,26 @@ export class CloudinaryService {
     }
   }
 
-  async uploadImage(fileData: string, filename?: string) {
+  async uploadImage(fileData: string, filename?: string, folder = 'products') {
     const config = cloudinary.config()
     if (!config.cloud_name || !config.api_key || !config.api_secret) {
       throw new ServiceUnavailableException('Image uploads are not configured on the backend.')
     }
     const options: Record<string, unknown> = {
-      folder: 'dubazaarmart/products',
+      folder: `dubazaarmart/${folder}`,
       resource_type: 'image',
       allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-      transformation: [{ quality: 'auto:good' }, { fetch_format: 'auto' }],
+      transformation: folder === 'testimonials'
+        ? [{ width: 300, height: 300, crop: 'limit' }, { quality: 'auto:good' }, { fetch_format: 'auto' }]
+        : folder === 'categories'
+          ? [{ width: 400, height: 400, crop: 'limit' }, { quality: 'auto:good' }, { fetch_format: 'auto' }]
+          : [{ quality: 'auto:good' }, { fetch_format: 'auto' }],
     }
     if (filename) options.public_id = filename
+    if (folder === 'categories') {
+      options.overwrite = true
+      options.invalidate = true
+    }
     const result = await cloudinary.uploader.upload(fileData, options)
     return {
       url: result.secure_url || result.url,

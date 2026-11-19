@@ -11,6 +11,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module'
 import { HealthModule } from './modules/health/health.module'
 import { MediaModule } from './modules/media/media.module'
 import { AuditModule } from './modules/audit/audit.module'
+import { TestimonialsModule } from './modules/testimonials/testimonials.module'
+import { CategoriesModule } from './modules/categories/categories.module'
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { AuditModule } from './modules/audit/audit.module'
     HealthModule,
     MediaModule,
     AuditModule,
+    TestimonialsModule,
+    CategoriesModule,
   ],
 })
 export class AppModule {}

@@ -24,21 +24,43 @@ export interface Product {
   updatedAt?: string
 }
 
-export const categories = [
-  { id: 'smartphones', name: 'Smartphones', icon: '📱', count: 48 },
-  { id: 'laptops', name: 'Laptops', icon: '💻', count: 32 },
-  { id: 'tablets', name: 'Tablets', icon: '📟', count: 18 },
-  { id: 'smartwatches', name: 'Smart Watches', icon: '⌚', count: 24 },
-  { id: 'headphones', name: 'Headphones', icon: '🎧', count: 36 },
-  { id: 'earbuds', name: 'Earbuds', icon: '🎵', count: 28 },
-  { id: 'tvs', name: 'TVs', icon: '📺', count: 15 },
-  { id: 'cameras', name: 'Cameras', icon: '📷', count: 22 },
-  { id: 'gaming', name: 'Gaming', icon: '🎮', count: 19 },
-  { id: 'accessories', name: 'Computer Accessories', icon: '🖱️', count: 54 },
-  { id: 'phone-accessories', name: 'Phone Accessories', icon: '🔌', count: 67 },
-  { id: 'chargers', name: 'Chargers', icon: '⚡', count: 41 },
-  { id: 'power-banks', name: 'Power Banks', icon: '🔋', count: 23 },
-  { id: 'speakers', name: 'Speakers', icon: '🔊', count: 31 },
+export interface ProductCategory {
+  id: string
+  name: string
+}
+
+export const categoryImageIds = [
+  'smartphones',
+  'laptops',
+  'tablets',
+  'smartwatches',
+  'headphones',
+  'earbuds',
+  'tvs',
+  'cameras',
+  'gaming',
+  'accessories',
+  'phone-accessories',
+  'chargers',
+  'power-banks',
+  'speakers',
+] as const
+
+export const categories: ProductCategory[] = [
+  { id: 'smartphones', name: 'Smartphones' },
+  { id: 'laptops', name: 'Laptops' },
+  { id: 'tablets', name: 'Tablets'},
+  { id: 'smartwatches', name: 'Smart Watches'},
+  { id: 'headphones', name: 'Headphones' },
+  { id: 'earbuds', name: 'Earbuds'},
+  { id: 'tvs', name: 'TVs' },
+  { id: 'cameras', name: 'Cameras'},
+  { id: 'gaming', name: 'Gaming'},
+  { id: 'accessories', name: 'Computer Accessories'},
+  { id: 'phone-accessories', name: 'Phone Accessories'},
+  { id: 'chargers', name: 'Chargers'},
+  { id: 'power-banks', name: 'Power Banks'  },
+  { id: 'speakers', name: 'Speakers'},
 ]
 
 export const products: Product[] = [
@@ -286,32 +308,5 @@ export const products: Product[] = [
     active: true,
     rating: 4.6,
     reviews: 178,
-  },
-]
-
-export const testimonials = [
-  {
-    name: 'Claudine Uwimana',
-    location: 'Kigali, Rwanda',
-    text: 'I ordered a Samsung Galaxy S24 Ultra and it arrived in perfect condition within 3 days. The price was significantly lower than local shops. Will definitely order again!',
-    rating: 5,
-    product: 'Samsung Galaxy S24 Ultra',
-    avatar: 'CU',
-  },
-  {
-    name: 'Jean-Paul Hakizimana',
-    location: 'Musanze, Rwanda',
-    text: 'My MacBook Pro arrived faster than expected, sealed in original packaging. Customer support was responsive and helpful throughout the process.',
-    rating: 5,
-    product: 'Apple MacBook Pro M3',
-    avatar: 'JH',
-  },
-  {
-    name: 'Amina Kabanda',
-    location: 'Huye, Rwanda',
-    text: 'The Sony headphones sound incredible. Dubazaarmart saved me over RWF 100,000 compared to buying locally. The MoMo payment was super easy.',
-    rating: 5,
-    product: 'Sony WH-1000XM5',
-    avatar: 'AK',
   },
 ]

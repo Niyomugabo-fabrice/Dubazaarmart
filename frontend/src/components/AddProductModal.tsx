@@ -165,7 +165,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
               >
                 {categories.map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.icon} {c.name}
+                    {c.name}
                   </option>
                 ))}
               </select>

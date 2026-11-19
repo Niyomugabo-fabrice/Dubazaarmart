@@ -7,5 +7,6 @@ import { MediaController } from './media.controller'
   imports: [AuthModule],
   controllers: [MediaController],
   providers: [CloudinaryService],
+  exports: [CloudinaryService],
 })
 export class MediaModule {}

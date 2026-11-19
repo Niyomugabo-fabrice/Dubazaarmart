@@ -8,6 +8,8 @@ import { CompanyOrderEntity } from '../modules/procurement/infrastructure/persis
 import { CompanyOrderItemEntity } from '../modules/procurement/infrastructure/persistence/typeorm/company-order-item.entity'
 import { WebsiteSettingsEntity } from '../modules/settings/infrastructure/persistence/typeorm/website-settings.entity'
 import { AnnouncementEntity } from '../modules/settings/infrastructure/persistence/typeorm/announcement.entity'
+import { TestimonialEntity } from '../modules/testimonials/infrastructure/persistence/typeorm/testimonial.entity'
+import { CategoryImageEntity } from '../modules/categories/infrastructure/persistence/typeorm/category-image.entity'
 
 export const databaseEntities = [
   UserEntity,
@@ -20,4 +22,6 @@ export const databaseEntities = [
   CompanyOrderItemEntity,
   WebsiteSettingsEntity,
   AnnouncementEntity,
+  TestimonialEntity,
+  CategoryImageEntity,
 ]

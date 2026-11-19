@@ -14,6 +14,12 @@ export const STAFF_OPERATIONAL_PERMISSION_KEYS = [
   'procurement.manage',
   'reports.view',
   'announcements.view',
+  'testimonials.view',
+  'testimonials.create',
+  'testimonials.update',
+  'testimonials.delete',
+  'categories.view',
+  'categories.manage',
 ] as const
 
 export const STAFF_PERMISSION_KEYS = [

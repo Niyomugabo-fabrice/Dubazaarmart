@@ -11,6 +11,8 @@ import { RemoveCustomerAccounts20261119000001 } from './migrations/2026111900000
 import { ProductSlugs20261119000002 } from './migrations/20261119000002-ProductSlugs'
 import { AnnouncementsManagement20261119000000 } from './migrations/20261119000000-AnnouncementsManagement'
 import { OrderAdminNotes20261119213000 } from './migrations/20261119213000-OrderAdminNotes'
+import { TestimonialsManagement20261119232000 } from './migrations/20261119232000-TestimonialsManagement'
+import { CategoryImages20261119234000 } from './migrations/20261119234000-CategoryImages'
 
 export default new DataSource({
   type: 'postgres',
@@ -26,6 +28,8 @@ export default new DataSource({
     RemoveCustomerAccounts20261119000001,
     ProductSlugs20261119000002,
     OrderAdminNotes20261119213000,
+    TestimonialsManagement20261119232000,
+    CategoryImages20261119234000,
   ],
   migrationsTableName: 'typeorm_migrations',
   synchronize: false,

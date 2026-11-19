@@ -2,13 +2,15 @@
 
 import Image from 'next/image'
 import { useState, useEffect, useMemo } from 'react'
-import { categories, testimonials } from '../data/products'
+import { categories } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import SiteLogo from '../components/SiteLogo'
 import { useProducts } from '../store/productsStore'
 import { useWebsiteSettings } from '../store/settingsStore'
 import { swaggerUrl } from '../services/api-client'
 import { useAppNavigation } from '../lib/navigation'
+import { fetchPublicTestimonials, type Testimonial } from '../lib/testimonialsApi'
+import { useCategoryImages } from '../store/categoryImagesStore'
 
 const HERO_LINES = [
   'Premium Electronics Direct from Dubai Wholesale',
@@ -48,11 +50,33 @@ export default function HomePage() {
   const { navigate } = useAppNavigation()
   const settings = useWebsiteSettings()
   const { products: liveProducts, loading, error } = useProducts()
+  const { categoryImages, error: categoryImagesError } = useCategoryImages()
   const products = liveProducts
 
   const [activeTab, setActiveTab] = useState<'featured' | 'popular' | 'new' | 'deals'>('featured')
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [testimonialError, setTestimonialError] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    void fetchPublicTestimonials()
+      .then((items) => {
+        if (!active) return
+        setTestimonials(items.filter((item) => item.isVisible))
+        setTestimonialError(false)
+      })
+      .catch((loadError) => {
+        if (!active) return
+        console.error('Customer testimonials could not be loaded.', loadError)
+        setTestimonials([])
+        setTestimonialError(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const filteredProducts = useMemo(() => products.filter(p => {
     if (activeTab === 'featured') return p.featured
@@ -183,19 +207,37 @@ export default function HomePage() {
             </button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {categories.slice(0, 7).map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => navigate('shop')}
-                className="flex flex-col items-center gap-2 p-4 rounded-2xl card-hover text-center"
-                style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
-              >
-                <span className="text-2xl">{cat.icon}</span>
-                <span className="text-xs font-medium" style={{ color: '#111111' }}>{cat.name}</span>
-                <span className="badge" style={{ color: '#0B5B24' }}>{cat.count}</span>
-              </button>
-            ))}
+            {categories.slice(0, 7).map((cat) => {
+              const imageUrl = categoryImages[cat.id]
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => navigate('shop')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl card-hover text-center"
+                  style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
+                >
+                  <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-gray-200">
+                    {imageUrl ? (
+                      <Image
+                        src={imageUrl}
+                        alt=""
+                        width={96}
+                        height={96}
+                        unoptimized
+                        className="h-24 w-24 object-cover"
+                      />
+                    ) : null}
+                  </span>
+                  <span className="text-xs font-medium" style={{ color: '#111111' }}>{cat.name}</span>
+                </button>
+              )
+            })}
           </div>
+          {categoryImagesError && (
+            <p role="alert" className="mt-4 text-center text-xs text-[#0B5B24]">
+              Category images are temporarily unavailable. Showing placeholders.
+            </p>
+          )}
         </div>
       </section>
 
@@ -304,38 +346,55 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="badge mb-2" style={{ color: '#FF6A00' }}>REVIEWS</div>
-            <h2 className="text-3xl font-bold text-[#111111]">Customer Stories</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((t) => (
-              <div key={t.name} className="p-6 rounded-2xl" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
-                <div className="flex mb-3">
-                  {[1,2,3,4,5].map(s => (
-                    <svg key={s} width="14" height="14" viewBox="0 0 24 24" fill="#FF6A00">
-                      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: '#111111' }}>"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: 'rgba(255,106,0,0.2)', color: '#FF6A00' }}>
-                    {t.avatar}
+      {testimonials.length > 0 && (
+        <section className="py-16 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="badge mb-2" style={{ color: '#FF6A00' }}>REVIEWS</div>
+              <h2 className="text-3xl font-bold text-[#111111]">Customer Stories</h2>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6">
+              {testimonials.map((testimonial) => (
+                <div key={testimonial.id} className="p-6 rounded-2xl" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
+                  <div className="flex mb-3" aria-label={`${testimonial.rating} out of 5 stars`}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <svg key={star} width="14" height="14" viewBox="0 0 24 24" fill={star <= testimonial.rating ? '#FF6A00' : '#D1D5DB'}>
+                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
+                      </svg>
+                    ))}
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[#111111]">{t.name}</div>
-                    <div className="text-xs" style={{ color: '#0B5B24' }}>{t.location}</div>
+                  <p className="text-sm leading-relaxed mb-4" style={{ color: '#111111' }}>"{testimonial.message}"</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden text-sm font-bold" style={{ background: 'rgba(255,106,0,0.2)', color: '#FF6A00' }}>
+                      {testimonial.photoUrl ? (
+                        <Image
+                          src={testimonial.photoUrl}
+                          alt=""
+                          width={36}
+                          height={36}
+                          unoptimized
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        testimonial.customerName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[#111111]">{testimonial.customerName}</div>
+                      {testimonial.role && <div className="text-xs" style={{ color: '#0B5B24' }}>{testimonial.role}</div>}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        </section>
+      )}
+      {testimonialError && (
+        <div role="alert" className="mx-auto max-w-7xl px-4 py-4 text-center text-sm text-[#0B5B24]">
+          Customer stories are temporarily unavailable.
         </div>
-      </section>
+      )}
 
       {/* Delivery info */}
       <section className="py-12 px-4" style={{ background: '#FFF7E8' }}>

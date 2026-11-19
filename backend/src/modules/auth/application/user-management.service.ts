@@ -53,7 +53,7 @@ export class UserManagementService {
 
   async updateManagedUser(actor: UserIdentity, id: string, dto: UpdateStaffDto): Promise<UserIdentity> {
     this.assertManager(actor)
-    if (!Object.keys(dto).length) throw new BadRequestException('No staff fields were provided.')
+    if (!Object.keys(dto).length) throw new BadRequestException('No user fields were provided.')
     if (dto.email) {
       const existing = await this.users.findByEmail(dto.email.trim().toLowerCase())
       if (existing && existing.id !== id) throw new ConflictException('An account already exists for this email.')
@@ -78,12 +78,12 @@ export class UserManagementService {
   async promoteStaffToManager(actor: UserIdentity, id: string): Promise<UserIdentity> {
     this.assertManager(actor)
     const target = await this.users.findById(id)
-    if (!target || target.role !== 'STAFF') throw new NotFoundException('Staff account not found.')
+    if (!target || target.role !== 'STAFF') throw new NotFoundException('User account not found.')
     if (target.status !== 'ACTIVE' || !target.emailVerified) {
-      throw new BadRequestException('Only active, verified staff can be promoted to manager.')
+      throw new BadRequestException('Only active, verified users can be promoted to manager.')
     }
     const promoted = await this.users.promoteStaffToManager(id)
-    if (!promoted) throw new ConflictException('This staff account can no longer be promoted.')
+    if (!promoted) throw new ConflictException('This user account can no longer be promoted.')
     return promoted
   }
 

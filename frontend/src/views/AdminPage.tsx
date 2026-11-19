@@ -52,7 +52,7 @@ const EditProductModal = dynamic(() => import("../components/EditProductModal"))
 const AnnouncementsModal = dynamic(() => import("../components/AnnouncementsModal"))
 const ConfirmModal = dynamic(() => import("../components/ConfirmModal"))
 const StaffManagementPanel = dynamic(() => import("./admin/StaffManagementPanel"), {
-  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading staff management…</div>,
+  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading user management…</div>,
 })
 const AuditLogPanel = dynamic(() => import("./admin/AuditLogPanel"), {
   loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading audit logs…</div>,
@@ -931,7 +931,7 @@ export default function AdminPage() {
                     {admin?.name || "Account"}
                   </span>
                   <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    {isManager ? "Manager" : "Staff"}
+                    {isManager ? "Manager" : "User"}
                   </span>
                 </span>
                 <svg
@@ -966,7 +966,7 @@ export default function AdminPage() {
                     </div>
                     <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      {isManager ? "Manager account" : "Staff account"}
+                      {isManager ? "Manager account" : "User account"}
                     </span>
                   </div>
                   <div className="space-y-1 p-2">
@@ -2893,7 +2893,7 @@ export default function AdminPage() {
               </div>
 
               <div className="p-6 rounded-2xl border" style={{ background: "#FFF7E8", borderColor: "#FFB800" }}>
-                <h3 className="font-bold text-[#111111] mb-2 text-base">Staff registration</h3>
+                <h3 className="font-bold text-[#111111] mb-2 text-base">User registration</h3>
                 <label className="flex items-start gap-3 text-sm text-[#111111]">
                   <input
                     type="checkbox"
@@ -2904,7 +2904,7 @@ export default function AdminPage() {
                     className="mt-1"
                   />
                   <span>
-                    Allow public staff registration. New accounts remain pending and receive no permissions until a manager activates and configures them.
+                    Allow public user registration. New accounts remain pending and receive no permissions until a manager activates and configures them.
                   </span>
                 </label>
               </div>

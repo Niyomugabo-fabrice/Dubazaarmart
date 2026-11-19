@@ -22,12 +22,12 @@ export default function StaffRegistrationPage() {
     let active = true
     apiFetch(apiUrl("/api/settings"))
       .then(async (response) => {
-        if (!response.ok) throw new Error("Staff registration settings could not be loaded.")
+        if (!response.ok) throw new Error("User registration settings could not be loaded.")
         const result = await response.json() as { settings?: { allowStaffRegistration?: boolean } }
         if (active) setRegistrationEnabled(result.settings?.allowStaffRegistration === true)
       })
       .catch((loadError) => {
-        if (active) setError(loadError instanceof Error ? loadError.message : "Staff registration settings could not be loaded.")
+        if (active) setError(loadError instanceof Error ? loadError.message : "User registration settings could not be loaded.")
       })
       .finally(() => {
         if (active) setCheckingSettings(false)
@@ -72,9 +72,9 @@ export default function StaffRegistrationPage() {
       <section className="w-full max-w-lg rounded-3xl border border-[#FFB800] bg-white p-7 shadow-xl sm:p-9">
         <div className="mb-6 text-center">
           <SiteLogo className="mx-auto mb-3 h-14 w-14" />
-          <div className="badge mb-2" style={{ color: "#FF6A00" }}>STAFF ACCESS</div>
-          <h1 className="text-2xl font-bold text-[#111111]">Request staff account</h1>
-          <p className="mt-2 text-sm text-slate-600">Staff access requires manager approval and permission assignment.</p>
+          <div className="badge mb-2" style={{ color: "#FF6A00" }}>USER ACCESS</div>
+          <h1 className="text-2xl font-bold text-[#111111]">Request user account</h1>
+          <p className="mt-2 text-sm text-slate-600">User access requires manager approval and permission assignment.</p>
         </div>
 
         {error && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
@@ -113,17 +113,17 @@ export default function StaffRegistrationPage() {
               <input required type="password" minLength={12} maxLength={72} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-3 text-sm" />
             </label>
             <button disabled={submitting} className="btn-gold w-full rounded-xl py-3 font-bold disabled:opacity-60">
-              {submitting ? "Submitting…" : "Submit staff request"}
+              {submitting ? "Submitting…" : "Submit user request"}
             </button>
           </form>
         ) : (
           <p className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center text-sm text-amber-900">
-            Public staff registration is currently disabled. Please contact a manager to request access.
+            Public user registration is currently disabled. Please contact a manager to request access.
           </p>
         )}
 
         <Link href="/admin/login" className="mt-6 block text-center text-sm font-semibold text-[#FF6A00] hover:underline">
-          Back to manager/staff login
+          Back to manager/user login
         </Link>
       </section>
     </main>

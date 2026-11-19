@@ -134,7 +134,7 @@ export default function AdminLoginPage() {
               Sign In to DubazaarMart
             </h1>
             <p className="text-xs text-black/60 mt-1">
-              Restricted management area for authorized staff only
+              Restricted management area for authorized users only
             </p>
           </div>
 
@@ -158,7 +158,7 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
               <label htmlFor="admin-login-email" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">
-                Administrator or Staff Email Address
+                Manager or User Email Address
               </label>
               <input
                 id="admin-login-email"
@@ -243,7 +243,7 @@ export default function AdminLoginPage() {
               </label>
 
               <span className="text-[11px] font-medium text-black/50">
-                Secure staff session
+                Secure user session
               </span>
             </div>
 
@@ -269,14 +269,14 @@ export default function AdminLoginPage() {
           {/* Security Notice */}
           <div className="mt-7 pt-5 border-t border-[#F1FFF0] text-center">
             <p className="text-[11px] text-black/55 leading-relaxed">
-              <strong>Need staff access?</strong> Registration is manager-controlled. New accounts require manager approval.
+              <strong>Need user access?</strong> Registration is manager-controlled. New accounts require manager approval.
             </p>
             {staffRegistrationEnabled && (
               <Link
                 href="/admin/register"
                 className="inline-block mt-3 text-xs font-semibold text-[#FF6A00] hover:underline"
               >
-                Request staff access
+                Request user access
               </Link>
             )}
           </div>

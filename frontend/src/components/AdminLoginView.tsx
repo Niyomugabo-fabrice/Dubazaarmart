@@ -18,7 +18,7 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim() || !password) {
-      setError('Please provide your administrator or staff email and password.')
+      setError('Please provide your manager or user email and password.')
       return
     }
 
@@ -84,7 +84,7 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="admin-workspace-email" className="block text-xs font-semibold text-[#111111] mb-1.5">
-                Administrator or Staff Email Address
+                Manager or User Email Address
               </label>
               <input
                 id="admin-workspace-email"

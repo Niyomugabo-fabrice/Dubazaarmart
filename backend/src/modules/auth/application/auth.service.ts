@@ -75,7 +75,7 @@ export class AuthService {
   }
 
   async registerStaff(dto: RegisterStaffDto, clientIp: string, registrationEnabled: boolean) {
-    if (!registrationEnabled) throw new ForbiddenException('Staff registration is currently disabled.')
+    if (!registrationEnabled) throw new ForbiddenException('User registration is currently disabled.')
     this.checkRateLimit(hashKey(`register\0${clientIp}`), 5)
 
     const email = dto.email.trim().toLowerCase()
@@ -100,7 +100,7 @@ export class AuthService {
     }
     return {
       success: true,
-      message: 'Registration submitted. A manager must activate your staff account before you can sign in.',
+      message: 'Registration submitted. A manager must activate your user account before you can sign in.',
     }
   }
 

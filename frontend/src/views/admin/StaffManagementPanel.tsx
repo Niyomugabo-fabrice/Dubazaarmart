@@ -11,9 +11,14 @@ import {
   verifyStaffUser,
   type StaffUserRecord,
 } from "../../lib/dashboardApi"
+import ConfirmModal from "../../components/ConfirmModal"
 import { useAdminAuth } from "../../store/adminAuthStore"
 
 type StaffStatus = StaffUserRecord["status"]
+type AccountConfirmation = {
+  action: "promote" | "remove"
+  user: StaffUserRecord
+}
 type StaffProfileDraft = Pick<StaffUserRecord, "firstName" | "lastName" | "email"> & {
   phoneNumber: string
 }
@@ -43,6 +48,7 @@ export default function StaffManagementPanel() {
   const [page, setPage] = useState(1)
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<StaffProfileDraft | null>(null)
+  const [accountConfirmation, setAccountConfirmation] = useState<AccountConfirmation | null>(null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
@@ -72,7 +78,7 @@ export default function StaffManagementPanel() {
       }
       setStaff(result.items)
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Staff accounts could not be loaded.")
+      setError(loadError instanceof Error ? loadError.message : "User accounts could not be loaded.")
     } finally {
       setLoading(false)
     }
@@ -104,10 +110,10 @@ export default function StaffManagementPanel() {
       setSearch("")
       setStatusFilter("ALL")
       setPage(1)
-      setMessage("Staff account created as pending. Verify the email and activate the account when ready.")
+      setMessage("User account created as pending. Verify the email and activate the account when ready.")
       if (page === 1 && search === "" && statusFilter === "ALL") void loadStaff()
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Staff account could not be created.")
+      setError(createError instanceof Error ? createError.message : "User account could not be created.")
     } finally {
       setSaving(false)
     }
@@ -122,7 +128,7 @@ export default function StaffManagementPanel() {
       setMessage(`${user.name} was ${action === "activate" ? "activated" : action === "deactivate" ? "deactivated" : "suspended"}.`)
       await loadStaff()
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : "Staff status could not be updated.")
+      setError(statusError instanceof Error ? statusError.message : "User status could not be updated.")
     } finally {
       setSavingUserId(null)
     }
@@ -137,17 +143,13 @@ export default function StaffManagementPanel() {
       setMessage(`Email verified for ${user.name}.`)
       await loadStaff()
     } catch (verificationError) {
-      setError(verificationError instanceof Error ? verificationError.message : "Staff email could not be verified.")
+      setError(verificationError instanceof Error ? verificationError.message : "User email could not be verified.")
     } finally {
       setSavingUserId(null)
     }
   }
 
   async function promoteToManager(user: StaffUserRecord) {
-    const confirmed = window.confirm(
-      `Promote ${user.name} to manager? Managers can manage staff, edit settings, and view audit logs.`,
-    )
-    if (!confirmed) return
     setError(null)
     setMessage(null)
     setSavingUserId(user.id)
@@ -156,7 +158,7 @@ export default function StaffManagementPanel() {
       setMessage(`${user.name} is now a manager.`)
       await loadStaff()
     } catch (promotionError) {
-      setError(promotionError instanceof Error ? promotionError.message : "Staff member could not be promoted.")
+      throw new Error(promotionError instanceof Error ? promotionError.message : "User could not be promoted.")
     } finally {
       setSavingUserId(null)
     }
@@ -187,23 +189,22 @@ export default function StaffManagementPanel() {
       })
       setEditingUserId(null)
       setEditDraft(null)
-      setMessage(`Staff details updated for ${updated.name}.`)
+      setMessage(`User details updated for ${updated.name}.`)
       await loadStaff()
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Staff details could not be updated.")
+      setError(updateError instanceof Error ? updateError.message : "User details could not be updated.")
     } finally {
       setSavingUserId(null)
     }
   }
 
   async function removeStaff(user: StaffUserRecord) {
-    if (!window.confirm(`Remove ${user.name} from staff access?`)) return
     setError(null)
     setMessage(null)
     setSavingUserId(user.id)
     try {
       await deleteStaffUser(user.id)
-      setMessage(`${user.name} was removed from staff access.`)
+      setMessage(`${user.name} was removed from user access.`)
       setEditingUserId(null)
       setEditDraft(null)
       if (staff.length === 1 && page > 1) {
@@ -212,9 +213,18 @@ export default function StaffManagementPanel() {
         await loadStaff()
       }
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Staff account could not be removed.")
+      throw new Error(deleteError instanceof Error ? deleteError.message : "User account could not be removed.")
     } finally {
       setSavingUserId(null)
+    }
+  }
+
+  async function confirmAccountAction() {
+    if (!accountConfirmation) return
+    if (accountConfirmation.action === "promote") {
+      await promoteToManager(accountConfirmation.user)
+    } else {
+      await removeStaff(accountConfirmation.user)
     }
   }
 
@@ -228,7 +238,7 @@ export default function StaffManagementPanel() {
         <div className="badge mb-2" style={{ color: "#FF6A00" }}>MANAGER CONTROLS</div>
         <h1 className="text-2xl font-bold text-[#111111]">User management</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Manage staff and manager accounts. User Management, Audit Log, and store settings/content—including announcement publishing—remain manager-only.
+          Manage user and manager accounts. User Management, Audit Log, and store settings/content—including announcement publishing—remain manager-only.
         </p>
       </header>
 
@@ -236,14 +246,14 @@ export default function StaffManagementPanel() {
       {message && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</div>}
 
       <form onSubmit={handleCreate} className="grid gap-3 rounded-2xl border border-[#FFB800] bg-white p-5 md:grid-cols-2">
-        <h2 className="md:col-span-2 text-lg font-bold text-[#111111]">Create staff account</h2>
+        <h2 className="md:col-span-2 text-lg font-bold text-[#111111]">Create user account</h2>
         <input required minLength={2} maxLength={60} value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
         <input required minLength={2} maxLength={60} value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
-        <input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Staff email" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
+        <input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="User email" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
         <input maxLength={32} value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="Phone (optional)" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
         <input required type="password" minLength={12} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Temporary password (12+ characters)" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
         <button disabled={saving} type="submit" className="btn-gold rounded-xl px-4 py-2.5 text-sm font-bold disabled:opacity-60">
-          {saving ? "Creating…" : "Create pending staff account"}
+          {saving ? "Creating…" : "Create pending user account"}
         </button>
       </form>
 
@@ -251,7 +261,7 @@ export default function StaffManagementPanel() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-[#111111]">Managed accounts ({total})</h2>
-            <p className="text-xs text-slate-500">Search staff and managers, review verification, and manage account access.</p>
+            <p className="text-xs text-slate-500">Search users and managers, review verification, and manage account access.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input
@@ -262,7 +272,7 @@ export default function StaffManagementPanel() {
                 setPage(1)
               }}
               placeholder="Search name, email, or phone"
-              aria-label="Search staff accounts"
+              aria-label="Search user accounts"
               className="min-w-60 rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
             <select
@@ -271,7 +281,7 @@ export default function StaffManagementPanel() {
                 setStatusFilter(event.target.value as "ALL" | StaffStatus)
                 setPage(1)
               }}
-              aria-label="Filter staff by status"
+              aria-label="Filter users by status"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             >
               <option value="ALL">All statuses</option>
@@ -305,7 +315,7 @@ export default function StaffManagementPanel() {
                     <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-900">{user.name}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.role === "MANAGER" ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-700"}`}>
-                        {user.role === "MANAGER" ? "Manager" : "Staff"}
+                        {user.role === "MANAGER" ? "Manager" : "User"}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-700">{user.email}</td>
@@ -342,7 +352,7 @@ export default function StaffManagementPanel() {
                           </button>
                         )}
                         {user.status === "ACTIVE" && user.emailVerified && (
-                          <button disabled={Boolean(savingUserId)} onClick={() => void promoteToManager(user)} type="button" className="rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-800 disabled:opacity-50">
+                          <button disabled={Boolean(savingUserId)} onClick={() => setAccountConfirmation({ action: "promote", user })} type="button" className="rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-semibold text-violet-800 disabled:opacity-50">
                             Make manager
                           </button>
                         )}
@@ -350,7 +360,7 @@ export default function StaffManagementPanel() {
                           Edit
                         </button>
                         {user.id !== admin?.id && (
-                          <button disabled={Boolean(savingUserId)} onClick={() => void removeStaff(user)} type="button" className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800 disabled:opacity-50">
+                          <button disabled={Boolean(savingUserId)} onClick={() => setAccountConfirmation({ action: "remove", user })} type="button" className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800 disabled:opacity-50">
                             Remove
                           </button>
                         )}
@@ -361,10 +371,10 @@ export default function StaffManagementPanel() {
                     <tr key={`${user.id}-edit`}>
                       <td colSpan={8} className="bg-slate-50 px-4 py-4">
                         <form onSubmit={(event) => void saveProfile(event, user)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                          <input required minLength={2} maxLength={60} value={editDraft.firstName} onChange={(event) => setEditDraft({ ...editDraft, firstName: event.target.value })} aria-label="Staff first name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                          <input required minLength={2} maxLength={60} value={editDraft.lastName} onChange={(event) => setEditDraft({ ...editDraft, lastName: event.target.value })} aria-label="Staff last name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                          <input required type="email" maxLength={254} value={editDraft.email} onChange={(event) => setEditDraft({ ...editDraft, email: event.target.value })} aria-label="Staff email" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-                          <input maxLength={32} value={editDraft.phoneNumber} onChange={(event) => setEditDraft({ ...editDraft, phoneNumber: event.target.value })} aria-label="Staff phone number" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                          <input required minLength={2} maxLength={60} value={editDraft.firstName} onChange={(event) => setEditDraft({ ...editDraft, firstName: event.target.value })} aria-label="User first name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                          <input required minLength={2} maxLength={60} value={editDraft.lastName} onChange={(event) => setEditDraft({ ...editDraft, lastName: event.target.value })} aria-label="User last name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                          <input required type="email" maxLength={254} value={editDraft.email} onChange={(event) => setEditDraft({ ...editDraft, email: event.target.value })} aria-label="User email" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                          <input maxLength={32} value={editDraft.phoneNumber} onChange={(event) => setEditDraft({ ...editDraft, phoneNumber: event.target.value })} aria-label="User phone number" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                           <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
                             <button disabled={Boolean(savingUserId)} type="submit" className="btn-gold rounded-lg px-4 py-2 text-xs font-bold disabled:opacity-50">
                               Save changes
@@ -396,6 +406,20 @@ export default function StaffManagementPanel() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={accountConfirmation !== null}
+        title={accountConfirmation?.action === "promote" ? "Promote to manager" : "Remove account"}
+        message={accountConfirmation?.action === "promote"
+          ? `Promote ${accountConfirmation.user.name} to manager? Managers can manage users, edit settings, and view audit logs.`
+          : accountConfirmation
+            ? `Remove ${accountConfirmation.user.name} from user access?`
+            : ""}
+        confirmLabel={accountConfirmation?.action === "promote" ? "Make manager" : "Remove account"}
+        danger={accountConfirmation?.action === "remove"}
+        onConfirm={confirmAccountAction}
+        onClose={() => setAccountConfirmation(null)}
+      />
     </section>
   )
 }

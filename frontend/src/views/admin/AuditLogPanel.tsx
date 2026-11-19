@@ -138,7 +138,7 @@ export default function AuditLogPanel() {
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Actors on this page</p>
           <p className="mt-2 text-2xl font-bold text-slate-950">{actors}</p>
-          <p className="mt-1 text-xs text-slate-500">Managers, staff, and system events</p>
+          <p className="mt-1 text-xs text-slate-500">Managers, users, and system events</p>
         </article>
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest activity</p>
@@ -162,7 +162,7 @@ export default function AuditLogPanel() {
           <input
             value={resourceInput}
             onChange={(event) => setResourceInput(event.target.value)}
-            placeholder="e.g. auth, products, staff"
+            placeholder="e.g. auth, products, users"
             className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
           />
         </label>

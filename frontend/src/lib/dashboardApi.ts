@@ -884,7 +884,7 @@ export async function fetchStaffUsers(options: {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to load staff accounts."))
+    throw new Error(getApiErrorMessage(data, "Failed to load user accounts."))
   }
   return readJsonResponse(response) as Promise<{ items: StaffUserRecord[]; total: number; page: number; pageSize: number }>
 }
@@ -903,7 +903,7 @@ export async function createStaffUser(payload: {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to create staff account."))
+    throw new Error(getApiErrorMessage(data, "Failed to create user account."))
   }
   return response.json()
 }
@@ -919,7 +919,7 @@ export async function updateStaffUser(
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to update staff account."))
+    throw new Error(getApiErrorMessage(data, "Failed to update user account."))
   }
   return response.json()
 }
@@ -931,7 +931,7 @@ export async function updateStaffStatus(id: string, action: "activate" | "deacti
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to update staff status."))
+    throw new Error(getApiErrorMessage(data, "Failed to update user status."))
   }
 }
 
@@ -942,7 +942,7 @@ export async function verifyStaffUser(id: string): Promise<StaffUserRecord> {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to verify staff account."))
+    throw new Error(getApiErrorMessage(data, "Failed to verify user account."))
   }
   return response.json()
 }
@@ -954,7 +954,7 @@ export async function promoteStaffUserToManager(id: string): Promise<StaffUserRe
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to promote staff account."))
+    throw new Error(getApiErrorMessage(data, "Failed to promote user account."))
   }
   return response.json()
 }
@@ -966,7 +966,7 @@ export async function deleteStaffUser(id: string) {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(getApiErrorMessage(data, "Failed to delete staff account."))
+    throw new Error(getApiErrorMessage(data, "Failed to delete user account."))
   }
 }
 

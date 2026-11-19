@@ -24,18 +24,23 @@ export default function ConfirmModal({
   onClose,
 }: ConfirmModalProps) {
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
-      setSubmitting(false)
-      cancelRef.current?.focus()
-      const handleKey = (e: KeyboardEvent) => {
-        if (e.key === 'Escape' && !submitting) onClose()
-      }
-      document.addEventListener('keydown', handleKey)
-      return () => document.removeEventListener('keydown', handleKey)
+    if (!isOpen) return
+    setSubmitting(false)
+    setError(null)
+    cancelRef.current?.focus()
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !submitting) onClose()
     }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
   }, [isOpen, submitting, onClose])
 
   if (!isOpen) return null
@@ -43,10 +48,11 @@ export default function ConfirmModal({
   async function handleConfirm() {
     try {
       setSubmitting(true)
+      setError(null)
       await onConfirm()
       onClose()
     } catch (err) {
-      console.error('Confirmation action failed', err)
+      setError(err instanceof Error ? err.message : 'The action could not be completed. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -145,6 +151,12 @@ export default function ConfirmModal({
           <p className="text-sm mb-6 text-black/75 leading-relaxed">
             {message}
           </p>
+
+          {error && (
+            <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-2.5 justify-end">
             <button

@@ -1,10 +1,12 @@
-import type { Metadata } from 'next'
+import { createPageMetadata } from '@/lib/seo'
 import PaymentSuccessPage from '@/views/PaymentSuccessPage'
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Order Confirmation',
-  robots: { index: false, follow: false },
-}
+  description: 'Your DubazaarMart order confirmation.',
+  path: '/checkout/success',
+  noIndex: true,
+})
 
 export default function Page() {
   return <PaymentSuccessPage />

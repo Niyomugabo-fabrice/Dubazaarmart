@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { cartStore, useCart } from '../store/cartStore'
 import { createWhatsAppOrder } from '../lib/dashboardApi'
@@ -89,8 +90,8 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map(item => (
               <div key={item.product.id} className="flex gap-4 p-4 rounded-2xl shadow-sm" style={{ background: '#FFF7E8', border: '2px solid #FFB800' }}>
-                <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 product-img-wrap">
-                  <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 product-img-wrap">
+                  <Image src={item.product.image} alt={item.product.name} fill sizes="80px" unoptimized={item.product.image.includes('images.unsplash.com')} className="object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="badge mb-1" style={{ color: '#FF6A00' }}>{item.product.brand}</div>
@@ -98,13 +99,13 @@ export default function CartPage() {
                   <div className="text-sm font-bold" style={{ color: '#FF6A00' }}>Unit price: {formatPrice(item.product.price)}</div>
                 </div>
                 <div className="flex flex-col items-end gap-3">
-                  <button onClick={() => cartStore.remove(item.product.id)} className="text-xs" style={{ color: '#0B5B24' }}>
+                  <button type="button" onClick={() => cartStore.remove(item.product.id)} className="text-xs" style={{ color: '#0B5B24' }} aria-label={`Remove ${item.product.name} from cart`}>
                     ✕ Remove
                   </button>
                   <div className="flex items-center rounded-lg overflow-hidden bg-white" style={{ border: '1px solid #FFB800' }}>
-                    <button onClick={() => cartStore.updateQty(item.product.id, item.quantity - 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold">−</button>
-                    <span className="px-3 font-mono text-[#111111] text-sm font-bold">{item.quantity}</span>
-                    <button onClick={() => cartStore.updateQty(item.product.id, item.quantity + 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold">+</button>
+                    <button type="button" onClick={() => cartStore.updateQty(item.product.id, item.quantity - 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold" aria-label={`Decrease ${item.product.name} quantity`}>−</button>
+                    <span className="px-3 font-mono text-[#111111] text-sm font-bold" aria-live="polite">{item.quantity}</span>
+                    <button type="button" onClick={() => cartStore.updateQty(item.product.id, item.quantity + 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold" aria-label={`Increase ${item.product.name} quantity`}>+</button>
                   </div>
                   <div className="text-sm font-bold text-[#111111]">Total: {formatPrice(item.product.price * item.quantity)}</div>
                 </div>
@@ -145,7 +146,7 @@ export default function CartPage() {
 
             {/* Promo */}
             <div className="flex gap-2 mb-6">
-              <input placeholder="Promo code" className="flex-1 px-3 py-2 rounded-lg text-sm bg-white border border-[#FFB800]" />
+              <input aria-label="Promo code" placeholder="Promo code" className="flex-1 px-3 py-2 rounded-lg text-sm bg-white border border-[#FFB800]" />
               <button className="px-4 py-2 rounded-lg text-sm btn-ghost">Apply</button>
             </div>
 

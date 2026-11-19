@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { createPageMetadata } from '@/lib/seo'
 import ShopPage from '@/views/ShopPage'
 
 type Props = {
@@ -8,10 +9,12 @@ type Props = {
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const params = await searchParams
   const query = Array.isArray(params.q) ? params.q[0] : params.q
-  return {
+  return createPageMetadata({
     title: query ? `Search: ${query}` : 'Search Products',
     description: 'Search the DubazaarMart electronics catalog.',
-  }
+    path: '/search',
+    noIndex: true,
+  })
 }
 
 export default async function Page({ searchParams }: Props) {

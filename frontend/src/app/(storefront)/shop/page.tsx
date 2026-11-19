@@ -1,10 +1,11 @@
-import type { Metadata } from 'next'
+import { createPageMetadata } from '@/lib/seo'
 import ShopPage from '@/views/ShopPage'
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Shop Electronics',
   description: 'Browse DubazaarMart electronics and filter by category, price, rating, and deals.',
-}
+  path: '/shop',
+})
 
 type Props = {
   searchParams: Promise<{ category?: string | string[] }>

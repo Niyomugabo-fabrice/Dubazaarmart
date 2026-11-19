@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import Image from 'next/image'
+import { useState, useEffect, useMemo } from 'react'
 import { categories, testimonials } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import SiteLogo from '../components/SiteLogo'
@@ -8,6 +9,40 @@ import { useProducts } from '../store/productsStore'
 import { useWebsiteSettings } from '../store/settingsStore'
 import { swaggerUrl } from '../services/api-client'
 import { useAppNavigation } from '../lib/navigation'
+
+const HERO_LINES = [
+  'Premium Electronics Direct from Dubai Wholesale',
+  'Unbeatable Dubai Prices · Save up to 30%',
+  'Fast & Secure Nationwide Delivery Across Rwanda',
+]
+
+function RotatingHeroMessage() {
+  const [activeLine, setActiveLine] = useState(0)
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const timer = setInterval(() => {
+      setActiveLine(index => (index + 1) % HERO_LINES.length)
+    }, 2800)
+    return () => clearInterval(timer)
+  }, [])
+
+  return (
+    <div className="mb-6 inline-flex items-center gap-2.5 rounded-2xl border px-3.5 py-2 transition-all duration-300" style={{ background: '#FFF7E8', borderColor: '#FFB800', boxShadow: '0 4px 20px rgba(255,106,0,0.08)' }}>
+      <span className="inline-flex items-center justify-center rounded-lg bg-[#FF6A00]/15 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-[#FF6A00]">
+        LIVE
+      </span>
+      <span
+        key={activeLine}
+        aria-live="off"
+        className="text-xs sm:text-sm font-semibold transition-all duration-500 bg-gradient-to-r from-[#FF6A00] via-[#E94B00] to-[#0B5B24] bg-clip-text text-transparent"
+      >
+        ⚡ {HERO_LINES[activeLine]}
+      </span>
+    </div>
+  )
+}
 
 export default function HomePage() {
   const { navigate } = useAppNavigation()
@@ -18,25 +53,13 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'featured' | 'popular' | 'new' | 'deals'>('featured')
   const [email, setEmail] = useState('')
   const [subscribed, setSubscribed] = useState(false)
-  const [heroText, setHeroText] = useState(0)
 
-  const heroLines = [
-    'Premium Electronics Direct from Dubai Wholesale',
-    'Unbeatable Dubai Prices · Save up to 30%',
-    'Fast & Secure Nationwide Delivery Across Rwanda',
-  ]
-
-  useEffect(() => {
-    const t = setInterval(() => setHeroText(n => (n + 1) % heroLines.length), 2800)
-    return () => clearInterval(t)
-  }, [heroLines.length])
-
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = useMemo(() => products.filter(p => {
     if (activeTab === 'featured') return p.featured
     if (activeTab === 'new') return p.badge === 'New Arrival'
     if (activeTab === 'deals') return p.discount >= 15
     return p.reviews > 150
-  })
+  }), [products, activeTab])
 
   const whyItems = [
     { icon: '✈️', title: 'Sourced from Dubai', desc: 'Direct from UAE wholesalers — authentic products at wholesale prices.' },
@@ -53,10 +76,14 @@ export default function HomePage() {
       <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=1600&h=900&fit=crop&auto=format"
             alt=""
-            className="w-full h-full object-cover opacity-20"
+            fill
+            sizes="100vw"
+            unoptimized
+            loading="lazy"
+            className="object-cover opacity-20"
           />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FFFFFF 50%, rgba(255,247,232,0.88) 100%)' }} />
           {/* Gold radial */}
@@ -84,18 +111,7 @@ export default function HomePage() {
                 </span>
               </h1>
 
-              {/* Attractive Animated HeroLine */}
-              <div className="mb-6 inline-flex items-center gap-2.5 rounded-2xl border px-3.5 py-2 transition-all duration-300" style={{ background: '#FFF7E8', borderColor: '#FFB800', boxShadow: '0 4px 20px rgba(255,106,0,0.08)' }}>
-                <span className="inline-flex items-center justify-center rounded-lg bg-[#FF6A00]/15 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-[#FF6A00]">
-                  LIVE
-                </span>
-                <span
-                  key={heroText}
-                  className="text-xs sm:text-sm font-semibold transition-all duration-500 bg-gradient-to-r from-[#FF6A00] via-[#E94B00] to-[#0B5B24] bg-clip-text text-transparent"
-                >
-                  ⚡ {heroLines[heroText]}
-                </span>
-              </div>
+              <RotatingHeroMessage />
 
               <p className="text-base sm:text-lg mb-8 max-w-lg leading-relaxed text-[#111111]/80">
                 Discover quality electronics sourced directly from Dubai and delivered to you at competitive wholesale prices anywhere in Rwanda.
@@ -128,11 +144,15 @@ export default function HomePage() {
             {/* Hero product showcase */}
             <div className="hidden lg:flex justify-center relative">
               <div className="relative">
-                <div className="w-80 h-80 rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(255,106,0,0.2)', background: '#FFF7E8' }}>
-                  <img
+                <div className="relative w-80 h-80 rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(255,106,0,0.2)', background: '#FFF7E8' }}>
+                  <Image
                     src="https://images.unsplash.com/photo-1675315936697-1bd8e939948e?w=640&h=640&fit=crop&auto=format"
                     alt="Samsung Galaxy S24 Ultra"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="320px"
+                    unoptimized
+                    loading="lazy"
+                    className="object-cover"
                   />
                 </div>
                 {/* Floating card */}
@@ -208,8 +228,17 @@ export default function HomePage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {loading ? (
-              <div className="col-span-full py-12 text-center" style={{ color: '#0B5B24' }} role="status" aria-live="polite">
-                Loading products…
+              <div className="col-span-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" role="status" aria-live="polite" aria-label="Loading products">
+                {Array.from({ length: 8 }, (_, index) => (
+                  <div key={index} aria-hidden="true" className="overflow-hidden rounded-2xl border border-[#FFB800] bg-[#FFF7E8]">
+                    <div className="shimmer aspect-square" />
+                    <div className="space-y-3 p-4">
+                      <div className="shimmer h-3 w-1/3 rounded" />
+                      <div className="shimmer h-4 w-4/5 rounded" />
+                      <div className="shimmer h-4 w-1/2 rounded" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : error ? (
               <div className="col-span-full py-12 text-center" style={{ color: '#0B5B24' }} role="alert">
@@ -335,12 +364,14 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-[#111111] mb-3">Stay Ahead of the Deals</h2>
           <p className="mb-8" style={{ color: '#111111' }}>Get notified about flash sales, new arrivals, and exclusive offers.</p>
           {subscribed ? (
-            <div className="py-4 px-6 rounded-xl inline-block" style={{ background: 'rgba(255,106,0,0.1)', border: '1px solid rgba(255,106,0,0.3)', color: '#FF6A00' }}>
+            <div role="status" aria-live="polite" className="py-4 px-6 rounded-xl inline-block" style={{ background: 'rgba(255,106,0,0.1)', border: '1px solid rgba(255,106,0,0.3)', color: '#FF6A00' }}>
               ✓ You're subscribed! Watch your inbox.
             </div>
           ) : (
             <form onSubmit={e => { e.preventDefault(); if (email) setSubscribed(true) }} className="flex gap-3 max-w-md mx-auto">
+              <label htmlFor="newsletter-email" className="sr-only">Email address</label>
               <input
+                id="newsletter-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -362,7 +393,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <SiteLogo className="h-12 w-12" />
+                <SiteLogo className="h-12 w-12" priority={false} />
               </div>
               <p className="text-sm leading-relaxed mb-4" style={{ color: '#0B5B24' }}>
                 Premium electronics from Dubai, delivered to Rwanda. Quality guaranteed.

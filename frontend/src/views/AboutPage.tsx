@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function AboutPage() {
@@ -8,10 +9,14 @@ export default function AboutPage() {
         <h1 className="text-4xl font-bold text-[#111111] mb-6">About Dubazaarmart</h1>
 
         <div className="rounded-3xl overflow-hidden mb-10" style={{ height: '300px' }}>
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1426024084828-5da21e13f5dc?w=1200&h=600&fit=crop&auto=format"
             alt="Electronics store"
-            className="w-full h-full object-cover opacity-70"
+            width={1200}
+            height={600}
+            sizes="(min-width: 896px) 896px, 100vw"
+            unoptimized
+            className="h-full w-full object-cover opacity-70"
           />
         </div>
 

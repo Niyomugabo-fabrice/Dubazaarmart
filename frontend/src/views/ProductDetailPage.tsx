@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from 'react'
+import Image from 'next/image'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { cartStore, useCart } from '../store/cartStore'
 import ProductCard from '../components/ProductCard'
@@ -21,7 +22,10 @@ export default function ProductDetailPage({ product }: Props) {
   const { navigate } = useAppNavigation()
   const inWishlist = wishlist.includes(product.id)
 
-  const related = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4)
+  const related = useMemo(
+    () => products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4),
+    [products, product.category, product.id],
+  )
 
   function formatPrice(n: number) {
     return `RWF ${n.toLocaleString()}`
@@ -36,23 +40,27 @@ export default function ProductDetailPage({ product }: Props) {
     <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 py-6 text-sm" style={{ color: '#0B5B24' }}>
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 py-6 text-sm" style={{ color: '#0B5B24' }}>
           <Link href="/" className="hover:text-[#111111] transition-colors">Home</Link>
-          <span>/</span>
+          <span aria-hidden="true">/</span>
           <Link href="/shop" className="hover:text-[#111111] transition-colors">Shop</Link>
-          <span>/</span>
+          <span aria-hidden="true">/</span>
           <span className="text-[#111111]">{product.name}</span>
-        </div>
+        </nav>
 
         {/* Main grid */}
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* Images */}
           <div>
-            <div className="rounded-3xl overflow-hidden aspect-square mb-4 product-img-wrap" style={{ border: '1px solid #FFB800' }}>
-              <img
+            <div className="relative rounded-3xl overflow-hidden aspect-square mb-4 product-img-wrap" style={{ border: '1px solid #FFB800' }}>
+              <Image
                 src={product.images[activeImage] || product.image}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                priority
+                unoptimized={(product.images[activeImage] || product.image).includes('images.unsplash.com')}
+                className="object-cover"
               />
             </div>
             {product.images.length > 1 && (
@@ -60,11 +68,21 @@ export default function ProductDetailPage({ product }: Props) {
                 {product.images.map((img, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => setActiveImage(i)}
-                    className="w-20 h-20 rounded-xl overflow-hidden"
+                    className="relative w-20 h-20 rounded-xl overflow-hidden"
                     style={{ border: `2px solid ${activeImage === i ? '#FF6A00' : '#FFB800'}` }}
+                    aria-label={`View product image ${i + 1}`}
+                    aria-pressed={activeImage === i}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <Image
+                      src={img}
+                      alt=""
+                      fill
+                      sizes="80px"
+                      unoptimized={img.includes('images.unsplash.com')}
+                      className="object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -85,9 +103,9 @@ export default function ProductDetailPage({ product }: Props) {
 
             {/* Rating */}
             <div className="flex items-center gap-3 mb-6">
-              <div className="flex">
+              <div className="flex" role="img" aria-label={`Rated ${product.rating} out of 5`}>
                 {[1,2,3,4,5].map(s => (
-                  <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= Math.round(product.rating) ? '#FF6A00' : '#FFB800'}>
+                  <svg key={s} aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill={s <= Math.round(product.rating) ? '#FF6A00' : '#FFB800'}>
                     <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
                   </svg>
                 ))}
@@ -121,17 +139,17 @@ export default function ProductDetailPage({ product }: Props) {
             {/* Qty + Cart */}
             <div className="flex items-center gap-4 mb-6">
               <div className="flex items-center rounded-xl overflow-hidden" style={{ border: '1px solid #FFB800' }}>
-                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-3 text-[#111111] hover:bg-white/5 transition-colors">−</button>
-                <span className="px-4 font-mono text-[#111111]">{qty}</span>
-                <button onClick={() => setQty(q => Math.min(product.quantity, q + 1))} className="px-4 py-3 text-[#111111] hover:bg-white/5 transition-colors">+</button>
+                <button type="button" onClick={() => setQty(q => Math.max(1, q - 1))} className="px-4 py-3 text-[#111111] hover:bg-white/5 transition-colors" aria-label="Decrease quantity" disabled={qty <= 1}>−</button>
+                <span className="px-4 font-mono text-[#111111]" aria-live="polite">{qty}</span>
+                <button type="button" onClick={() => setQty(q => Math.min(product.quantity, q + 1))} className="px-4 py-3 text-[#111111] hover:bg-white/5 transition-colors" aria-label="Increase quantity" disabled={qty >= product.quantity}>+</button>
               </div>
-              <button onClick={() => cartStore.add(product, qty)} className="flex-1 py-3 rounded-xl font-semibold text-sm btn-ghost">
+              <button type="button" onClick={() => cartStore.add(product, qty)} className="flex-1 py-3 rounded-xl font-semibold text-sm btn-ghost" disabled={product.quantity <= 0}>
                 Add to Cart
               </button>
-              <button onClick={addAndGo} className="flex-1 py-3 rounded-xl font-bold text-sm btn-gold">
+              <button type="button" onClick={addAndGo} className="flex-1 py-3 rounded-xl font-bold text-sm btn-gold" disabled={product.quantity <= 0}>
                 Buy Now
               </button>
-              <button onClick={() => cartStore.toggleWishlist(product.id)} className="p-3 rounded-xl transition-colors" style={{ border: '1px solid #FFB800', background: inWishlist ? 'rgba(255,106,0,0.1)' : 'transparent' }}>
+              <button type="button" onClick={() => cartStore.toggleWishlist(product.id)} className="p-3 rounded-xl transition-colors" style={{ border: '1px solid #FFB800', background: inWishlist ? 'rgba(255,106,0,0.1)' : 'transparent' }} aria-label={`${inWishlist ? 'Remove' : 'Add'} ${product.name} ${inWishlist ? 'from' : 'to'} wishlist`} aria-pressed={inWishlist}>
                 <svg width="18" height="18" fill={inWishlist ? '#FF6A00' : 'none'} stroke={inWishlist ? '#FF6A00' : '#111111'} strokeWidth="2" viewBox="0 0 24 24">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
@@ -152,7 +170,9 @@ export default function ProductDetailPage({ product }: Props) {
             {(['desc', 'specs', 'warranty'] as const).map(tab => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setActiveTab(tab)}
+                aria-pressed={activeTab === tab}
                 className="px-5 py-2.5 rounded-lg text-sm font-medium transition-all capitalize"
                 style={activeTab === tab ? { background: '#FF6A00', color: '#000' } : { color: '#111111' }}
               >

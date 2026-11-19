@@ -37,11 +37,6 @@ export default function Navbar() {
     }
   }
 
-  function handleNav(href: string) {
-    router.push(href)
-    setMobileOpen(false)
-  }
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #F1FFF0' }}>
       <AnnouncementBanner />
@@ -57,12 +52,13 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-6">
+          <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-6">
             {navItems.map(item => (
               <Link
                 key={item.id}
                 href={item.href}
                 className={`nav-link ${isItemActive(item) ? 'active' : ''}`}
+                aria-current={isItemActive(item) ? 'page' : undefined}
               >
                 {item.label}
               </Link>
@@ -79,12 +75,13 @@ export default function Navbar() {
                     autoFocus
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
+                    aria-label="Search products"
                     placeholder="Search products..."
                     className="h-9 w-48 rounded-lg px-3 text-sm"
                     style={{ background: '#F1FFF0', border: '1px solid #0874F9', color: '#111111' }}
                     onBlur={() => !searchQuery && setSearchOpen(false)}
                   />
-                  <button type="submit" className="ml-1 p-2 text-[#0874F9]">
+                  <button type="submit" className="ml-1 p-2 text-[#0874F9]" aria-label="Submit product search">
                     <svg width="16" height="16" fill="none" stroke="#0874F9" strokeWidth="2" viewBox="0 0 24 24">
                       <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
                     </svg>
@@ -114,7 +111,7 @@ export default function Navbar() {
             <Link
               href="/cart"
               className="relative p-2 text-black/60 hover:text-[#0874F9] transition-colors"
-              aria-label="Shopping Cart"
+              aria-label={`Shopping cart, ${count} item${count === 1 ? '' : 's'}`}
             >
               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
@@ -131,7 +128,9 @@ export default function Navbar() {
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden p-2 text-black/60 hover:text-[#0874F9] transition-colors"
-              aria-label="Toggle mobile menu"
+              aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation"
             >
               {mobileOpen ? (
                 <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -148,18 +147,20 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="lg:hidden py-4 border-t" style={{ borderColor: '#F1FFF0' }}>
+          <nav id="mobile-navigation" aria-label="Mobile navigation" className="lg:hidden py-4 border-t" style={{ borderColor: '#F1FFF0' }}>
             {navItems.map(item => (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => handleNav(item.href)}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                aria-current={isItemActive(item) ? 'page' : undefined}
                 className="block w-full text-left px-2 py-3 text-sm font-medium border-b"
                 style={{ color: isItemActive(item) ? '#0874F9' : '#111111', borderColor: '#F1FFF0' }}
               >
                 {item.label}
-              </button>
+              </Link>
             ))}
-          </div>
+          </nav>
         )}
       </div>
     </header>

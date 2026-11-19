@@ -1,5 +1,6 @@
 "use client"
 
+import Image from 'next/image'
 import { useState } from 'react'
 import { useCart, cartStore } from '../store/cartStore'
 import { createCustomerOrder } from '../lib/dashboardApi'
@@ -102,18 +103,23 @@ export default function CheckoutPage() {
     )
   }
 
-  const input = (label: string, field: keyof typeof form, type = 'text', placeholder = '') => (
-    <div>
-      <label className="block text-sm font-medium mb-1.5" style={{ color: '#111111' }}>{label}</label>
+  const input = (label: string, field: keyof typeof form, type = 'text', placeholder = '') => {
+    const id = `checkout-${field}`
+
+    return (
+      <div>
+        <label htmlFor={id} className="block text-sm font-medium mb-1.5" style={{ color: '#111111' }}>{label}</label>
       <input
+        id={id}
         type={type}
         value={form[field]}
         onChange={e => update(field, e.target.value)}
         placeholder={placeholder}
         className="w-full px-4 py-3 rounded-xl text-sm"
       />
-    </div>
-  )
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
@@ -125,18 +131,29 @@ export default function CheckoutPage() {
         <div className="flex items-center gap-0 mb-10">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center flex-1">
-              <div className={`flex items-center gap-2 ${i <= step ? 'cursor-pointer' : ''}`} onClick={() => i < step && setStep(i)}>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                  style={{
-                    background: i < step ? '#17D719' : i === step ? '#FF6A00' : '#F1FFF0',
-                    color: i <= step ? '#000' : '#0B5B24',
-                    border: i > step ? '1px solid #FFB800' : 'none',
-                  }}
-                >
-                  {i < step ? '✓' : i + 1}
+              {i < step ? (
+                <button type="button" onClick={() => setStep(i)} className="flex items-center gap-2" aria-label={`Return to ${s}`}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{ background: '#17D719', color: '#000' }}
+                  >
+                    ✓
+                  </div>
+                  <span className="text-sm font-medium hidden sm:block" style={{ color: '#0B5B24' }}>{s}</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2" aria-current={i === step ? 'step' : undefined}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{
+                      background: i === step ? '#FF6A00' : '#F1FFF0',
+                      color: i <= step ? '#000' : '#0B5B24',
+                      border: '1px solid #FFB800',
+                    }}
+                  >
+                    {i + 1}
+                  </div>
+                  <span className="text-sm font-medium hidden sm:block" style={{ color: i === step ? '#FFFFFF' : '#0B5B24' }}>{s}</span>
                 </div>
-                <span className="text-sm font-medium hidden sm:block" style={{ color: i === step ? '#FFFFFF' : '#0B5B24' }}>{s}</span>
-              </div>
+              )}
               {i < STEPS.length - 1 && <div className="flex-1 h-px mx-3" style={{ background: i < step ? '#17D719' : '#FFB800' }} />}
             </div>
           ))}
@@ -161,8 +178,8 @@ export default function CheckoutPage() {
                 <div className="space-y-4">
                   <h2 className="font-bold text-[#111111] text-lg mb-6">Delivery Information</h2>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#111111' }}>Province</label>
-                    <select value={form.province} onChange={e => update('province', e.target.value)} className="w-full px-4 py-3 rounded-xl text-sm">
+                    <label htmlFor="checkout-province" className="block text-sm font-medium mb-1.5" style={{ color: '#111111' }}>Province</label>
+                    <select id="checkout-province" value={form.province} onChange={e => update('province', e.target.value)} className="w-full px-4 py-3 rounded-xl text-sm">
                       <option value="">Select Province</option>
                       {RW_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
@@ -182,8 +199,9 @@ export default function CheckoutPage() {
                     </p>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold mb-1 text-[#111111]">Arrival Date</label>
+                        <label htmlFor="checkout-delivery-date" className="block text-xs font-semibold mb-1 text-[#111111]">Arrival Date</label>
                         <input
+                          id="checkout-delivery-date"
                           type="date"
                           min={new Date().toISOString().slice(0, 10)}
                           value={form.deliveryDate}
@@ -192,8 +210,9 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold mb-1 text-[#111111]">Arrival Time</label>
+                        <label htmlFor="checkout-delivery-time" className="block text-xs font-semibold mb-1 text-[#111111]">Arrival Time</label>
                         <input
+                          id="checkout-delivery-time"
                           type="time"
                           value={form.deliveryTime}
                           onChange={(e) => update('deliveryTime', e.target.value)}
@@ -204,8 +223,8 @@ export default function CheckoutPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: '#111111' }}>Delivery Instructions (optional)</label>
-                    <textarea value={form.instructions} onChange={e => update('instructions', e.target.value)} placeholder="e.g. Please deliver my order tomorrow at 10:00 AM, call me when at the gate..." rows={3} className="w-full px-4 py-3 rounded-xl text-sm resize-none" />
+                    <label htmlFor="checkout-instructions" className="block text-sm font-medium mb-1.5" style={{ color: '#111111' }}>Delivery Instructions (optional)</label>
+                    <textarea id="checkout-instructions" value={form.instructions} onChange={e => update('instructions', e.target.value)} placeholder="e.g. Please deliver my order tomorrow at 10:00 AM, call me when at the gate..." rows={3} className="w-full px-4 py-3 rounded-xl text-sm resize-none" />
                   </div>
                 </div>
               )}
@@ -217,8 +236,8 @@ export default function CheckoutPage() {
                   <div className="space-y-3 mb-6">
                     {cartItems.map(item => (
                       <div key={item.product.id} className="flex gap-3 py-3" style={{ borderBottom: '1px solid #FFB800' }}>
-                        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                          <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                          <Image src={item.product.image} alt={item.product.name} fill sizes="48px" unoptimized={item.product.image.includes('images.unsplash.com')} className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-[#111111] line-clamp-1">{item.product.name}</div>

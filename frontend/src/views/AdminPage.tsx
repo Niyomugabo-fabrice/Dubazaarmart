@@ -1,6 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import dynamic from "next/dynamic"
+import Image from "next/image"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   fetchAdminOrders,
   fetchDashboardData,
@@ -32,24 +34,29 @@ import SiteLogo from "../components/SiteLogo"
 import { useAdminAuth } from "../store/adminAuthStore"
 import { useProducts, fetchProductsFromBackend } from "../store/productsStore"
 import AdminLoginView from "../components/AdminLoginView"
-import AddProductModal from "../components/AddProductModal"
-import CreateOrderModal from "../components/CreateOrderModal"
-import CustomerOrderDetailsModal from "../components/CustomerOrderDetailsModal"
-import CancelOrderModal from "../components/CancelOrderModal"
-import CreateCompanyOrderModal from "../components/CreateCompanyOrderModal"
-import CompanyOrderDetailsModal from "../components/CompanyOrderDetailsModal"
-import ReceiveCompanyOrderModal from "../components/ReceiveCompanyOrderModal"
-import RemoveStockModal from "../components/RemoveStockModal"
-import EditStockItemModal from "../components/EditStockItemModal"
-import EditProductModal from "../components/EditProductModal"
-import AnnouncementsModal from "../components/AnnouncementsModal"
-import ConfirmModal from "../components/ConfirmModal"
 import LiveCountdown from "../components/LiveCountdown"
 import type { StoredProduct } from "../types/product"
 import { useAppNavigation } from "../lib/navigation"
 import { useToast } from "../components/ui/Toast"
-import StaffManagementPanel from "./admin/StaffManagementPanel"
-import AuditLogPanel from "./admin/AuditLogPanel"
+
+const AddProductModal = dynamic(() => import("../components/AddProductModal"))
+const CreateOrderModal = dynamic(() => import("../components/CreateOrderModal"))
+const CustomerOrderDetailsModal = dynamic(() => import("../components/CustomerOrderDetailsModal"))
+const CancelOrderModal = dynamic(() => import("../components/CancelOrderModal"))
+const CreateCompanyOrderModal = dynamic(() => import("../components/CreateCompanyOrderModal"))
+const CompanyOrderDetailsModal = dynamic(() => import("../components/CompanyOrderDetailsModal"))
+const ReceiveCompanyOrderModal = dynamic(() => import("../components/ReceiveCompanyOrderModal"))
+const RemoveStockModal = dynamic(() => import("../components/RemoveStockModal"))
+const EditStockItemModal = dynamic(() => import("../components/EditStockItemModal"))
+const EditProductModal = dynamic(() => import("../components/EditProductModal"))
+const AnnouncementsModal = dynamic(() => import("../components/AnnouncementsModal"))
+const ConfirmModal = dynamic(() => import("../components/ConfirmModal"))
+const StaffManagementPanel = dynamic(() => import("./admin/StaffManagementPanel"), {
+  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading staff management…</div>,
+})
+const AuditLogPanel = dynamic(() => import("./admin/AuditLogPanel"), {
+  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading audit logs…</div>,
+})
 
 function DashboardIcon({ name }: { name: string }) {
   const common = {
@@ -261,6 +268,15 @@ export default function AdminPage() {
   const toast = useToast()
   const { isAuthenticated, admin, token: adminToken, login, logout } = useAdminAuth()
   const isManager = admin?.role === "MANAGER"
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
+  const profileInitials = (admin?.name || "User")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
   const hasPermission = useCallback(
     (permission: string) => isManager || (
       permission !== "announcements.manage" &&
@@ -288,6 +304,24 @@ export default function AdminPage() {
       sessionStorage.setItem("dubazaar_admin_section", s)
     }
   }
+
+  useEffect(() => {
+    if (!profileMenuOpen) return
+    function closeProfileMenu(event: PointerEvent) {
+      if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) {
+        setProfileMenuOpen(false)
+      }
+    }
+    function handleProfileMenuKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setProfileMenuOpen(false)
+    }
+    document.addEventListener("pointerdown", closeProfileMenu)
+    document.addEventListener("keydown", handleProfileMenuKey)
+    return () => {
+      document.removeEventListener("pointerdown", closeProfileMenu)
+      document.removeEventListener("keydown", handleProfileMenuKey)
+    }
+  }, [profileMenuOpen])
 
   useEffect(() => {
     const requiredPermissions: Partial<Record<AdminSection, string>> = {
@@ -791,45 +825,6 @@ export default function AdminPage() {
           </nav>
         </div>
         <div className="mt-auto p-4 space-y-2.5">
-          {/* Admin User Profile */}
-          <div
-            className="rounded-xl border p-2.5 flex items-center justify-between"
-            style={{ borderColor: "#FFB800", background: "#FFFFFF" }}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-[#FF6A00] text-black font-bold text-xs flex items-center justify-center flex-shrink-0">
-                IT
-              </div>
-              <div className="min-w-0 text-left">
-                <div className="text-xs font-bold text-[#111111] truncate">{admin?.name || "Manager"}</div>
-                <div className="text-[10px] text-[#0B5B24] truncate">{admin?.email}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              {isManager && (
-                <button
-                  type="button"
-                  onClick={() => setSection("staff")}
-                  className="text-[11px] font-bold text-[#FF6A00] hover:text-[#E94B00] px-2 py-1 rounded bg-[#FF6A00]/10 flex-shrink-0"
-                  title="Manage staff accounts"
-                >
-                  Staff
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  logout()
-                  navigate("/admin/login")
-                }}
-                className="text-[11px] font-bold text-gray-500 hover:text-black px-2 py-1 rounded hover:bg-black/5 flex-shrink-0"
-                title="Sign out of Admin Workspace"
-              >
-                Log out
-              </button>
-            </div>
-          </div>
-
           <div
             className="rounded-xl border p-3"
             style={{ borderColor: "#F1FFF0", background: "#FFF7E8" }}
@@ -919,6 +914,104 @@ export default function AdminPage() {
             >
               Storefront
             </button>
+            <div className="relative" ref={profileMenuRef}>
+              <button
+                type="button"
+                aria-label={`Account menu for ${admin?.name || "user"}`}
+                aria-haspopup="menu"
+                aria-expanded={profileMenuOpen}
+                onClick={() => setProfileMenuOpen((open) => !open)}
+                className="flex max-w-48 items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 pr-2.5 text-left shadow-sm transition hover:border-amber-300 hover:bg-amber-50/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 sm:max-w-56 sm:gap-3 sm:pr-3"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-xs font-extrabold text-white shadow-sm">
+                  {profileInitials}
+                </span>
+                <span className="hidden min-w-0 flex-1 sm:block">
+                  <span className="block truncate text-xs font-bold text-slate-900">
+                    {admin?.name || "Account"}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    {isManager ? "Manager" : "Staff"}
+                  </span>
+                </span>
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  aria-hidden="true"
+                  className={`hidden h-4 w-4 shrink-0 text-slate-500 transition-transform sm:block ${profileMenuOpen ? "rotate-180" : ""}`}
+                >
+                  <path d="m5 7.5 5 5 5-5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {profileMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Account options"
+                  className="absolute right-0 top-full z-[60] mt-3 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10"
+                >
+                  <div className="border-b border-slate-100 bg-gradient-to-br from-amber-50 to-white p-4">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-sm font-extrabold text-white shadow-sm">
+                        {profileInitials}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-bold text-slate-900">
+                          {admin?.name || "Account"}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-500">
+                          {admin?.email}
+                        </span>
+                      </span>
+                    </div>
+                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      {isManager ? "Manager account" : "Staff account"}
+                    </span>
+                  </div>
+                  <div className="space-y-1 p-2">
+                    {isManager && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setSection("settings")
+                          setProfileMenuOpen(false)
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600" aria-hidden="true">
+                          ⚙
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-slate-800">Settings &amp; Content</span>
+                          <span className="mt-0.5 block text-[11px] text-slate-500">Manage your store configuration</span>
+                        </span>
+                        <span className="text-slate-400" aria-hidden="true">›</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setProfileMenuOpen(false)
+                        logout()
+                        navigate("/admin/login")
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600" aria-hidden="true">
+                        ↪
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-rose-700">Log out</span>
+                        <span className="mt-0.5 block text-[11px] text-slate-500">End this admin session</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -2343,11 +2436,14 @@ export default function AdminPage() {
                   className="flex items-center gap-4 p-4 rounded-2xl"
                   style={{ background: "#FFF7E8", border: "1px solid #FFB800" }}
                 >
-                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 product-img-wrap">
-                    <img
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 product-img-wrap">
+                    <Image
                       src={p.image}
                       alt={p.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="56px"
+                      unoptimized={p.image.includes("images.unsplash.com")}
+                      className="object-cover"
                     />
                   </div>
                   <div className="flex-1 min-w-0">

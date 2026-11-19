@@ -47,7 +47,9 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
       <div className="p-5 rounded-2xl mb-4" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
         <h3 className="font-bold text-[#111111] mb-4 text-sm">Categories</h3>
         <button
+          type="button"
           onClick={() => setSelectedCategory('all')}
+          aria-pressed={selectedCategory === 'all'}
           className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
           style={selectedCategory === 'all' ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
         >
@@ -57,7 +59,9 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
         {categories.map(cat => (
           <button
             key={cat.id}
+            type="button"
             onClick={() => setSelectedCategory(cat.id)}
+            aria-pressed={selectedCategory === cat.id}
             className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
             style={selectedCategory === cat.id ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
           >
@@ -74,7 +78,9 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
           {[[0, 200_000], [200_000, 500_000], [500_000, 1_000_000], [1_000_000, 3_000_000]].map(([min, max]) => (
             <button
               key={`${min}-${max}`}
+              type="button"
               onClick={() => setPriceRange([min, max])}
+              aria-pressed={priceRange[0] === min && priceRange[1] === max}
               className="w-full text-left py-2 px-3 rounded-lg text-sm transition-all"
               style={priceRange[0] === min && priceRange[1] === max
                 ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' }
@@ -85,7 +91,9 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
             </button>
           ))}
           <button
+            type="button"
             onClick={() => setPriceRange([0, 3_000_000])}
+            aria-pressed={priceRange[0] === 0 && priceRange[1] === 3_000_000}
             className="w-full text-left py-2 px-3 rounded-lg text-sm transition-all"
             style={priceRange[0] === 0 && priceRange[1] === 3_000_000
               ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' }
@@ -109,7 +117,9 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
         {/* Search + Sort bar */}
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-64 relative">
+            <label htmlFor="product-search" className="sr-only">Search products and brands</label>
             <input
+              id="product-search"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search products, brands..."
@@ -119,7 +129,9 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
           </div>
+          <label htmlFor="product-sort" className="sr-only">Sort products</label>
           <select
+            id="product-sort"
             value={sortBy}
             onChange={e => setSortBy(e.target.value)}
             className="px-4 py-3 rounded-xl text-sm"
@@ -131,8 +143,11 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
             <option value="discount">Biggest Discount</option>
           </select>
           <button
+            type="button"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden px-4 py-3 rounded-xl text-sm btn-ghost"
+            aria-expanded={sidebarOpen}
+            aria-controls="mobile-product-filters"
           >
             Filters
           </button>
@@ -147,11 +162,15 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
 
         {/* Mobile sidebar */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}>
-            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.8)' }} />
-            <div className="absolute left-0 top-0 bottom-0 w-72 p-4 overflow-y-auto" style={{ background: '#FFFFFF' }} onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <button type="button" className="absolute inset-0 h-full w-full cursor-default" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setSidebarOpen(false)} aria-label="Close product filters" />
+            <aside id="mobile-product-filters" aria-label="Product filters" className="absolute left-0 top-0 bottom-0 w-72 p-4 overflow-y-auto" style={{ background: '#FFFFFF' }}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-bold text-[#111111]">Filters</h2>
+                <button type="button" onClick={() => setSidebarOpen(false)} className="rounded-lg px-3 py-2 text-sm btn-ghost" aria-label="Close product filters">Close</button>
+              </div>
               <Sidebar />
-            </div>
+            </aside>
           </div>
         )}
 
@@ -164,9 +183,17 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
           </div>
 
           {loading ? (
-            <div className="text-center py-24" style={{ color: '#0B5B24' }} role="status" aria-live="polite">
-              <span className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[#FFB800] border-t-transparent mb-4" />
-              <div className="text-sm">Loading products…</div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" role="status" aria-live="polite" aria-label="Loading products">
+              {Array.from({ length: 8 }, (_, index) => (
+                <div key={index} aria-hidden="true" className="overflow-hidden rounded-2xl border border-[#FFB800] bg-[#FFF7E8]">
+                  <div className="shimmer aspect-square" />
+                  <div className="space-y-3 p-4">
+                    <div className="shimmer h-3 w-1/3 rounded" />
+                    <div className="shimmer h-4 w-4/5 rounded" />
+                    <div className="shimmer h-4 w-1/2 rounded" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className="text-center py-24" style={{ color: '#0B5B24' }} role="alert">

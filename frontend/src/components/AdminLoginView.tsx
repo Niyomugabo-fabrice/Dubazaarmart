@@ -67,6 +67,7 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
           {/* Error Banner */}
           {error && (
             <div
+              role="alert"
               className="mb-6 p-4 rounded-xl text-xs font-medium flex items-center gap-2.5 animate-fadeIn"
               style={{
                 background: 'rgba(233,75,0,0.08)',
@@ -82,12 +83,14 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[#111111] mb-1.5">
+              <label htmlFor="admin-workspace-email" className="block text-xs font-semibold text-[#111111] mb-1.5">
                 Administrator or Staff Email Address
               </label>
               <input
+                id="admin-workspace-email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="admin@dubazaarmart.rw"
@@ -101,13 +104,15 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#111111] mb-1.5">
+              <label htmlFor="admin-workspace-password" className="block text-xs font-semibold text-[#111111] mb-1.5">
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="admin-workspace-password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••••••"
@@ -122,6 +127,8 @@ export default function AdminLoginView({ onLogin, onBack }: Props) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-black/60 hover:text-black p-1"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? 'Hide' : 'Show'}
                 </button>

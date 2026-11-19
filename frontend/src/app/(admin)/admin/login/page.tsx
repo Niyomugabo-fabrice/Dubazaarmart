@@ -141,6 +141,7 @@ export default function AdminLoginPage() {
           {/* Error Banner */}
           {errorMessage && (
             <div
+              role="alert"
               className="mt-5 p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2.5 animate-fadeIn"
               style={{
                 background: 'rgba(233, 75, 0, 0.08)',
@@ -156,10 +157,11 @@ export default function AdminLoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">
+              <label htmlFor="admin-login-email" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">
                 Administrator or Staff Email Address
               </label>
               <input
+                id="admin-login-email"
                 type="email"
                 required
                 autoComplete="email"
@@ -178,7 +180,7 @@ export default function AdminLoginPage() {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
+                <label htmlFor="admin-login-password" className="block text-xs font-bold text-[#111111] uppercase tracking-wider">
                   Password
                 </label>
                 <button
@@ -192,6 +194,7 @@ export default function AdminLoginPage() {
 
               <div className="relative">
                 <input
+                  id="admin-login-password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"

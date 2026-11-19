@@ -1,10 +1,12 @@
-import type { Metadata } from 'next'
+import { createPageMetadata } from '@/lib/seo'
 import CheckoutPage from '@/views/CheckoutPage'
 
-export const metadata: Metadata = {
+export const metadata = createPageMetadata({
   title: 'Checkout',
-  robots: { index: false, follow: false },
-}
+  description: 'Complete your DubazaarMart order securely.',
+  path: '/checkout',
+  noIndex: true,
+})
 
 export default function Page() {
   return <CheckoutPage />

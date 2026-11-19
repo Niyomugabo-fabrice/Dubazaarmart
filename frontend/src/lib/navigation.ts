@@ -39,6 +39,16 @@ export function pageToPath(page: string): string {
   }
 }
 
+export function rememberProductSelection(product: Product): void {
+  if (typeof window === 'undefined') return
+
+  try {
+    sessionStorage.setItem('dubazaar_selected_product', JSON.stringify(product))
+  } catch {
+    // Product details can still load from the catalog when session storage is unavailable.
+  }
+}
+
 export function useAppNavigation() {
   const router = useRouter()
 
@@ -48,13 +58,7 @@ export function useAppNavigation() {
   }, [router])
 
   const navigateToProduct = useCallback((product: Product) => {
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem('dubazaar_selected_product', JSON.stringify(product))
-      } catch {
-        // ignore
-      }
-    }
+    rememberProductSelection(product)
     const slug = getProductSlug(product)
     router.push(`/products/${slug}`)
   }, [router])

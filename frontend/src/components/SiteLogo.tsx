@@ -4,12 +4,14 @@ interface SiteLogoProps {
   className?: string
   showName?: boolean
   size?: number
+  priority?: boolean
 }
 
 export default function SiteLogo({
   className = "h-11 w-11",
   showName = true,
   size = 44,
+  priority = true,
 }: SiteLogoProps) {
   return (
     <span className="flex min-w-0 items-center gap-2.5">
@@ -21,8 +23,8 @@ export default function SiteLogo({
           alt="Dubazaarmart logo"
           width={size}
           height={size}
+          priority={priority}
           className="h-full w-full object-contain"
-          priority
         />
       </span>
       {showName && (

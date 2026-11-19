@@ -196,6 +196,10 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
                 <img
                   src={mediaUrl(value)}
                   alt="Product preview"
+                  width={80}
+                  height={80}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -273,7 +277,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
           />
           {value && (
             <div className="flex items-center gap-2 p-2 rounded-lg bg-[#FFF7E8]">
-              <img src={mediaUrl(value)} alt="Preview" className="w-12 h-12 rounded object-cover border" />
+              <img src={mediaUrl(value)} alt="Preview" width={48} height={48} loading="lazy" decoding="async" className="w-12 h-12 rounded object-cover border" />
               <span className="text-xs text-gray-600 truncate">Image link loaded</span>
             </div>
           )}
@@ -298,6 +302,10 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
                 <img
                   src={p.url}
                   alt={p.label}
+                  width={160}
+                  height={48}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-12 object-cover rounded-lg mb-1"
                 />
                 <span className="text-[10px] font-bold text-gray-800 block truncate">

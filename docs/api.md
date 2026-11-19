@@ -49,6 +49,6 @@ Protected requests use `Authorization: Bearer <access-token>`. Browser requests 
 | PATCH | `/admin/users/:id/activate`, `/deactivate`, `/suspend`, `/verify`, `/promote-to-manager` | Manage STAFF status, verify email, or promote an active verified STAFF account (MANAGER only) |
 | GET | `/admin/audit-logs` | Read append-only sign-in and administrative audit records (MANAGER only) |
 
-STAFF accounts have full operational access except staff management, audit logs, and settings/content management (including announcement changes), which remain MANAGER-only. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER.
+STAFF accounts have full operational access except user management, audit logs, and settings/content management (including announcement changes), which remain MANAGER-only. Managers can manage staff and other manager accounts; an account cannot deactivate, suspend, or remove itself. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER. Customer contact information is stored on orders; customers do not have sign-in accounts.
 
 Interactive OpenAPI documentation is served from `/docs`.

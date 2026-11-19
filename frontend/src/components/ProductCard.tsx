@@ -43,7 +43,6 @@ export default function ProductCard({ product }: Props) {
             alt={product.name}
             fill
             sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 33vw, 50vw"
-            unoptimized={product.image.includes('images.unsplash.com')}
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {product.badge && (

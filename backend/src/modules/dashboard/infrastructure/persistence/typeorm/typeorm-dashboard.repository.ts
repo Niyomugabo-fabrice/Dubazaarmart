@@ -22,21 +22,28 @@ export class TypeOrmDashboardRepository implements DashboardRepository {
           COUNT(*) FILTER (WHERE status = 'PENDING_PAYMENT') AS pending_orders,
           COUNT(*) FILTER (WHERE payment_status = 'PAID') AS paid_orders,
           COUNT(*) FILTER (WHERE status = 'DELIVERED') AS completed_orders,
-          (SELECT COUNT(*) FROM customers) AS total_customers,
+          (SELECT COUNT(DISTINCT LOWER(email)) FROM orders WHERE email <> '') AS total_customers,
           (SELECT COUNT(*) FROM products WHERE active = TRUE) AS total_products,
           (SELECT COUNT(*) FROM products WHERE quantity <= 5 AND active = TRUE) AS low_stock
         FROM orders`),
       this.dataSource.query(`
-        SELECT o.id, COALESCE(c.name, o.customer_name) AS customer, o.total_amount AS amount,
+        SELECT o.id, o.customer_name AS customer, o.total_amount AS amount,
           o.status, o.created_at AS date, COUNT(oi.id)::int AS items
-        FROM orders o LEFT JOIN customers c ON c.id = o.customer_id
-        LEFT JOIN order_items oi ON oi.order_id = o.id
-        GROUP BY o.id, c.name, o.customer_name ORDER BY o.created_at DESC LIMIT 100`),
+        FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
+        GROUP BY o.id, o.customer_name ORDER BY o.created_at DESC LIMIT 100`),
       this.dataSource.query(`SELECT id, name, brand, category, sku, price, quantity, active, image FROM products ORDER BY created_at DESC LIMIT 200`),
       this.dataSource.query(`
-        SELECT c.name, c.email, COUNT(o.id)::int AS orders, COALESCE(SUM(o.total_amount), 0) AS total, c.created_at AS joined
-        FROM customers c LEFT JOIN orders o ON o.customer_id = c.id
-        GROUP BY c.id ORDER BY c.created_at DESC LIMIT 100`),
+        SELECT
+          (ARRAY_AGG(customer_name ORDER BY created_at DESC))[1] AS name,
+          LOWER(email) AS email,
+          COUNT(*)::int AS orders,
+          COALESCE(SUM(total_amount), 0) AS total,
+          MIN(created_at) AS joined
+        FROM orders
+        WHERE email <> ''
+        GROUP BY LOWER(email)
+        ORDER BY MIN(created_at) DESC
+        LIMIT 100`),
       this.dataSource.query(`SELECT id, name, sku, quantity FROM products ORDER BY quantity ASC, name ASC LIMIT 200`),
       range === '12m'
         ? this.dataSource.query(`

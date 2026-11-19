@@ -11,6 +11,7 @@ import {
   verifyStaffUser,
   type StaffUserRecord,
 } from "../../lib/dashboardApi"
+import { useAdminAuth } from "../../store/adminAuthStore"
 
 type StaffStatus = StaffUserRecord["status"]
 type StaffProfileDraft = Pick<StaffUserRecord, "firstName" | "lastName" | "email"> & {
@@ -34,6 +35,7 @@ function formatLastLogin(value: string | null): string {
 }
 
 export default function StaffManagementPanel() {
+  const { admin } = useAdminAuth()
   const [staff, setStaff] = useState<StaffUserRecord[]>([])
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState("")
@@ -224,9 +226,9 @@ export default function StaffManagementPanel() {
     <section className="space-y-6">
       <header>
         <div className="badge mb-2" style={{ color: "#FF6A00" }}>MANAGER CONTROLS</div>
-        <h1 className="text-2xl font-bold text-[#111111]">Staff management</h1>
+        <h1 className="text-2xl font-bold text-[#111111]">User management</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Staff have full operational access. Staff Management, Audit Log, and store settings/content—including announcement publishing—remain manager-only.
+          Manage staff and manager accounts. User Management, Audit Log, and store settings/content—including announcement publishing—remain manager-only.
         </p>
       </header>
 
@@ -248,8 +250,8 @@ export default function StaffManagementPanel() {
       <div className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-[#111111]">Staff accounts ({total})</h2>
-            <p className="text-xs text-slate-500">Search, review verification, and manage account access.</p>
+            <h2 className="text-lg font-bold text-[#111111]">Managed accounts ({total})</h2>
+            <p className="text-xs text-slate-500">Search staff and managers, review verification, and manage account access.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <input
@@ -283,6 +285,7 @@ export default function StaffManagementPanel() {
             <thead className="bg-[#FFF7E8] text-xs uppercase tracking-wide text-slate-600">
               <tr>
                 <th scope="col" className="px-4 py-3">Name</th>
+                <th scope="col" className="px-4 py-3">Role</th>
                 <th scope="col" className="px-4 py-3">Email</th>
                 <th scope="col" className="px-4 py-3">Phone</th>
                 <th scope="col" className="px-4 py-3">Status</th>
@@ -293,13 +296,18 @@ export default function StaffManagementPanel() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">Loading staff accounts…</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">Loading accounts…</td></tr>
               ) : staff.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">No staff accounts match this search.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">No accounts match this search.</td></tr>
               ) : staff.map((user) => (
                 <Fragment key={user.id}>
                   <tr key={user.id}>
                     <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-900">{user.name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.role === "MANAGER" ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-700"}`}>
+                        {user.role === "MANAGER" ? "Manager" : "Staff"}
+                      </span>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-700">{user.email}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">{user.phoneNumber || "—"}</td>
                     <td className="px-4 py-3">
@@ -323,12 +331,12 @@ export default function StaffManagementPanel() {
                             Activate
                           </button>
                         )}
-                        {user.status === "ACTIVE" && (
+                        {user.status === "ACTIVE" && user.id !== admin?.id && (
                           <button disabled={Boolean(savingUserId)} onClick={() => void changeStatus(user, "deactivate")} type="button" className="rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-50">
                             Deactivate
                           </button>
                         )}
-                        {user.status !== "SUSPENDED" && (
+                        {user.status !== "SUSPENDED" && user.id !== admin?.id && (
                           <button disabled={Boolean(savingUserId)} onClick={() => void changeStatus(user, "suspend")} type="button" className="rounded-lg bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-800 disabled:opacity-50">
                             Suspend
                           </button>
@@ -341,15 +349,17 @@ export default function StaffManagementPanel() {
                         <button disabled={Boolean(savingUserId)} onClick={() => startEditing(user)} type="button" className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-800 disabled:opacity-50">
                           Edit
                         </button>
-                        <button disabled={Boolean(savingUserId)} onClick={() => void removeStaff(user)} type="button" className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800 disabled:opacity-50">
-                          Remove
-                        </button>
+                        {user.id !== admin?.id && (
+                          <button disabled={Boolean(savingUserId)} onClick={() => void removeStaff(user)} type="button" className="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-800 disabled:opacity-50">
+                            Remove
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                   {editingUserId === user.id && editDraft && (
                     <tr key={`${user.id}-edit`}>
-                      <td colSpan={7} className="bg-slate-50 px-4 py-4">
+                      <td colSpan={8} className="bg-slate-50 px-4 py-4">
                         <form onSubmit={(event) => void saveProfile(event, user)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                           <input required minLength={2} maxLength={60} value={editDraft.firstName} onChange={(event) => setEditDraft({ ...editDraft, firstName: event.target.value })} aria-label="Staff first name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                           <input required minLength={2} maxLength={60} value={editDraft.lastName} onChange={(event) => setEditDraft({ ...editDraft, lastName: event.target.value })} aria-label="Staff last name" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import type { CatalogQuery, ProductRepository } from '../domain/product.repository'
 import { PRODUCT_REPOSITORY } from '../domain/product.repository'
@@ -26,7 +27,12 @@ export class ProductService {
     const price = Number(dto.price)
     const originalPrice = Number(dto.originalPrice) || price
     const sku = dto.sku?.trim() || `${category.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+    const id = randomUUID()
+    const baseSlug = slugify(name) || 'product'
+    const slug = await this.createUniqueSlug(baseSlug, id)
     const product = await this.save({
+      id,
+      slug,
       name,
       brand: dto.brand?.trim() || 'General',
       category,
@@ -77,10 +83,33 @@ export class ProductService {
     return { success: true, message: 'Product archived successfully' }
   }
 
+  private async createUniqueSlug(baseSlug: string, id: string): Promise<string> {
+    let slug = baseSlug
+    while (await this.products.findBySlug(slug)) {
+      slug = `${baseSlug}-${id}`
+      if (await this.products.findBySlug(slug)) slug = `${baseSlug}-${id}-${randomUUID()}`
+    }
+    return slug
+  }
+
   private async save(product: Partial<ProductEntity>) {
     try {
       return await this.products.save(product)
     } catch (error) {
+      if (isConstraintViolation(error, 'products_slug_key') && product.id && product.slug) {
+        const baseSlug = slugify(product.name || '') || 'product'
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const fallbackSlug = await this.createUniqueSlug(`${baseSlug}-${product.id}`, randomUUID())
+          try {
+            return await this.products.save({ ...product, slug: fallbackSlug })
+          } catch (retryError) {
+            if (isConstraintViolation(retryError, 'products_slug_key')) continue
+            if (isUniqueViolation(retryError)) throw new ConflictException('A product with this SKU already exists.')
+            throw retryError
+          }
+        }
+        throw new ConflictException('A unique product URL could not be generated. Try again.')
+      }
       if (isUniqueViolation(error)) throw new ConflictException('A product with this SKU already exists.')
       throw error
     }
@@ -91,6 +120,7 @@ export function serializeProduct(row: ProductEntity) {
   return {
     id: String(row.id),
     name: row.name,
+    slug: row.slug,
     category: row.category,
     brand: row.brand,
     description: row.description || '',
@@ -117,7 +147,24 @@ export function serializeProduct(row: ProductEntity) {
   }
 }
 
+function slugify(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return Boolean(error && typeof error === 'object' && 'driverError' in error &&
     (error as { driverError?: { code?: string } }).driverError?.code === '23505')
+}
+
+function isConstraintViolation(error: unknown, constraint: string): boolean {
+  if (!error || typeof error !== 'object' || !('driverError' in error)) return false
+  const driverError = (error as { driverError?: { code?: string; constraint?: string } }).driverError
+  return driverError?.code === '23505' && driverError.constraint === constraint
 }

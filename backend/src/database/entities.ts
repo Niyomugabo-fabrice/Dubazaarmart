@@ -1,7 +1,6 @@
 import { UserEntity } from '../modules/auth/infrastructure/persistence/typeorm/user.entity'
 import { AuditLogEntity } from '../modules/audit/infrastructure/persistence/typeorm/audit-log.entity'
 import { ProductEntity } from '../modules/products/infrastructure/persistence/typeorm/product.entity'
-import { CustomerEntity } from '../modules/orders/infrastructure/persistence/typeorm/customer.entity'
 import { OrderEntity } from '../modules/orders/infrastructure/persistence/typeorm/order.entity'
 import { OrderItemEntity } from '../modules/orders/infrastructure/persistence/typeorm/order-item.entity'
 import { StockMovementEntity } from '../modules/inventory/infrastructure/persistence/typeorm/stock-movement.entity'
@@ -14,7 +13,6 @@ export const databaseEntities = [
   UserEntity,
   AuditLogEntity,
   ProductEntity,
-  CustomerEntity,
   OrderEntity,
   OrderItemEntity,
   StockMovementEntity,

@@ -45,9 +45,9 @@ export class TypeOrmUserRepository implements UserRepository {
     return user ? this.toIdentity(user) : null
   }
 
-  async listStaff(query: StaffListQuery): Promise<StaffListResult> {
+  async listManagedUsers(query: StaffListQuery): Promise<StaffListResult> {
     const builder = this.users.createQueryBuilder('user')
-      .where('user.role = :role', { role: 'STAFF' })
+      .where('user.role IN (:...roles)', { roles: ['STAFF', 'MANAGER'] })
 
     if (query.status) builder.andWhere('user.status = :status', { status: query.status })
     if (query.search) {
@@ -87,10 +87,10 @@ export class TypeOrmUserRepository implements UserRepository {
     return this.toAccount(await this.users.save(user))
   }
 
-  async updateStaff(id: string, values: UpdateStaffRecord): Promise<UserAccount | null> {
+  async updateManagedUser(id: string, values: UpdateStaffRecord): Promise<UserAccount | null> {
     const user = await this.users.createQueryBuilder('user')
       .addSelect('user.passwordHash')
-      .where('user.id = :id AND user.role = :role AND user.deleted_at IS NULL', { id, role: 'STAFF' })
+      .where("user.id = :id AND user.role IN ('STAFF', 'MANAGER') AND user.deleted_at IS NULL", { id })
       .getOne()
     if (!user) return null
 
@@ -107,10 +107,10 @@ export class TypeOrmUserRepository implements UserRepository {
     return this.toAccount(await this.users.save(user))
   }
 
-  async updateStatus(id: string, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'): Promise<UserAccount | null> {
+  async updateManagedUserStatus(id: string, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'): Promise<UserAccount | null> {
     const user = await this.users.createQueryBuilder('user')
       .addSelect('user.passwordHash')
-      .where('user.id = :id AND user.role = :role AND user.deleted_at IS NULL', { id, role: 'STAFF' })
+      .where("user.id = :id AND user.role IN ('STAFF', 'MANAGER') AND user.deleted_at IS NULL", { id })
       .getOne()
     if (!user) return null
     user.status = status
@@ -130,11 +130,11 @@ export class TypeOrmUserRepository implements UserRepository {
     return this.findIdentityById(id)
   }
 
-  async softDeleteStaff(id: string): Promise<boolean> {
+  async softDeleteManagedUser(id: string): Promise<boolean> {
     const result = await this.users.createQueryBuilder()
       .update(UserEntity)
       .set({ status: 'INACTIVE', deletedAt: new Date() })
-      .where('id = :id AND role = :role AND deleted_at IS NULL', { id, role: 'STAFF' })
+      .where("id = :id AND role IN ('STAFF', 'MANAGER') AND deleted_at IS NULL", { id })
       .execute()
     return Boolean(result.affected)
   }

@@ -7,6 +7,8 @@ import { AdminRefreshTokens20261117000001 } from './migrations/20261117000001-Ad
 import { CustomerPasswordHash20261118000002 } from './migrations/20261118000002-CustomerPasswordHash'
 import { SoftDeleteBusinessRecords20261118000003 } from './migrations/20261118000003-SoftDeleteBusinessRecords'
 import { ManagerStaffAuthentication20261118000004 } from './migrations/20261118000004-ManagerStaffAuthentication'
+import { RemoveCustomerAccounts20261119000001 } from './migrations/20261119000001-RemoveCustomerAccounts'
+import { ProductSlugs20261119000002 } from './migrations/20261119000002-ProductSlugs'
 
 export default new DataSource({
   type: 'postgres',
@@ -18,6 +20,8 @@ export default new DataSource({
     CustomerPasswordHash20261118000002,
     SoftDeleteBusinessRecords20261118000003,
     ManagerStaffAuthentication20261118000004,
+    RemoveCustomerAccounts20261119000001,
+    ProductSlugs20261119000002,
   ],
   migrationsTableName: 'typeorm_migrations',
   synchronize: false,

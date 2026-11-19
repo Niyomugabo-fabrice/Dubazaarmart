@@ -32,11 +32,11 @@ Create `backend/.env` from `backend/.env.example`, set the database URL and two 
 
 The backend environment variables are `PORT`, `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `FRONTEND_URL`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `MANAGER_DEFAULT_EMAIL`, and `MANAGER_DEFAULT_PASSWORD`. The last two are only read by the explicit seed command. Never place backend secrets in frontend environment files or `NEXT_PUBLIC_*` values.
 
-The frontend environment variables are `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_NAME`, and `NEXT_PUBLIC_CURRENCY`.
+The frontend environment variables are `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_NAME`, `NEXT_PUBLIC_CURRENCY`, and `NEXT_PUBLIC_SITE_URL`. Set `NEXT_PUBLIC_SITE_URL` to the canonical public origin so canonical links, social metadata, robots.txt, and sitemap.xml use the deployed domain.
 
 ## Database and migrations
 
-The TypeORM entities map to the existing PostgreSQL tables. Automatic schema synchronization and automatic migration execution are disabled. The initial migration validates an existing schema before recording its baseline; it does not alter populated business tables. The authentication migration copies existing manager/staff identities into `users`, removes the legacy auth tables and customer password hashes, and adds audit/settings schema. Customer and order records remain; checkout continues without customer accounts.
+The TypeORM entities map to the existing PostgreSQL tables. Automatic schema synchronization and automatic migration execution are disabled. The initial migration validates an existing schema before recording its baseline; it does not alter populated business tables. Authentication migrations copy existing manager/staff identities into `users`; customer contact details remain on orders, while the separate `customers` table is removed. Checkout continues without customer accounts. A later migration adds unique, persistent product slugs and backfills existing products; duplicate product names receive ID suffixes.
 
 Review the migration status before applying migrations:
 
@@ -45,7 +45,7 @@ pnpm db:migration:show
 pnpm db:migrate
 ```
 
-The migration initializer refuses to proceed if it finds a partial or mismatched legacy schema. The later manager/staff authentication migration is intentionally irreversible and drops legacy authentication data. Review its SQL and take a verified database backup before applying it to any database with important records. Do not run that migration against production without an approved maintenance and recovery plan.
+The migration initializer refuses to proceed if it finds a partial or mismatched legacy schema. The customer-table removal and authentication migrations are intentionally irreversible; product slugs are required by the storefront's canonical product routes. Review migrations and take a verified database backup before applying them to any database with important records. Do not run destructive migrations against production without an approved maintenance and recovery plan.
 
 ```bash
 pnpm db:seed
@@ -83,6 +83,6 @@ pnpm build
 
 ## Production deployment
 
-Deploy `frontend/` and `backend/` as separate applications. Set the frontend's `NEXT_PUBLIC_API_URL` to the public API base ending in `/api/v1`. Set the backend database URL, JWT secrets, CORS origins, Cloudinary settings, and port in its private environment. Apply reviewed TypeORM migrations before enabling manager/staff login. Serve the API over HTTPS and publish the Swagger page only where appropriate for the deployment.
+Deploy `frontend/` and `backend/` as separate applications. Set the frontend's `NEXT_PUBLIC_API_URL` to the public API base ending in `/api/v1` and `NEXT_PUBLIC_SITE_URL` to the canonical storefront origin. Set the backend database URL, JWT secrets, CORS origins, Cloudinary settings, and port in its private environment. Apply reviewed TypeORM migrations, including product slug backfill, before deploying the frontend SEO routes. Serve the API over HTTPS and publish the Swagger page only where appropriate for the deployment. The dynamic sitemap includes active products and categories; catalog and sitemap data revalidate within five minutes.
 
 The previous Prisma schema and initial SQL snapshot are kept under `docs/architecture/legacy-prisma/` for historical reference. They are not installed or used at runtime.

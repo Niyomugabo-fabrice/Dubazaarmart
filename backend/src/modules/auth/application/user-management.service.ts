@@ -9,9 +9,9 @@ import { isUniqueViolation, validatePassword } from './user-validation'
 export class UserManagementService {
   constructor(@Inject(USER_REPOSITORY) private readonly users: UserRepository) {}
 
-  async listStaff(actor: UserIdentity, query: ListStaffQueryDto) {
+  async listManagedUsers(actor: UserIdentity, query: ListStaffQueryDto) {
     this.assertManager(actor)
-    return this.users.listStaff({
+    return this.users.listManagedUsers({
       search: query.search?.trim(),
       status: query.status,
       page: query.page,
@@ -21,10 +21,10 @@ export class UserManagementService {
     })
   }
 
-  async getStaff(actor: UserIdentity, id: string): Promise<UserIdentity> {
+  async getManagedUser(actor: UserIdentity, id: string): Promise<UserIdentity> {
     this.assertManager(actor)
     const user = await this.users.findById(id)
-    if (!user || user.role !== 'STAFF') throw new NotFoundException('Staff account not found.')
+    if (!user || !isManagedRole(user.role)) throw new NotFoundException('Managed account not found.')
     return identityOf(user)
   }
 
@@ -51,7 +51,7 @@ export class UserManagementService {
     }
   }
 
-  async updateStaff(actor: UserIdentity, id: string, dto: UpdateStaffDto): Promise<UserIdentity> {
+  async updateManagedUser(actor: UserIdentity, id: string, dto: UpdateStaffDto): Promise<UserIdentity> {
     this.assertManager(actor)
     if (!Object.keys(dto).length) throw new BadRequestException('No staff fields were provided.')
     if (dto.email) {
@@ -59,8 +59,8 @@ export class UserManagementService {
       if (existing && existing.id !== id) throw new ConflictException('An account already exists for this email.')
     }
     try {
-      const user = await this.users.updateStaff(id, dto)
-      if (!user) throw new NotFoundException('Staff account not found.')
+      const user = await this.users.updateManagedUser(id, dto)
+      if (!user) throw new NotFoundException('Managed account not found.')
       return identityOf(user)
     } catch (error) {
       if (isUniqueViolation(error)) throw new ConflictException('An account already exists for this email.')
@@ -68,10 +68,10 @@ export class UserManagementService {
     }
   }
 
-  async verifyStaff(actor: UserIdentity, id: string): Promise<UserIdentity> {
+  async verifyManagedUser(actor: UserIdentity, id: string): Promise<UserIdentity> {
     this.assertManager(actor)
-    const user = await this.users.updateStaff(id, { emailVerified: true })
-    if (!user) throw new NotFoundException('Staff account not found.')
+    const user = await this.users.updateManagedUser(id, { emailVerified: true })
+    if (!user) throw new NotFoundException('Managed account not found.')
     return identityOf(user)
   }
 
@@ -87,35 +87,48 @@ export class UserManagementService {
     return promoted
   }
 
-  activateStaff(actor: UserIdentity, id: string) {
+  activateManagedUser(actor: UserIdentity, id: string) {
     return this.updateStatus(actor, id, 'ACTIVE')
   }
 
-  deactivateStaff(actor: UserIdentity, id: string) {
+  deactivateManagedUser(actor: UserIdentity, id: string) {
     return this.updateStatus(actor, id, 'INACTIVE')
   }
 
-  suspendStaff(actor: UserIdentity, id: string) {
+  suspendManagedUser(actor: UserIdentity, id: string) {
     return this.updateStatus(actor, id, 'SUSPENDED')
   }
 
-  async deleteStaff(actor: UserIdentity, id: string) {
+  async deleteManagedUser(actor: UserIdentity, id: string) {
     this.assertManager(actor)
     if (actor.id === id) throw new ForbiddenException('You cannot delete your own account.')
-    if (!(await this.users.softDeleteStaff(id))) throw new NotFoundException('Staff account not found.')
-    return { success: true }
+    const target = await this.users.findById(id)
+    if (!target || !isManagedRole(target.role)) throw new NotFoundException('Managed account not found.')
+    if (!(await this.users.softDeleteManagedUser(id))) throw new NotFoundException('Managed account not found.')
+    return {
+      success: true,
+      name: [target.firstName, target.lastName].filter(Boolean).join(' '),
+      email: target.email,
+    }
   }
 
   private async updateStatus(actor: UserIdentity, id: string, status: UserStatus): Promise<UserIdentity> {
     this.assertManager(actor)
-    const user = await this.users.updateStatus(id, status)
-    if (!user) throw new NotFoundException('Staff account not found.')
+    if (actor.id === id && status !== 'ACTIVE') {
+      throw new ForbiddenException('You cannot deactivate or suspend your own account.')
+    }
+    const user = await this.users.updateManagedUserStatus(id, status)
+    if (!user) throw new NotFoundException('Managed account not found.')
     return identityOf(user)
   }
 
   private assertManager(actor: UserIdentity): void {
-    if (actor.role !== 'MANAGER') throw new ForbiddenException('Only a MANAGER can manage staff accounts.')
+    if (actor.role !== 'MANAGER') throw new ForbiddenException('Only a MANAGER can manage user accounts.')
   }
+}
+
+function isManagedRole(role: UserIdentity['role']): boolean {
+  return role === 'STAFF' || role === 'MANAGER'
 }
 
 function identityOf(user: {

@@ -42,11 +42,11 @@ export interface UserRepository {
   findByEmail(email: string): Promise<UserAccount | null>
   findById(id: string): Promise<UserAccount | null>
   findIdentityById(id: string): Promise<UserIdentity | null>
-  listStaff(query: StaffListQuery): Promise<StaffListResult>
+  listManagedUsers(query: StaffListQuery): Promise<StaffListResult>
   createStaff(record: CreateUserRecord): Promise<UserAccount>
-  updateStaff(id: string, values: UpdateStaffRecord): Promise<UserAccount | null>
-  updateStatus(id: string, status: UserStatus): Promise<UserAccount | null>
+  updateManagedUser(id: string, values: UpdateStaffRecord): Promise<UserAccount | null>
+  updateManagedUserStatus(id: string, status: UserStatus): Promise<UserAccount | null>
   promoteStaffToManager(id: string): Promise<UserIdentity | null>
-  softDeleteStaff(id: string): Promise<boolean>
+  softDeleteManagedUser(id: string): Promise<boolean>
   updateLastLogin(id: string, at: Date): Promise<void>
 }

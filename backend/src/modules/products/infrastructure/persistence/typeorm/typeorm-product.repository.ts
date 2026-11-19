@@ -29,6 +29,10 @@ export class TypeOrmProductRepository implements ProductRepository {
     return this.products.findOneBy({ id })
   }
 
+  findBySlug(slug: string): Promise<ProductEntity | null> {
+    return this.products.findOneBy({ slug })
+  }
+
   findActiveBySkus(skus: string[]): Promise<ProductEntity[]> {
     if (!skus.length) return Promise.resolve([])
     return this.products.find({ where: { sku: In(skus), active: true } })

@@ -24,12 +24,12 @@ export class UsersController {
 
   @Get()
   list(@Req() request: Request, @Query() query: ListStaffQueryDto) {
-    return this.users.listStaff((request as AuthenticatedRequest).user, query)
+    return this.users.listManagedUsers((request as AuthenticatedRequest).user, query)
   }
 
   @Get(':id')
   get(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.users.getStaff((request as AuthenticatedRequest).user, id)
+    return this.users.getManagedUser((request as AuthenticatedRequest).user, id)
   }
 
   @Post()
@@ -39,22 +39,22 @@ export class UsersController {
 
   @Patch(':id')
   update(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string, @Body() dto: UpdateStaffDto) {
-    return this.users.updateStaff((request as AuthenticatedRequest).user, id, dto)
+    return this.users.updateManagedUser((request as AuthenticatedRequest).user, id, dto)
   }
 
   @Patch(':id/activate')
   activate(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.users.activateStaff((request as AuthenticatedRequest).user, id)
+    return this.users.activateManagedUser((request as AuthenticatedRequest).user, id)
   }
 
   @Patch(':id/deactivate')
   deactivate(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.users.deactivateStaff((request as AuthenticatedRequest).user, id)
+    return this.users.deactivateManagedUser((request as AuthenticatedRequest).user, id)
   }
 
   @Patch(':id/verify')
   verify(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.users.verifyStaff((request as AuthenticatedRequest).user, id)
+    return this.users.verifyManagedUser((request as AuthenticatedRequest).user, id)
   }
 
   @Patch(':id/promote-to-manager')
@@ -64,11 +64,11 @@ export class UsersController {
 
   @Patch(':id/suspend')
   suspend(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.users.suspendStaff((request as AuthenticatedRequest).user, id)
+    return this.users.suspendManagedUser((request as AuthenticatedRequest).user, id)
   }
 
   @Delete(':id')
   delete(@Req() request: Request, @Param('id', new ParseUUIDPipe()) id: string) {
-    return this.users.deleteStaff((request as AuthenticatedRequest).user, id)
+    return this.users.deleteManagedUser((request as AuthenticatedRequest).user, id)
   }
 }

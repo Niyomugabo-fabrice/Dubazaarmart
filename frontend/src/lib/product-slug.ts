@@ -11,8 +11,13 @@ export function slugify(text: string): string {
 }
 
 export function getProductSlug(product: Product): string {
+  if (product.slug?.trim()) return product.slug.trim().toLowerCase()
   const base = slugify(product.name)
-  return base ? `${base}-${product.id}` : product.id
+  const catalog = fallbackProducts.some((item) => item.id === product.id)
+    ? fallbackProducts
+    : [...fallbackProducts, product]
+  const duplicateName = catalog.filter((item) => slugify(item.name) === base).length > 1
+  return base ? (duplicateName ? `${base}-${product.id}` : base) : product.id
 }
 
 export function findProductBySlug(
@@ -20,27 +25,20 @@ export function findProductBySlug(
   productList: Product[] = fallbackProducts,
 ): Product | undefined {
   if (!slug) return undefined
-  const decoded = decodeURIComponent(slug).toLowerCase().trim()
+  const decoded = slug.toLowerCase().trim()
 
-  // 1. Direct match on id
-  const byId = productList.find(p => p.id.toLowerCase() === decoded)
+  const byCanonicalSlug = productList.find((product) => getProductSlug(product) === decoded)
+  if (byCanonicalSlug) return byCanonicalSlug
+
+  const byId = productList.find((product) => product.id.toLowerCase() === decoded)
   if (byId) return byId
 
-  // 2. Direct match on sku
-  const bySku = productList.find(p => p.sku && p.sku.toLowerCase() === decoded)
+  const bySku = productList.find((product) => product.sku && product.sku.toLowerCase() === decoded)
   if (bySku) return bySku
 
-  // 3. Exact slug match
-  const bySlug = productList.find(p => getProductSlug(p).toLowerCase() === decoded)
-  if (bySlug) return bySlug
-
-  // 4. Name slug match
-  const byNameSlug = productList.find(p => slugify(p.name).toLowerCase() === decoded)
-  if (byNameSlug) return byNameSlug
-
-  // 5. Match if ends with -{id}
-  const bySuffix = productList.find(p => decoded.endsWith(`-${p.id.toLowerCase()}`))
-  if (bySuffix) return bySuffix
-
-  return undefined
+  return productList.find((product) =>
+    decoded === `${slugify(product.name)}-${product.id.toLowerCase()}` ||
+    decoded === `${slugify(product.name)}-${product.sku.toLowerCase()}` ||
+    decoded.endsWith(`-${product.id.toLowerCase()}`),
+  )
 }

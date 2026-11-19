@@ -1,5 +1,6 @@
 export interface Product {
   id: string
+  slug?: string
   name: string
   category: string
   brand: string
@@ -19,6 +20,8 @@ export interface Product {
   rating: number
   reviews: number
   badge?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export const categories = [

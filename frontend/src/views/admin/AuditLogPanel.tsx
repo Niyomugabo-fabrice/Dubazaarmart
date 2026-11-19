@@ -236,8 +236,15 @@ export default function AuditLogPanel() {
                         {log.targetResource || "—"}
                       </span>
                     </td>
-                    <td className="max-w-48 truncate px-5 py-4 font-mono text-xs text-slate-600" title={log.targetId ?? undefined}>
-                      {log.targetId ?? "—"}
+                    <td className="max-w-48 truncate px-5 py-4 text-slate-600">
+                      <div className="font-sans text-sm font-medium text-slate-800">
+                        {typeof log.metadata?.targetLabel === "string"
+                          ? log.metadata.targetLabel
+                          : log.targetId ? "Details not recorded" : "—"}
+                      </div>
+                      {typeof log.metadata?.targetDetail === "string" && (
+                        <div className="mt-0.5 truncate font-sans text-xs text-slate-500">{log.metadata.targetDetail}</div>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4">
                       <p className="font-medium text-slate-800">{timestamp.date}</p>

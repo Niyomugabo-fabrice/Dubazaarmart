@@ -59,7 +59,6 @@ export default function ProductDetailPage({ product }: Props) {
                 fill
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 priority
-                unoptimized={(product.images[activeImage] || product.image).includes('images.unsplash.com')}
                 className="object-cover"
               />
             </div>
@@ -80,7 +79,6 @@ export default function ProductDetailPage({ product }: Props) {
                       alt=""
                       fill
                       sizes="80px"
-                      unoptimized={img.includes('images.unsplash.com')}
                       className="object-cover"
                     />
                   </button>

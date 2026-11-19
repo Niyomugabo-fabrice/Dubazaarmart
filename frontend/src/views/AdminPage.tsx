@@ -724,7 +724,7 @@ export default function AdminPage() {
   if (isManager) {
     navItems.push(
       { id: "settings", label: "Settings & Content", icon: "⚙️" },
-      { id: "staff", label: "Staff Management", icon: "🧑‍💼" },
+      { id: "staff", label: "User Management", icon: "🧑‍💼" },
       { id: "audit", label: "Audit Log", icon: "🧾" },
     )
   }

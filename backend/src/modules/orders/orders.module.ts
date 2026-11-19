@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { AuthModule } from '../auth/auth.module'
 import { ProductsModule } from '../products/products.module'
 import { SettingsModule } from '../settings/settings.module'
-import { CustomerEntity } from './infrastructure/persistence/typeorm/customer.entity'
 import { OrderEntity } from './infrastructure/persistence/typeorm/order.entity'
 import { OrderItemEntity } from './infrastructure/persistence/typeorm/order-item.entity'
 import { ProductEntity } from '../products/infrastructure/persistence/typeorm/product.entity'
@@ -15,7 +14,7 @@ import { OrderService } from './application/order.service'
 import { AdminOrdersController, OrdersController } from './presentation/orders.controller'
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CustomerEntity, OrderEntity, OrderItemEntity, ProductEntity, StockMovementEntity]), AuthModule, ProductsModule, SettingsModule],
+  imports: [TypeOrmModule.forFeature([OrderEntity, OrderItemEntity, ProductEntity, StockMovementEntity]), AuthModule, ProductsModule, SettingsModule],
   controllers: [OrdersController, AdminOrdersController],
   providers: [
     OrderService,

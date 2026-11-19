@@ -3,6 +3,7 @@ import { OrderItemEntity } from '../../../../orders/infrastructure/persistence/t
 
 @Entity({ name: 'products' })
 @Index('products_sku_key', ['sku'], { unique: true })
+@Index('products_slug_key', ['slug'], { unique: true })
 @Index('products_quantity_idx', ['quantity'])
 @Check('products_price_check', 'price >= 0')
 @Check('products_quantity_check', 'quantity >= 0')
@@ -12,6 +13,9 @@ export class ProductEntity {
 
   @Column({ type: 'text' })
   name!: string
+
+  @Column({ type: 'text' })
+  slug!: string
 
   @Column({ type: 'text', default: '' })
   brand!: string

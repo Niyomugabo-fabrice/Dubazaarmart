@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
 import { DataSource, IsNull } from 'typeorm'
 import type { AdminOrderQuery, CreateAdminOrderInput, CreateCustomerOrderInput, OrderRepository, OrderUpdates } from '../../../domain/order.repository'
-import { CustomerEntity } from './customer.entity'
 import { OrderEntity } from './order.entity'
 import { OrderItemEntity } from './order-item.entity'
 import { ProductEntity } from '../../../../products/infrastructure/persistence/typeorm/product.entity'
@@ -35,15 +34,6 @@ export class TypeOrmOrderRepository implements OrderRepository {
         if (product.quantity < quantity) throw new Error(`Product ${sku} has insufficient stock. Please update your cart.`)
       }
 
-      const customerRepository = manager.getRepository(CustomerEntity)
-      let customer = await customerRepository.findOneBy({ email: input.email })
-      if (customer) {
-        customer.name = input.customerName
-        customer = await customerRepository.save(customer)
-      } else {
-        customer = await customerRepository.save(customerRepository.create({ name: input.customerName, email: input.email }))
-      }
-
       const lines = input.items.map((line) => {
         const product = productsBySku.get(line.sku)!
         const unitPrice = Number(product.price)
@@ -62,8 +52,6 @@ export class TypeOrmOrderRepository implements OrderRepository {
       const deliveryFee = 10000
       const orderRepository = manager.getRepository(OrderEntity)
       const order = orderRepository.create({
-        customerId: customer.id,
-        customer,
         customerName: input.customerName,
         phone: input.phone,
         email: input.email,

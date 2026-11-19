@@ -1,5 +1,4 @@
-import { Check, Column, CreateDateColumn, DeleteDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
-import { CustomerEntity } from './customer.entity'
+import { Check, Column, CreateDateColumn, DeleteDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { OrderItemEntity } from './order-item.entity'
 
 @Entity({ name: 'orders' })
@@ -11,13 +10,6 @@ import { OrderItemEntity } from './order-item.entity'
 export class OrderEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string
-
-  @Column({ name: 'customer_id', type: 'uuid', nullable: true })
-  customerId!: string | null
-
-  @ManyToOne(() => CustomerEntity, (customer) => customer.orders, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'customer_id' })
-  customer!: CustomerEntity | null
 
   @Column({ name: 'customer_name', type: 'text' })
   customerName!: string

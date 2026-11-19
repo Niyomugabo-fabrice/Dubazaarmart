@@ -29,15 +29,33 @@ export class AuditInterceptor implements NestInterceptor {
     const rawTargetId = request.params.id || request.params.productId
     const targetId = typeof rawTargetId === 'string' ? rawTargetId : null
     return next.handle().pipe(concatMap(async (response) => {
+      const target = describeTarget(response)
       await this.audit.record({
         actorUserId: user?.id,
         actorName: user?.name,
         action: `${method.toLowerCase()}.${targetResource}`,
         targetResource,
         targetId,
-        metadata: { method, path },
+        metadata: {
+          method,
+          path,
+          ...(target.label ? { targetLabel: target.label } : {}),
+          ...(target.detail ? { targetDetail: target.detail } : {}),
+        },
       })
       return response
     }))
   }
+}
+
+function describeTarget(response: unknown): { label: string | null; detail: string | null } {
+  if (!response || typeof response !== 'object') return { label: null, detail: null }
+  const record = response as Record<string, unknown>
+  const label = firstText(record.name, record.title, record.poNumber, record.orderNumber, record.customerName)
+  const detail = firstText(record.email, record.sku)
+  return { label, detail }
+}
+
+function firstText(...values: unknown[]): string | null {
+  return values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() ?? null
 }

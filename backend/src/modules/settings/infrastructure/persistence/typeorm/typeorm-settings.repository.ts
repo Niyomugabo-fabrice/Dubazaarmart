@@ -22,10 +22,10 @@ export class TypeOrmSettingsRepository implements SettingsRepository {
 
   findActiveAnnouncements(now: Date) {
     return this.announcements.createQueryBuilder('announcement')
-      .where('announcement.active = true')
-      .andWhere('(announcement.startDate IS NULL OR announcement.startDate <= :now)', { now })
-      .andWhere('(announcement.endDate IS NULL OR announcement.endDate >= :now)', { now })
-      .orderBy('announcement.createdAt', 'DESC')
+      .where('announcement.is_active = true')
+      .andWhere('(announcement.start_date IS NULL OR announcement.start_date <= :now)', { now })
+      .andWhere('(announcement.end_date IS NULL OR announcement.end_date >= :now)', { now })
+      .orderBy('announcement.created_at', 'DESC')
       .getMany()
   }
 

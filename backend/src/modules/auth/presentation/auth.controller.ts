@@ -5,6 +5,7 @@ import type { Request, Response } from 'express'
 import { AuthService } from '../application/auth.service'
 import { AuditService } from '../../audit/application/audit.service'
 import { LoginDto } from './dto/login.dto'
+import { SetupManagerDto } from './dto/setup-manager.dto'
 import { Roles } from './auth.decorators'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 import { AccessControlGuard } from './guards/access-control.guard'
@@ -17,6 +18,27 @@ export class AuthController {
     private readonly config: ConfigService,
     private readonly audit: AuditService,
   ) {}
+
+  @Get('setup-status')
+  @ApiOperation({ summary: 'Report whether the first manager account still needs to be created' })
+  setupStatus() {
+    return this.auth.getSetupStatus()
+  }
+
+  @Post('setup')
+  @ApiOperation({ summary: 'Create the first manager account when none exists' })
+  async setup(@Body() dto: SetupManagerDto, @Req() request: Request) {
+    assertTrustedOrigin(request, this.config)
+    const clientIp = request.ip || request.socket.remoteAddress || 'unknown'
+    const result = await this.auth.createFirstManager(dto, clientIp)
+    await this.audit.record({
+      actorName: dto.email.trim().toLowerCase(),
+      action: 'auth.setup.manager_created',
+      targetResource: 'auth',
+      metadata: { ip: clientIp },
+    })
+    return result
+  }
 
   @Post('login')
   @ApiOperation({ summary: 'Sign in a MANAGER or active STAFF account' })

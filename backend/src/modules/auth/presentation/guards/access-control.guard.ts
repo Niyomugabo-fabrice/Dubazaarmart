@@ -20,7 +20,10 @@ export class AccessControlGuard implements CanActivate {
     if (permissions?.length) {
       const granted = user?.role === 'MANAGER' || (
         user?.role === 'STAFF' &&
-        !permissions.includes('announcements.manage')
+        (
+          !permissions.includes('announcements.manage') ||
+          permissions.every((permission) => permission.startsWith('announcements.'))
+        )
       )
       if (!granted) throw new ForbiddenException('You do not have permission to perform this action.')
     }

@@ -255,11 +255,12 @@ export type SiteAnnouncement = {
   id: string
   title: string
   message: string
-  tag: string
-  active: boolean
-  startDate?: string
-  endDate?: string
+  link: string | null
+  isActive: boolean
+  startDate: string | null
+  endDate: string | null
   createdAt: string
+  updatedAt: string
 }
 
 export type AdminOrdersPage = {
@@ -809,14 +810,16 @@ export async function fetchAdminAnnouncements(): Promise<SiteAnnouncement[]> {
   return Array.isArray(data.announcements) ? data.announcements : []
 }
 
-export async function createAdminAnnouncement(payload: {
-  title: string
-  message: string
-  tag?: string
-  startDate?: string
-  endDate?: string
-  active?: boolean
-}): Promise<SiteAnnouncement> {
+export type AnnouncementInput = {
+  title?: string
+  message?: string
+  link?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  isActive?: boolean
+}
+
+export async function createAdminAnnouncement(payload: AnnouncementInput): Promise<SiteAnnouncement> {
   const response = await apiFetch(apiUrl("/api/admin/announcements"), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
@@ -824,23 +827,13 @@ export async function createAdminAnnouncement(payload: {
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to create announcement")
+    throw new Error(getApiErrorMessage(data, "Failed to create announcement."))
   }
   const result = await response.json()
   return result.announcement
 }
 
-export async function updateAdminAnnouncement(
-  id: string,
-  payload: {
-    title: string
-    message: string
-    tag: string
-    active: boolean
-    startDate: string | null
-    endDate: string | null
-  },
-): Promise<SiteAnnouncement> {
+export async function updateAdminAnnouncement(id: string, payload: AnnouncementInput): Promise<SiteAnnouncement> {
   const response = await apiFetch(apiUrl(`/api/admin/announcements/${id}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
@@ -895,6 +888,7 @@ export async function createStaffUser(payload: {
   email: string
   phoneNumber?: string
   password: string
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'
 }): Promise<StaffUserRecord> {
   const response = await apiFetch(apiUrl("/api/admin/users"), {
     method: "POST",

@@ -14,7 +14,7 @@ interface Props {
   onAnnouncementSaved: (announcement: SiteAnnouncement, isUpdate: boolean) => void
 }
 
-function toDateInputValue(value?: string): string {
+function toDateInputValue(value?: string | null): string {
   if (!value) return ""
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ""
@@ -27,13 +27,17 @@ function toDateTime(value: string, endOfDay = false): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }
 
+function isValidLink(value: string): boolean {
+  return /^https?:\/\//i.test(value) || (value.startsWith("/") && !value.startsWith("//"))
+}
+
 export default function AnnouncementsModal({ isOpen, announcement, onClose, onAnnouncementSaved }: Props) {
   const [title, setTitle] = useState("")
   const [message, setMessage] = useState("")
-  const [tag, setTag] = useState("Flash Friday")
+  const [link, setLink] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [active, setActive] = useState(true)
+  const [isActive, setIsActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isEditing = Boolean(announcement)
@@ -42,10 +46,10 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
     if (!isOpen) return
     setTitle(announcement?.title ?? "")
     setMessage(announcement?.message ?? "")
-    setTag(announcement?.tag ?? "Flash Friday")
+    setLink(announcement?.link ?? "")
     setStartDate(toDateInputValue(announcement?.startDate))
     setEndDate(toDateInputValue(announcement?.endDate))
-    setActive(announcement?.active ?? true)
+    setIsActive(announcement?.isActive ?? false)
     setError(null)
   }, [announcement, isOpen])
 
@@ -55,6 +59,11 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
     event.preventDefault()
     if (!title.trim() || !message.trim()) {
       setError("Title and message are required.")
+      return
+    }
+    const trimmedLink = link.trim()
+    if (trimmedLink && !isValidLink(trimmedLink)) {
+      setError('Link must be an http(s) URL or a site path starting with "/".')
       return
     }
     if (startDate && endDate && startDate > endDate) {
@@ -68,18 +77,14 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
       const payload = {
         title: title.trim(),
         message: message.trim(),
-        tag: tag.trim() || "Announcement",
+        link: trimmedLink || null,
         startDate: toDateTime(startDate),
         endDate: toDateTime(endDate, true),
-        active,
+        isActive,
       }
       const saved = announcement
         ? await updateAdminAnnouncement(announcement.id, payload)
-        : await createAdminAnnouncement({
-            ...payload,
-            startDate: payload.startDate ?? undefined,
-            endDate: payload.endDate ?? undefined,
-          })
+        : await createAdminAnnouncement(payload)
       onAnnouncementSaved(saved, Boolean(announcement))
       onClose()
     } catch (saveError) {
@@ -117,19 +122,6 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <div>
-            <label htmlFor="announcement-tag" className="mb-1.5 block text-sm font-semibold text-slate-700">Tag / category</label>
-            <input
-              id="announcement-tag"
-              required
-              maxLength={40}
-              value={tag}
-              onChange={(event) => setTag(event.target.value)}
-              placeholder="Flash Friday, Special Offer, Holiday Notice"
-              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-            />
-          </div>
-
-          <div>
             <label htmlFor="announcement-title" className="mb-1.5 block text-sm font-semibold text-slate-700">Title</label>
             <input
               id="announcement-title"
@@ -156,9 +148,27 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
             />
           </div>
 
+          <div>
+            <label htmlFor="announcement-link" className="mb-1.5 block text-sm font-semibold text-slate-700">
+              Link <span className="font-normal text-slate-400">(optional)</span>
+            </label>
+            <input
+              id="announcement-link"
+              type="text"
+              maxLength={2048}
+              value={link}
+              onChange={(event) => setLink(event.target.value)}
+              placeholder="/shop or https://example.com"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+            />
+            <p className="mt-1 text-xs text-slate-500">Shown as a link in the storefront banner.</p>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="announcement-start-date" className="mb-1.5 block text-sm font-semibold text-slate-700">Start date</label>
+              <label htmlFor="announcement-start-date" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Start date <span className="font-normal text-slate-400">(optional)</span>
+              </label>
               <input
                 id="announcement-start-date"
                 type="date"
@@ -168,7 +178,9 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
               />
             </div>
             <div>
-              <label htmlFor="announcement-end-date" className="mb-1.5 block text-sm font-semibold text-slate-700">End date</label>
+              <label htmlFor="announcement-end-date" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                End date <span className="font-normal text-slate-400">(optional)</span>
+              </label>
               <input
                 id="announcement-end-date"
                 type="date"
@@ -182,13 +194,15 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <input
               type="checkbox"
-              checked={active}
-              onChange={(event) => setActive(event.target.checked)}
+              checked={isActive}
+              onChange={(event) => setIsActive(event.target.checked)}
               className="mt-0.5 h-4 w-4 accent-amber-600"
             />
             <span>
-              <span className="block text-sm font-semibold text-slate-800">Visible in the storefront</span>
-              <span className="block text-xs text-slate-500">Hidden announcements remain saved and can be re-enabled later.</span>
+              <span className="block text-sm font-semibold text-slate-800">Active in the storefront</span>
+              <span className="block text-xs text-slate-500">
+                Inactive announcements stay saved but are hidden from customers until you turn them on.
+              </span>
             </span>
           </label>
 
@@ -199,7 +213,7 @@ export default function AnnouncementsModal({ isOpen, announcement, onClose, onAn
               Cancel
             </button>
             <button type="submit" disabled={loading} className="rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60">
-              {loading ? "Saving…" : isEditing ? "Save changes" : "Publish announcement"}
+              {loading ? "Saving…" : isEditing ? "Save changes" : "Create announcement"}
             </button>
           </div>
         </form>

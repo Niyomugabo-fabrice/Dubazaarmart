@@ -49,6 +49,8 @@ function backendPath(path: string): string {
   const [pathname, query = ''] = path.split(/(?=\?)/, 2)
   let mapped = pathname
   if (mapped === '/api/admin/login') mapped = '/auth/login'
+  else if (mapped === '/api/admin/setup-status') mapped = '/auth/setup-status'
+  else if (mapped === '/api/admin/setup') mapped = '/auth/setup'
   else if (mapped === '/api/admin/logout') mapped = '/auth/logout'
   else if (mapped === '/api/admin/verify') mapped = '/auth/verify'
   else if (mapped === '/api/admin/refresh') mapped = '/auth/refresh'

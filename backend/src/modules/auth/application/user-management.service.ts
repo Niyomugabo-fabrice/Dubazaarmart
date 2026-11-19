@@ -33,6 +33,7 @@ export class UserManagementService {
     const email = dto.email.trim().toLowerCase()
     if (await this.users.findByEmail(email)) throw new ConflictException('An account already exists for this email.')
     validatePassword(dto.password)
+    const status = dto.status ?? 'PENDING'
 
     try {
       const user = await this.users.createStaff({
@@ -41,8 +42,8 @@ export class UserManagementService {
         email,
         phoneNumber: dto.phoneNumber,
         passwordHash: await bcrypt.hash(dto.password, 12),
-        status: dto.status ?? 'PENDING',
-        emailVerified: dto.status === 'ACTIVE',
+        status,
+        emailVerified: status === 'ACTIVE',
       })
       return identityOf(user)
     } catch (error) {

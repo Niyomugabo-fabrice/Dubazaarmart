@@ -53,6 +53,24 @@ pnpm db:seed
 
 The seed command requires `MANAGER_DEFAULT_EMAIL` and `MANAGER_DEFAULT_PASSWORD`. It creates an initial MANAGER only when that email is not already present and leaves existing credentials, customer records, products, orders, and settings unchanged. Staff registration defaults to disabled and can only be enabled by a manager.
 
+### Create or reset an account
+
+When the database has no manager account, the admin login page shows a one-time "Create the First Manager Account" form; it disappears after the first manager exists. Signed-in managers can also create additional staff or manager accounts from Staff Management.
+
+When no manager can sign in, or you need to provision a new account, create it directly in PostgreSQL:
+
+```bash
+ACCOUNT_EMAIL=owner@example.com ACCOUNT_PASSWORD="a-long-password" pnpm db:create-account
+```
+
+Flags are also supported (environment variables keep the password out of shell history):
+
+```bash
+pnpm db:create-account -- --email owner@example.com --password "a-long-password" --first-name Owner --role MANAGER
+```
+
+The role defaults to MANAGER; pass `--role STAFF` for a staff account. Accounts are created active and verified. Use `--reset` to set a new password for an existing account and reactivate/verify it; the command never prints the password. Passwords must be 12-72 bytes.
+
 Authentication supports only MANAGER and STAFF. Access JWTs stay in memory in the frontend; a stateless refresh JWT is held in an HttpOnly cookie. Customer authentication and signup are not provided; customer/order records and guest checkout remain supported.
 
 ## Development

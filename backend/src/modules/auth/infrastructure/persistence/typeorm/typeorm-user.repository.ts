@@ -87,6 +87,26 @@ export class TypeOrmUserRepository implements UserRepository {
     return this.toAccount(await this.users.save(user))
   }
 
+  async countManagers(): Promise<number> {
+    return this.users.count({ where: { role: 'MANAGER', deletedAt: IsNull() } })
+  }
+
+  async createManager(record: CreateUserRecord): Promise<UserAccount> {
+    const user = this.users.create({
+      id: randomUUID(),
+      firstName: record.firstName.trim(),
+      lastName: record.lastName.trim(),
+      email: record.email.trim().toLowerCase(),
+      phoneNumber: record.phoneNumber?.trim() || null,
+      passwordHash: record.passwordHash,
+      role: 'MANAGER',
+      status: record.status,
+      emailVerified: record.emailVerified ?? true,
+      permissions: record.permissions ?? [],
+    })
+    return this.toAccount(await this.users.save(user))
+  }
+
   async updateManagedUser(id: string, values: UpdateStaffRecord): Promise<UserAccount | null> {
     const user = await this.users.createQueryBuilder('user')
       .addSelect('user.passwordHash')

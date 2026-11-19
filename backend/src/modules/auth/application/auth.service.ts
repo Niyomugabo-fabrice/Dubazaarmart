@@ -104,6 +104,42 @@ export class AuthService {
     }
   }
 
+  async getSetupStatus() {
+    return { needsSetup: (await this.users.countManagers()) === 0 }
+  }
+
+  async createFirstManager(
+    input: { firstName: string; lastName: string; email: string; password: string },
+    clientIp: string,
+  ) {
+    this.checkRateLimit(hashKey(`setup\0${clientIp}`), 5)
+
+    if ((await this.users.countManagers()) > 0) {
+      throw new ConflictException('Setup has already been completed. Sign in with an existing manager account.')
+    }
+
+    const email = input.email.trim().toLowerCase()
+    if (await this.users.findByEmail(email)) {
+      throw new ConflictException('An account with this email already exists.')
+    }
+    validatePassword(input.password)
+    try {
+      await this.users.createManager({
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        email,
+        passwordHash: await bcrypt.hash(input.password, 12),
+        status: 'ACTIVE',
+        emailVerified: true,
+        permissions: [],
+      })
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new ConflictException('An account with this email already exists.')
+      throw error
+    }
+    return { success: true, message: 'Manager account created. You can sign in now.' }
+  }
+
   async authenticateRequest(request: Request): Promise<UserIdentity | null> {
     const token = readAccessToken(request)
     if (!token) return null

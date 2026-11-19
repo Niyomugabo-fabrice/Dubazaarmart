@@ -7,6 +7,7 @@ import { SoftDeleteBusinessRecords20261118000003 } from './migrations/2026111800
 import { ManagerStaffAuthentication20261118000004 } from './migrations/20261118000004-ManagerStaffAuthentication'
 import { RemoveCustomerAccounts20261119000001 } from './migrations/20261119000001-RemoveCustomerAccounts'
 import { ProductSlugs20261119000002 } from './migrations/20261119000002-ProductSlugs'
+import { AnnouncementsManagement20261119000000 } from './migrations/20261119000000-AnnouncementsManagement'
 
 export function databaseOptions(databaseUrl: string): TypeOrmModuleOptions {
   return {
@@ -19,6 +20,7 @@ export function databaseOptions(databaseUrl: string): TypeOrmModuleOptions {
       CustomerPasswordHash20261118000002,
       SoftDeleteBusinessRecords20261118000003,
       ManagerStaffAuthentication20261118000004,
+      AnnouncementsManagement20261119000000,
       RemoveCustomerAccounts20261119000001,
       ProductSlugs20261119000002,
     ],

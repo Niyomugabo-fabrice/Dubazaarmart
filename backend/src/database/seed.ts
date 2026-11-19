@@ -51,8 +51,8 @@ async function seed() {
         id: randomUUID(),
         title: 'Direct Dubai Electronics Import',
         message: 'Genuine electronics sourced directly from Dubai wholesale hubs. Same-day delivery is available across Kigali.',
-        tag: 'Announcement',
-        active: true,
+        link: null,
+        isActive: true,
       }))
       process.stdout.write('Initial announcement created.\n')
     }

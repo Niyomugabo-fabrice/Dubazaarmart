@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx ./node_modules/typeorm/cli.js -d src/database/data-source.ts migration:run",
     "db:migration:show": "tsx ./node_modules/typeorm/cli.js -d src/database/data-source.ts migration:show",
-    "db:seed": "tsx src/database/seed.ts"
+    "db:seed": "tsx src/database/seed.ts",
+    "db:create-account": "tsx src/database/create-account.ts"
   },
   "dependencies": {
     "@nestjs/common": "^12.5.1",

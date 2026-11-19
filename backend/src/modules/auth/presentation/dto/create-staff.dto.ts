@@ -60,7 +60,7 @@ export class ListStaffQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @Max(100)
+  @MaxLength(100)
   search?: string
 
   @ApiPropertyOptional({ enum: USER_STATUSES })

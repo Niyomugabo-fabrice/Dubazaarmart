@@ -85,9 +85,10 @@ export class SettingsService {
     if (typeof body.title !== 'string' || !body.title.trim() || typeof body.message !== 'string' || !body.message.trim()) {
       throw new BadRequestException('Title and message are required.')
     }
-    if (body.active !== undefined && typeof body.active !== 'boolean') {
-      throw new BadRequestException('active must be a boolean.')
+    if (body.isActive !== undefined && typeof body.isActive !== 'boolean') {
+      throw new BadRequestException('isActive must be a boolean.')
     }
+    const link = parseOptionalLink(body.link)
     const startDate = parseOptionalDate(body.startDate)
     const endDate = parseOptionalDate(body.endDate)
     if (startDate && endDate && startDate > endDate) {
@@ -96,10 +97,10 @@ export class SettingsService {
     const announcement = await this.repository.saveAnnouncement({
       title: body.title.trim(),
       message: body.message.trim(),
-      tag: typeof body.tag === 'string' && body.tag.trim() ? body.tag.trim() : 'Announcement',
+      link,
       startDate,
       endDate,
-      active: body.active ?? true,
+      isActive: body.isActive ?? false,
     })
     return { success: true, announcement: serializeAnnouncement(announcement) }
   }
@@ -116,13 +117,12 @@ export class SettingsService {
       if (typeof body.message !== 'string' || !body.message.trim()) throw new BadRequestException('Message is required.')
       values.message = body.message.trim()
     }
-    if (body.tag !== undefined) {
-      if (typeof body.tag !== 'string') throw new BadRequestException('Tag must be a string.')
-      values.tag = body.tag.trim() || 'Announcement'
+    if (body.link !== undefined) {
+      values.link = parseOptionalLink(body.link)
     }
-    if (body.active !== undefined) {
-      if (typeof body.active !== 'boolean') throw new BadRequestException('active must be a boolean.')
-      values.active = body.active
+    if (body.isActive !== undefined) {
+      if (typeof body.isActive !== 'boolean') throw new BadRequestException('isActive must be a boolean.')
+      values.isActive = body.isActive
     }
     if (body.startDate !== undefined) values.startDate = parseOptionalDate(body.startDate)
     if (body.endDate !== undefined) values.endDate = parseOptionalDate(body.endDate)
@@ -145,6 +145,18 @@ function parseOptionalDate(value: unknown): Date | null {
   const date = new Date(String(value))
   if (Number.isNaN(date.getTime())) throw new BadRequestException('A date value is invalid.')
   return date
+}
+
+function parseOptionalLink(value: unknown): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string') throw new BadRequestException('Link must be a string.')
+  const link = value.trim()
+  if (!link) return null
+  if (link.length > 2048) throw new BadRequestException('Link must be 2048 characters or fewer.')
+  if (!/^https?:\/\//i.test(link) && (!link.startsWith('/') || link.startsWith('//'))) {
+    throw new BadRequestException('Link must be an http(s) URL or a site path starting with "/".')
+  }
+  return link
 }
 
 function serializeSettings(row: WebsiteSettingsEntity) {
@@ -170,10 +182,11 @@ function serializeAnnouncement(row: AnnouncementEntity) {
     id: String(row.id),
     title: row.title,
     message: row.message,
-    tag: row.tag,
-    active: row.active,
+    link: row.link ?? null,
+    isActive: row.isActive,
     startDate: row.startDate,
     endDate: row.endDate,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
 }

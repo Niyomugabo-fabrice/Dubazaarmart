@@ -16,7 +16,8 @@
     "format": "oxfmt",
     "db:migrate": "pnpm --filter @dubazaarmart/backend db:migrate",
     "db:migration:show": "pnpm --filter @dubazaarmart/backend db:migration:show",
-    "db:seed": "pnpm --filter @dubazaarmart/backend db:seed"
+    "db:seed": "pnpm --filter @dubazaarmart/backend db:seed",
+    "db:create-account": "pnpm --filter @dubazaarmart/backend db:create-account"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

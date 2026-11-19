@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
 
 @Entity({ name: 'announcements' })
 export class AnnouncementEntity {
@@ -11,11 +11,11 @@ export class AnnouncementEntity {
   @Column({ type: 'text' })
   message!: string
 
-  @Column({ type: 'text', default: 'Announcement' })
-  tag!: string
+  @Column({ type: 'text', nullable: true })
+  link!: string | null
 
-  @Column({ type: 'boolean', default: true })
-  active!: boolean
+  @Column({ name: 'is_active', type: 'boolean', default: false })
+  isActive!: boolean
 
   @Column({ name: 'start_date', type: 'timestamptz', nullable: true })
   startDate!: Date | null
@@ -25,4 +25,7 @@ export class AnnouncementEntity {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt!: Date
 }

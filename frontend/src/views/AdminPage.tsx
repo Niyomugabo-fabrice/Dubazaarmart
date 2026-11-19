@@ -12,8 +12,6 @@ import {
   fetchStockMovements,
   fetchWebsiteSettings,
   updateWebsiteSettings,
-  fetchAdminAnnouncements,
-  deleteAdminAnnouncement,
   cancelAdminOrder,
   recordAdminOrderPayment,
   deleteAdminOrder,
@@ -27,7 +25,6 @@ import {
   type StockItemSummary,
   type StockMovement,
   type WebsiteSettings,
-  type SiteAnnouncement,
 } from "../lib/dashboardApi"
 import { apiFetch, apiUrl } from "../services/api-client"
 import SiteLogo from "../components/SiteLogo"
@@ -49,13 +46,15 @@ const ReceiveCompanyOrderModal = dynamic(() => import("../components/ReceiveComp
 const RemoveStockModal = dynamic(() => import("../components/RemoveStockModal"))
 const EditStockItemModal = dynamic(() => import("../components/EditStockItemModal"))
 const EditProductModal = dynamic(() => import("../components/EditProductModal"))
-const AnnouncementsModal = dynamic(() => import("../components/AnnouncementsModal"))
 const ConfirmModal = dynamic(() => import("../components/ConfirmModal"))
 const StaffManagementPanel = dynamic(() => import("./admin/StaffManagementPanel"), {
   loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading user management…</div>,
 })
 const AuditLogPanel = dynamic(() => import("./admin/AuditLogPanel"), {
   loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading audit logs…</div>,
+})
+const AnnouncementsPanel = dynamic(() => import("./admin/AnnouncementsPanel"), {
+  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading announcements…</div>,
 })
 
 function DashboardIcon({ name }: { name: string }) {
@@ -387,18 +386,13 @@ export default function AdminPage() {
   const [preselectedStockItem, setPreselectedStockItem] = useState<StockItemSummary | null>(null)
   const [stockItemToEdit, setStockItemToEdit] = useState<StockItemSummary | null>(null)
 
-  // Settings & Announcements State
+  // Settings State
   const [settingsData, setSettingsData] = useState<WebsiteSettings | null>(null)
-  const [announcementsData, setAnnouncementsData] = useState<SiteAnnouncement[]>([])
-  const [announcementsError, setAnnouncementsError] = useState<string | null>(null)
-  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false)
-  const [announcementToEdit, setAnnouncementToEdit] = useState<SiteAnnouncement | null>(null)
   const [settingsSaving, setSettingsSaving] = useState(false)
 
   // Confirmation Modals State
   const [confirmDeleteOrder, setConfirmDeleteOrder] = useState<string | null>(null)
   const [confirmDeletePo, setConfirmDeletePo] = useState<{ id: string; poNumber: string } | null>(null)
-  const [confirmDeleteAnnouncement, setConfirmDeleteAnnouncement] = useState<string | null>(null)
   const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<{ id: string; name: string } | null>(null)
 
   async function handleUpdateOrderStatus(orderId: string, newStatus: string) {
@@ -488,25 +482,6 @@ export default function AdminPage() {
       setSettingsSaving(false)
     }
   }
-
-  function handleDeleteAnnouncement(id: string) {
-    setConfirmDeleteAnnouncement(id)
-  }
-
-  async function executeDeleteAnnouncement(id: string) {
-    try {
-      await deleteAdminAnnouncement(id)
-      setAnnouncementsData((prev) => prev.filter((a) => a.id !== id))
-      setActionSuccess("Announcement removed.")
-      setTimeout(() => setActionSuccess(null), 3000)
-    } catch (err) {
-      console.error("Failed to delete announcement", err)
-      toast.error(err instanceof Error ? err.message : "The announcement could not be deleted.", "Delete Failed")
-    } finally {
-      setConfirmDeleteAnnouncement(null)
-    }
-  }
-
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -649,24 +624,13 @@ export default function AdminPage() {
   }, [isAuthenticated, section, refreshToken])
 
   useEffect(() => {
-    if (!isAuthenticated || (section !== "settings" && section !== "announcements")) return
-    if (section === "settings" && !isManager) return
+    if (!isAuthenticated || section !== "settings" || !isManager) return
     let isMounted = true
-    const settingsRequest = section === "settings" ? fetchWebsiteSettings() : Promise.resolve(null)
-    Promise.all([settingsRequest, fetchAdminAnnouncements()])
-      .then(([st, an]) => {
-        if (isMounted) {
-          if (st) setSettingsData(st)
-          setAnnouncementsData(an)
-          setAnnouncementsError(null)
-        }
+    fetchWebsiteSettings()
+      .then((st) => {
+        if (isMounted) setSettingsData(st)
       })
-      .catch((err) => {
-        console.error("Error loading settings or announcements", err)
-        if (isMounted) {
-          setAnnouncementsError(err instanceof Error ? err.message : "Announcements could not be loaded.")
-        }
-      })
+      .catch((err) => console.error("Error loading website settings", err))
     return () => {
       isMounted = false
     }
@@ -2922,82 +2886,25 @@ export default function AdminPage() {
               </>
             )}
 
-            {/* Announcements Manager */}
-            <div className={`${section === "settings" ? "mt-10" : ""} p-6 rounded-2xl border`} style={{ background: "#FFFFFF", borderColor: "#FFB800" }}>
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div>
-                  <h3 className="font-bold text-[#111111] text-base">Store Announcements & Flash Deals</h3>
-                  <p className="text-xs text-[#0B5B24]">Active announcements display at the top of the customer store.</p>
+            {section === "announcements" && (
+              <div className="mb-8">
+                <div className="badge mb-2" style={{ color: "#FF6A00" }}>
+                  STORE COMMUNICATIONS
                 </div>
-                {hasPermission("announcements.manage") && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAnnouncementToEdit(null)
-                      setIsAnnouncementModalOpen(true)
-                    }}
-                    className="btn-gold px-4 py-2 rounded-xl text-xs font-bold shadow-sm"
-                  >
-                    + New Announcement
-                  </button>
-                )}
+                <h1 className="text-3xl font-bold tracking-tight text-[#111111] sm:text-4xl mb-2">
+                  Announcements
+                </h1>
+                <p className="text-sm text-[#0B5B24]">
+                  Create store-wide messages and control when they appear at the top of the customer store.
+                </p>
               </div>
+            )}
 
-              <div className="space-y-3">
-                {announcementsError && (
-                  <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                    {announcementsError}
-                  </div>
-                )}
-                {announcementsData.map((ann) => (
-                  <div
-                    key={ann.id}
-                    className="p-4 rounded-xl border flex flex-wrap items-center justify-between gap-3"
-                    style={{ background: "#FFF7E8", borderColor: "#FFB800" }}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-[#FF6A00] text-black">
-                          {ann.tag}
-                        </span>
-                        <span className="font-bold text-sm text-[#111111]">{ann.title}</span>
-                      </div>
-                      <p className="text-xs text-[#0B5B24]">{ann.message}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ann.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
-                        {ann.active ? "Active" : "Hidden"}
-                      </span>
-                      {hasPermission("announcements.manage") && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAnnouncementToEdit(ann)
-                              setIsAnnouncementModalOpen(true)
-                            }}
-                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 border border-slate-300 hover:bg-slate-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAnnouncement(ann.id)}
-                            className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#FF6A00] border border-[#FF6A00]/40 hover:bg-[#FF6A00]/10"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {!announcementsError && announcementsData.length === 0 && (
-                  <div className="text-center py-6 text-xs text-[#0B5B24] border border-dashed rounded-xl" style={{ borderColor: "#FFB800" }}>
-                    No announcements currently configured.
-                  </div>
-                )}
-              </div>
+            <div
+              className={section === "settings" ? "mt-10 p-6 rounded-2xl border" : ""}
+              style={section === "settings" ? { background: "#FFFFFF", borderColor: "#FFB800" } : undefined}
+            >
+              <AnnouncementsPanel embedded={section === "settings"} />
             </div>
           </div>
         )}
@@ -3124,22 +3031,6 @@ export default function AdminPage() {
         }}
       />
 
-      <AnnouncementsModal
-        isOpen={isAnnouncementModalOpen}
-        announcement={announcementToEdit}
-        onClose={() => {
-          setIsAnnouncementModalOpen(false)
-          setAnnouncementToEdit(null)
-        }}
-        onAnnouncementSaved={(ann, isUpdate) => {
-          setAnnouncementsData((current) => isUpdate
-            ? current.map((item) => item.id === ann.id ? ann : item)
-            : [ann, ...current])
-          setActionSuccess(isUpdate ? `Announcement "${ann.title}" updated.` : `New announcement "${ann.title}" published!`)
-          setTimeout(() => setActionSuccess(null), 3500)
-        }}
-      />
-
       {/* Delete Order Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmDeleteOrder !== null}
@@ -3168,21 +3059,6 @@ export default function AdminPage() {
           }
         }}
         onClose={() => setConfirmDeletePo(null)}
-      />
-
-      {/* Delete Announcement Confirmation Modal */}
-      <ConfirmModal
-        isOpen={confirmDeleteAnnouncement !== null}
-        title="Delete Announcement"
-        message="Are you sure you want to permanently remove this announcement? It will immediately stop showing to customers."
-        confirmLabel="Delete"
-        danger
-        onConfirm={() => {
-          if (confirmDeleteAnnouncement) {
-            executeDeleteAnnouncement(confirmDeleteAnnouncement)
-          }
-        }}
-        onClose={() => setConfirmDeleteAnnouncement(null)}
       />
 
       {/* Delete Product Confirmation Modal */}

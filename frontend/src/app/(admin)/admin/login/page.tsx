@@ -20,6 +20,12 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [staffRegistrationEnabled, setStaffRegistrationEnabled] = useState(false)
+  const [setupStatus, setSetupStatus] = useState<'checking' | 'required' | 'complete'>('checking')
+  const [setupFirstName, setSetupFirstName] = useState('')
+  const [setupLastName, setSetupLastName] = useState('')
+  const [setupEmail, setSetupEmail] = useState('')
+  const [setupPassword, setSetupPassword] = useState('')
+  const [setupConfirm, setSetupConfirm] = useState('')
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -27,6 +33,22 @@ export default function AdminLoginPage() {
       router.replace('/admin')
     }
   }, [isAuthenticated, isAuthLoading, router])
+
+  useEffect(() => {
+    let active = true
+    apiFetch(apiUrl('/api/admin/setup-status'))
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Setup status unavailable.')
+        const payload = await response.json() as { needsSetup?: boolean }
+        if (active) setSetupStatus(payload.needsSetup === true ? 'required' : 'complete')
+      })
+      .catch(() => {
+        if (active) setSetupStatus('complete')
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -56,6 +78,60 @@ export default function AdminLoginPage() {
       }
     }
   }, [])
+
+  async function handleSetup(e: React.FormEvent) {
+    e.preventDefault()
+    setErrorMessage(null)
+
+    const cleanEmail = setupEmail.trim()
+    if (setupPassword !== setupConfirm) {
+      setErrorMessage('The two passwords do not match.')
+      return
+    }
+    if (setupPassword.length < 12) {
+      setErrorMessage('Password must be at least 12 characters long.')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      const response = await apiFetch(apiUrl('/api/admin/setup'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: setupFirstName.trim(),
+          lastName: setupLastName.trim(),
+          email: cleanEmail,
+          password: setupPassword,
+        }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null) as { message?: string | string[] } | null
+        const message = Array.isArray(data?.message)
+          ? data.message.join(' ')
+          : data?.message || 'The manager account could not be created.'
+        setErrorMessage(message)
+        toast.error(message, 'Setup Failed')
+        return
+      }
+
+      const res = await login(cleanEmail, setupPassword)
+      if (res.success) {
+        toast.success('Your manager account is ready.', 'Setup Complete')
+        router.push('/admin')
+      } else {
+        setSetupStatus('complete')
+        setEmail(cleanEmail)
+        setErrorMessage('Account created. Please sign in with your new credentials.')
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'A connection error occurred.'
+      setErrorMessage(msg)
+      toast.error(msg, 'Network Error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -131,10 +207,12 @@ export default function AdminLoginPage() {
               <span>🔒</span> Admin Portal
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111111] tracking-tight">
-              Sign In to DubazaarMart
+              {setupStatus === 'required' ? 'Create the First Manager Account' : 'Sign In to DubazaarMart'}
             </h1>
             <p className="text-xs text-black/60 mt-1">
-              Restricted management area for authorized users only
+              {setupStatus === 'required'
+                ? 'No manager account exists yet. Create one to start managing the store.'
+                : 'Restricted management area for authorized staff only'}
             </p>
           </div>
 
@@ -154,6 +232,48 @@ export default function AdminLoginPage() {
             </div>
           )}
 
+          {setupStatus === 'checking' && (
+            <div className="mt-8 py-10 text-center text-sm text-black/60">Checking account setup…</div>
+          )}
+
+          {setupStatus === 'required' && (
+            <form onSubmit={handleSetup} className="mt-6 space-y-4">
+              <p className="rounded-2xl px-3.5 py-3 text-[11px] font-semibold leading-relaxed" style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#7A4A00' }}>
+                This form is only available while no manager account exists. Once the first manager is created, further accounts are managed from the dashboard.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="setup-first-name" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">First name</label>
+                  <input id="setup-first-name" required minLength={2} maxLength={60} value={setupFirstName} onChange={(e) => setSetupFirstName(e.target.value)} disabled={submitting} placeholder="Admin" className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]" style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }} />
+                </div>
+                <div>
+                  <label htmlFor="setup-last-name" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">Last name</label>
+                  <input id="setup-last-name" required minLength={2} maxLength={60} value={setupLastName} onChange={(e) => setSetupLastName(e.target.value)} disabled={submitting} placeholder="Manager" className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]" style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }} />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="setup-email" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">Email address</label>
+                <input id="setup-email" type="email" required autoComplete="email" maxLength={254} value={setupEmail} onChange={(e) => setSetupEmail(e.target.value)} disabled={submitting} placeholder="admin@dubazaarmart.rw" className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]" style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }} />
+              </div>
+              <div>
+                <label htmlFor="setup-password" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">Password</label>
+                <input id="setup-password" type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={setupPassword} onChange={(e) => setSetupPassword(e.target.value)} disabled={submitting} placeholder="At least 12 characters" className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]" style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }} />
+              </div>
+              <div>
+                <label htmlFor="setup-confirm" className="block text-xs font-bold text-[#111111] uppercase tracking-wider mb-1.5">Confirm password</label>
+                <input id="setup-confirm" type="password" required minLength={12} maxLength={72} autoComplete="new-password" value={setupConfirm} onChange={(e) => setSetupConfirm(e.target.value)} disabled={submitting} placeholder="Repeat the password" className="w-full px-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#FFB800]" style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }} />
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-3.5 rounded-xl text-sm font-bold btn-gold transition-all flex items-center justify-center gap-2 shadow-md hover:brightness-105 active:scale-[0.99] disabled:opacity-60"
+              >
+                {submitting ? 'Creating manager account…' : 'Create Manager Account →'}
+              </button>
+            </form>
+          )}
+
+          {setupStatus === 'complete' && (<>
           {/* Form */}
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
@@ -280,6 +400,7 @@ export default function AdminLoginPage() {
               </Link>
             )}
           </div>
+          </>)}
         </div>
       </div>
     </div>

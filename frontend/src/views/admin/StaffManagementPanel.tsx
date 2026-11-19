@@ -52,8 +52,8 @@ export default function StaffManagementPanel() {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingUserId, setSavingUserId] = useState<string | null>(null)
@@ -93,24 +93,28 @@ export default function StaffManagementPanel() {
     event.preventDefault()
     setError(null)
     setMessage(null)
+    if (password !== confirmPassword) {
+      setError("The two passwords do not match.")
+      return
+    }
     setSaving(true)
     try {
       await createStaffUser({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        phoneNumber: phoneNumber.trim() || undefined,
         password,
+        status: "PENDING",
       })
       setFirstName("")
       setLastName("")
       setEmail("")
-      setPhoneNumber("")
       setPassword("")
+      setConfirmPassword("")
       setSearch("")
       setStatusFilter("ALL")
       setPage(1)
-      setMessage("User account created as pending. Verify the email and activate the account when ready.")
+      setMessage("Staff account created as pending. Verify the email and activate the account when ready.")
       if (page === 1 && search === "" && statusFilter === "ALL") void loadStaff()
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : "User account could not be created.")
@@ -246,14 +250,14 @@ export default function StaffManagementPanel() {
       {message && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</div>}
 
       <form onSubmit={handleCreate} className="grid gap-3 rounded-2xl border border-[#FFB800] bg-white p-5 md:grid-cols-2">
-        <h2 className="md:col-span-2 text-lg font-bold text-[#111111]">Create user account</h2>
+        <h2 className="md:col-span-2 text-lg font-bold text-[#111111]">Create staff account</h2>
         <input required minLength={2} maxLength={60} value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
         <input required minLength={2} maxLength={60} value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
-        <input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="User email" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
-        <input maxLength={32} value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="Phone (optional)" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
-        <input required type="password" minLength={12} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Temporary password (12+ characters)" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
+        <input required type="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Staff email" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
+        <input required type="password" minLength={12} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password (12+ characters)" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
+        <input required type="password" minLength={12} maxLength={72} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" className="rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-2.5 text-sm" />
         <button disabled={saving} type="submit" className="btn-gold rounded-xl px-4 py-2.5 text-sm font-bold disabled:opacity-60">
-          {saving ? "Creating…" : "Create pending user account"}
+          {saving ? "Creating…" : "Create pending staff account"}
         </button>
       </form>
 

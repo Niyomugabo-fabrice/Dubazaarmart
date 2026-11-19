@@ -11,7 +11,6 @@ export default function StaffRegistrationPage() {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -53,7 +52,6 @@ export default function StaffRegistrationPage() {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           email: email.trim(),
-          phoneNumber: phoneNumber.trim() || undefined,
           password,
         }),
       })
@@ -99,10 +97,6 @@ export default function StaffRegistrationPage() {
             <label className="block text-xs font-semibold text-[#111111]">
               Email address
               <input required type="email" maxLength={254} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-3 text-sm" />
-            </label>
-            <label className="block text-xs font-semibold text-[#111111]">
-              Phone number (optional)
-              <input maxLength={32} autoComplete="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[#FFB800] bg-[#FFF7E8] px-3 py-3 text-sm" />
             </label>
             <label className="block text-xs font-semibold text-[#111111]">
               Password (12-72 characters)

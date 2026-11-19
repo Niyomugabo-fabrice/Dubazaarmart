@@ -407,7 +407,7 @@ export default function HomePage() {
             {[
               { title: 'Shop', links: ['Smartphones', 'Laptops', 'Tablets', 'Headphones', 'Smart Watches', 'All Products'] },
               { title: 'Company', links: ['About Us', 'Delivery Info', 'Contact Us', 'Terms & Conditions', 'Privacy Policy'] },
-              { title: 'Explore', links: ['Wishlist', 'Track Order', 'Returns', 'Admin Dashboard'] },
+              { title: 'Explore', links: ['Wishlist', 'Track Order', 'Returns', 'Admin Dashboard', 'Create Staff Account'] },
             ].map(col => (
               <div key={col.title}>
                 <h4 className="font-semibold text-[#111111] mb-4 text-sm">{col.title}</h4>
@@ -418,6 +418,7 @@ export default function HomePage() {
                       onClick={() => {
                         if (link === 'Wishlist') navigate('wishlist')
                         if (link === 'Admin Dashboard') navigate('admin')
+                        if (link === 'Create Staff Account') navigate('/admin/register')
                       }}
                       className="text-sm text-left hover:text-[#111111] transition-colors"
                       style={{ color: '#0B5B24' }}

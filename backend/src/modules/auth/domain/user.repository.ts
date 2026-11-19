@@ -42,8 +42,10 @@ export interface UserRepository {
   findByEmail(email: string): Promise<UserAccount | null>
   findById(id: string): Promise<UserAccount | null>
   findIdentityById(id: string): Promise<UserIdentity | null>
+  countManagers(): Promise<number>
   listManagedUsers(query: StaffListQuery): Promise<StaffListResult>
   createStaff(record: CreateUserRecord): Promise<UserAccount>
+  createManager(record: CreateUserRecord): Promise<UserAccount>
   updateManagedUser(id: string, values: UpdateStaffRecord): Promise<UserAccount | null>
   updateManagedUserStatus(id: string, status: UserStatus): Promise<UserAccount | null>
   promoteStaffToManager(id: string): Promise<UserIdentity | null>

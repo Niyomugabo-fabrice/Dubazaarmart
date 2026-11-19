@@ -26,19 +26,17 @@ import {
   type StockMovement,
   type WebsiteSettings,
 } from "../lib/dashboardApi"
-import { apiFetch, apiUrl } from "../services/api-client"
 import SiteLogo from "../components/SiteLogo"
 import { useAdminAuth } from "../store/adminAuthStore"
 import { useProducts, fetchProductsFromBackend } from "../store/productsStore"
 import AdminLoginView from "../components/AdminLoginView"
-import LiveCountdown from "../components/LiveCountdown"
 import type { StoredProduct } from "../types/product"
 import { useAppNavigation } from "../lib/navigation"
 import { useToast } from "../components/ui/Toast"
 
 const AddProductModal = dynamic(() => import("../components/AddProductModal"))
 const CreateOrderModal = dynamic(() => import("../components/CreateOrderModal"))
-const CustomerOrderDetailsModal = dynamic(() => import("../components/CustomerOrderDetailsModal"))
+const EditAdminOrderModal = dynamic(() => import("../components/EditAdminOrderModal"))
 const CancelOrderModal = dynamic(() => import("../components/CancelOrderModal"))
 const CreateCompanyOrderModal = dynamic(() => import("../components/CreateCompanyOrderModal"))
 const EditCompanyOrderModal = dynamic(() => import("../components/EditCompanyOrderModal"))
@@ -260,12 +258,14 @@ const STATUS_COLORS: Record<string, string> = {
   RETURNED: "#6B7280",        // Gray
 }
 
+const ORDERS_PAGE_SIZE = 10
+
 type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "inventory" | "announcements" | "settings" | "staff" | "audit"
 
 export default function AdminPage() {
   const { navigate } = useAppNavigation()
   const toast = useToast()
-  const { isAuthenticated, admin, token: adminToken, login, logout } = useAdminAuth()
+  const { isAuthenticated, admin, login, logout } = useAdminAuth()
   const isManager = admin?.role === "MANAGER"
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
@@ -346,7 +346,6 @@ export default function AdminPage() {
   const [paymentFilter, setPaymentFilter] = useState("ALL")
   const [channelFilter, setChannelFilter] = useState("ALL")
   const [ordersPage, setOrdersPage] = useState(1)
-  const [ordersPageSize, setOrdersPageSize] = useState(10)
   const [ordersData, setOrdersData] = useState<AdminOrdersPage | null>(null)
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [ordersError, setOrdersError] = useState<string | null>(null)
@@ -361,7 +360,8 @@ export default function AdminPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Modals & New Features State
-  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<AdminOrder | null>(null)
+  const [orderForEdit, setOrderForEdit] = useState<AdminOrder | null>(null)
+  const [expandedOrderIds, setExpandedOrderIds] = useState<string[]>([])
   const [orderIdToCancel, setOrderIdToCancel] = useState<string | null>(null)
   const [productToEdit, setProductToEdit] = useState<StoredProduct | null>(null)
 
@@ -394,40 +394,24 @@ export default function AdminPage() {
   const [confirmDeletePo, setConfirmDeletePo] = useState<{ id: string; poNumber: string } | null>(null)
   const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<{ id: string; name: string } | null>(null)
 
-  async function handleUpdateOrderStatus(orderId: string, newStatus: string) {
-    try {
-      const isPaid = newStatus === "PAID" || newStatus === "DELIVERED"
-      await apiFetch(apiUrl(`/api/admin/orders/${orderId}/status`), {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
-        },
-        body: JSON.stringify({
-          status: newStatus,
-          paymentStatus: isPaid ? "PAID" : undefined,
-        }),
-      })
-      setActionSuccess(`Order #${orderId.slice(0, 8)} status updated to ${newStatus}`)
-      setTimeout(() => setActionSuccess(null), 3500)
-      setRefreshToken((v) => v + 1)
-    } catch (err) {
-      console.error("Failed to update status", err)
-    }
-  }
-
   async function handleCancelOrder(orderId: string, reason: string) {
     await cancelAdminOrder(orderId, reason)
     setActionSuccess(`Order #${orderId.slice(0, 8)} cancelled. Restocked products into inventory.`)
     setTimeout(() => setActionSuccess(null), 3500)
+    setOrdersPage(1)
     setRefreshToken((v) => v + 1)
   }
 
   async function handleRecordPayment(orderId: string) {
-    await recordAdminOrderPayment(orderId, "Authorized by admin via MoMo/Airtel")
-    setActionSuccess(`Payment for Order #${orderId.slice(0, 8)} marked as PAID!`)
-    setTimeout(() => setActionSuccess(null), 3500)
-    setRefreshToken((v) => v + 1)
+    try {
+      await recordAdminOrderPayment(orderId, "Authorized by admin via MoMo/Airtel")
+      setActionSuccess(`Payment for Order #${orderId.slice(0, 8)} marked as PAID!`)
+      setTimeout(() => setActionSuccess(null), 3500)
+      setOrdersPage(1)
+      setRefreshToken((v) => v + 1)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to record payment", "Payment Failed")
+    }
   }
 
   function handleDeleteOrder(orderId: string) {
@@ -439,6 +423,7 @@ export default function AdminPage() {
       await deleteAdminOrder(orderId)
       setActionSuccess(`Order #${orderId.slice(0, 8)} archived and retained for records.`)
       setTimeout(() => setActionSuccess(null), 3500)
+      setOrdersPage(1)
       setRefreshToken((v) => v + 1)
     } catch (err) {
       console.error("Failed to delete order", err)
@@ -549,18 +534,29 @@ export default function AdminPage() {
     const timeout = setTimeout(() => {
       fetchAdminOrders({
         page: ordersPage,
-        pageSize: ordersPageSize,
+        pageSize: ORDERS_PAGE_SIZE,
         search: orderSearch.trim(),
         status: orderFilter === "ALL" ? "" : orderFilter,
         paymentStatus: paymentFilter === "ALL" ? "" : paymentFilter,
         channel: channelFilter === "ALL" ? "" : channelFilter,
       })
         .then((result) => {
-          if (isMounted) setOrdersData(result)
+          if (!isMounted) return
+          setOrdersData((current) => {
+            if (ordersPage === 1 || !current) return result
+            const loadedIds = new Set(current.orders.map((order) => order.id))
+            return {
+              ...result,
+              orders: [
+                ...current.orders,
+                ...result.orders.filter((order) => !loadedIds.has(order.id)),
+              ],
+            }
+          })
         })
         .catch((error) => {
           if (isMounted) {
-            setOrdersData(null)
+            if (ordersPage === 1) setOrdersData(null)
             setOrdersError(
               error instanceof Error
                 ? error.message
@@ -581,7 +577,6 @@ export default function AdminPage() {
     isAuthenticated,
     section,
     ordersPage,
-    ordersPageSize,
     orderSearch,
     orderFilter,
     paymentFilter,
@@ -1635,21 +1630,6 @@ export default function AdminPage() {
                 <option value="web">Online Web Orders</option>
                 <option value="whatsapp">WhatsApp Enquiries</option>
               </select>
-              <select
-                value={ordersPageSize}
-                onChange={(event) => {
-                  setOrdersPageSize(Number(event.target.value))
-                  setOrdersPage(1)
-                }}
-                aria-label="Orders per page"
-                className="rounded-xl px-3 py-3 text-sm"
-              >
-                {[10, 25, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size} per page
-                  </option>
-                ))}
-              </select>
             </div>
 
             {ordersError && (
@@ -1674,404 +1654,215 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="space-y-6">
-              {ordersLoading &&
-                !ordersData &&
-                Array.from({ length: 3 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="h-52 animate-pulse rounded-2xl border"
-                    style={{ background: "#FFF7E8", borderColor: "#FFB800" }}
-                  />
-                ))}
-              {ordersData?.orders.map((order, orderIndex) => {
-                const paymentColor =
-                  order.paymentStatus === "PAID"
-                    ? "#10B981"
-                    : order.paymentStatus === "FAILED"
-                      ? "#DC2626"
-                      : "#F59E0B"
-                const statusColor = STATUS_COLORS[order.status] ?? "#2563EB"
-                const totalOrdersCount = ordersData.orders.length
-
-                return (
-                  <div key={order.id} className="space-y-4">
-                    <article
-                      className="overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:shadow-2xl"
-                      style={{
-                        border: "2px solid #94A3B8",
-                        borderLeft: `10px solid ${statusColor}`,
-                        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
-                      }}
-                    >
-                      {/* Top Header Identity Strip */}
-                      <div className="bg-slate-900 text-white px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold tracking-wider">
-                        <div className="flex items-center gap-2.5">
-                          <span className="bg-[#FFB800] text-slate-950 font-black px-2.5 py-0.5 rounded text-[11px] tracking-wide">
-                            CUSTOMER ORDER #{orderIndex + 1} OF {totalOrdersCount}
-                          </span>
-                          <span className="font-mono text-slate-300">#{order.id}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-400 font-normal">Order Total:</span>
-                          <span className="text-[#FFB800] font-black text-sm">{formatPrice(order.total)}</span>
-                        </div>
-                      </div>
-
-                      {/* Top Header Banner */}
-                      <div
-                        className="flex flex-wrap items-start justify-between gap-4 border-b-2 p-5 sm:p-6"
-                        style={{
-                          background: "linear-gradient(135deg, #F8FAFC 0%, #FFFFFF 100%)",
-                          borderColor: "#E2E8F0",
-                        }}
-                      >
-                        <div className="min-w-0 flex-1">
-                          {/* Order tags row */}
-                          <div className="mb-3 flex flex-wrap items-center gap-2">
-                            <span
-                              className="font-mono text-xs font-black px-3 py-1 rounded-lg bg-[#111111] text-[#FFB800] tracking-wider shadow-xs"
-                            >
-                              #{order.id}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 border border-slate-300 text-slate-700">
-                              Order #{orderIndex + 1} of {totalOrdersCount}
-                            </span>
-                            <select
-                              value={order.status}
-                              onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                              className="rounded-full px-3 py-1 text-xs font-bold border cursor-pointer focus:outline-none shadow-xs"
-                              style={{
-                                background: `${statusColor}15`,
-                                color: statusColor,
-                                borderColor: `${statusColor}60`,
-                              }}
-                              title="Click to change order status"
-                            >
-                              {Object.keys(STATUS_COLORS).map((statusKey) => (
-                                <option key={statusKey} value={statusKey} style={{ background: "#FFFFFF", color: "#111111" }}>
-                                  {statusKey.replace(/_/g, " ")}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#064D1A] bg-[#10B981]/15 px-2.5 py-1 rounded-md border border-[#10B981]/30">
-                              CUSTOMER ORDER
-                            </span>
-                            {order.channel === "whatsapp" ? (
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#064D1A] bg-[#25D366]/20 px-2.5 py-1 rounded-md border border-[#25D366]/40 flex items-center gap-1 shadow-xs">
-                                <span>💬</span> WhatsApp Enquiry
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#0874F9] bg-[#0874F9]/10 px-2.5 py-1 rounded-md border border-[#0874F9]/30 shadow-xs">
-                                🌐 Web Checkout
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Customer Details */}
-                          <div className="font-bold text-lg text-slate-900 flex items-center gap-2">
-                            <span>👤 {order.customerName}</span>
-                          </div>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
-                            {order.phone && <span>📞 {order.phone}</span>}
-                            {order.email && <span>✉️ {order.email}</span>}
-                            <span>
-                              🕒 Placed:{" "}
-                              {new Intl.DateTimeFormat("en-RW", {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                                timeZone: "Africa/Kigali",
-                              }).format(new Date(order.createdAt))}
-                            </span>
-                          </div>
-
-                          {/* Delivery Address & Instructions */}
-                          {(order.deliveryAddress || order.customerInstructions) && (
-                            <div className="mt-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                              <span className="font-bold text-slate-800">📍 Destination: </span>
-                              {order.deliveryAddress ? (
-                                <span>
-                                  {[
-                                    order.deliveryAddress.province,
-                                    order.deliveryAddress.district,
-                                    order.deliveryAddress.sector,
-                                    order.deliveryAddress.cell,
-                                    order.deliveryAddress.street,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(", ")}
-                                </span>
-                              ) : (
-                                <span>Standard Kigali Delivery</span>
-                              )}
-                              {(order.customerInstructions || order.deliveryAddress?.instructions) && (
-                                <div className="mt-1 text-slate-700">
-                                  <strong>Notes:</strong> "{order.customerInstructions || order.deliveryAddress?.instructions}"
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Live Delivery Arrival Countdown */}
-                          <div className="mt-3 flex flex-wrap items-center gap-2.5 p-2.5 rounded-xl border border-amber-300/80 bg-amber-50/80">
-                            <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                              <span>⏰</span> Requested Arrival:
-                            </span>
-                            <span className="text-slate-700 font-semibold text-xs">
-                              {order.requestedDeliveryTime
-                                ? new Intl.DateTimeFormat("en-RW", {
-                                    dateStyle: "medium",
-                                    timeStyle: "short",
-                                    timeZone: "Africa/Kigali",
-                                  }).format(new Date(order.requestedDeliveryTime))
-                                : "Standard Dispatch (48h target)"}
-                            </span>
-                            <LiveCountdown
-                              targetDate={
-                                order.requestedDeliveryTime ||
-                                new Date(new Date(order.createdAt).getTime() + 48 * 3600 * 1000).toISOString()
-                              }
-                              isCompleted={order.status === "DELIVERED"}
-                              completedText="Delivered to Customer"
-                              variant="customer"
-                            />
-                          </div>
-
-                          {order.status === "CANCELLED" && order.cancelReason && (
-                            <div className="mt-2 text-xs text-red-700 bg-red-50 p-2.5 rounded-lg border border-red-200">
-                              <strong>Cancellation Reason:</strong> {order.cancelReason}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Order Total block */}
-                        <div className="text-left sm:text-right min-w-[180px]">
-                          <div className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                            Order Total
-                          </div>
-                          <div
-                            className="mt-1 text-2xl font-black text-[#FF6A00]"
-                          >
-                            {formatPrice(order.total)}
-                          </div>
-                          <div className="mt-2.5 flex flex-wrap items-center gap-2 sm:justify-end">
-                            <span
-                              className="text-[10px] uppercase font-bold text-slate-500"
-                            >
-                              Payment:
-                            </span>
-                            <span
-                              className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase"
-                              style={{
-                                background: `${paymentColor}20`,
-                                color: paymentColor,
-                                border: `1px solid ${paymentColor}`,
-                              }}
-                            >
-                              {order.paymentStatus}
-                            </span>
-                            <span
-                              className="text-[10px] uppercase font-bold px-2 py-1 rounded bg-slate-100 border border-slate-300 text-slate-800"
-                            >
-                              📱 {order.paymentMethod.toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Framed Products Table */}
-                      <div className="m-4 sm:m-6 overflow-x-auto rounded-xl border-2 border-slate-200 bg-white shadow-xs">
-                        <table className="w-full min-w-[610px] text-sm">
-                          <thead>
-                            <tr
-                              className="text-left text-[11px] font-bold uppercase tracking-wider bg-slate-100 border-b-2 border-slate-200 text-slate-800"
-                            >
-                              <th className="py-3 px-4 font-bold">Ordered Product</th>
-                              <th className="py-3 px-4 font-bold">Category</th>
-                              <th className="py-3 px-4 text-right font-bold">
-                                Quantity
-                              </th>
-                              <th className="py-3 px-4 text-right font-bold">
-                                Unit Price
-                              </th>
-                              <th className="py-3 px-4 text-right font-bold">
-                                Line Total
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {order.items.map((item, index) => (
-                              <tr
-                                key={`${order.id}-${index}`}
-                                className="transition-colors hover:bg-slate-50"
-                              >
-                                <td className="py-3 px-4 font-bold text-slate-900">
-                                  {item.productName}
-                                </td>
-                                <td className="py-3 px-4 text-xs font-semibold">
-                                  <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-300 text-slate-700">
-                                    {item.category}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-right font-bold text-slate-900">
-                                  {item.quantity}
-                                </td>
-                                <td className="py-3 px-4 text-right font-medium text-slate-700">
-                                  {item.unitPrice === null
-                                    ? "—"
-                                    : formatPrice(item.unitPrice)}
-                                </td>
-                                <td className="py-3 px-4 text-right font-black text-[#FF6A00]">
-                                  {item.lineTotal === null
-                                    ? "—"
-                                    : formatPrice(item.lineTotal)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Order Footer with Summary & Actions */}
-                      <div
-                        className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-slate-200 bg-slate-50 px-5 py-4 sm:px-6 font-medium text-xs text-slate-700"
-                      >
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span>
-                            Subtotal: <strong className="text-slate-900">{order.subtotal === null ? "—" : formatPrice(order.subtotal)}</strong>
-                          </span>
-                          <span>•</span>
-                          <span>
-                            Delivery: <strong className="text-slate-900">{order.deliveryFee === null ? "—" : formatPrice(order.deliveryFee)}</strong>
-                          </span>
-                          <span>•</span>
-                          <span>
-                            Total: <strong className="text-[#FF6A00] font-bold text-sm">{formatPrice(order.total)}</strong>
-                          </span>
-                          <span>•</span>
-                          <span
-                            className="font-bold uppercase tracking-wider"
-                            style={{ color: paymentColor }}
-                          >
-                            Payment {order.paymentStatus.toLowerCase()}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedOrderForDetails(order)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 transition-colors shadow-xs"
-                          >
-                            👁️ View More
-                          </button>
-                          {order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && (
-                            <button
-                              type="button"
-                              onClick={() => handleRecordPayment(order.id)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#10B981]/15 border border-[#10B981] text-[#065F46] hover:bg-[#10B981]/25 transition-colors shadow-xs"
-                              title="Record payment verified via MoMo or Airtel"
-                            >
-                              ✓ Record Paid
-                            </button>
-                          )}
-                          {order.status !== "CANCELLED" && order.status !== "DELIVERED" && (
-                            <button
-                              type="button"
-                              onClick={() => setOrderIdToCancel(order.id)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 transition-colors shadow-xs"
-                            >
-                              ✕ Cancel Order
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteOrder(order.id)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 text-red-800 hover:bg-red-200 border border-red-300 transition-colors shadow-xs flex items-center gap-1"
-                            title="Permanently delete this order from database"
-                          >
-                            <span>🗑️</span> Delete
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Bottom Order Boundary Strip */}
-                      <div className="px-5 py-2 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <span>DubazaarMart Order Receipt</span>
-                        <span className="text-slate-500 font-extrabold tracking-widest">▲ END OF ORDER #{order.id} ▲</span>
-                        <span>{order.items.length} Product(s) Total</span>
-                      </div>
-                    </article>
-
-                    {/* Distinct Separator between consecutive orders */}
-                    {orderIndex < totalOrdersCount - 1 && (
-                      <div className="my-10 flex items-center justify-center gap-4">
-                        <div className="h-0.5 bg-slate-300 flex-1"></div>
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-700 bg-white px-5 py-2 rounded-full border-2 border-slate-300 shadow-sm flex items-center gap-2">
-                          <span>⬇️</span> NEXT ORDER BELOW ({orderIndex + 2} of {totalOrdersCount})
-                        </span>
-                        <div className="h-0.5 bg-slate-300 flex-1"></div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-
-              {!ordersLoading &&
-                !ordersError &&
-                ordersData?.orders.length === 0 && (
-                  <div
-                    className="rounded-2xl border border-dashed p-12 text-center"
-                    style={{ borderColor: "#FFB800", color: "#0B5B24" }}
-                  >
-                    <div className="mb-3 text-3xl" aria-hidden="true">
-                      ▤
-                    </div>
-                    <div className="font-semibold text-[#111111]">
-                      No customer orders found
-                    </div>
-                    <div className="mt-1 text-sm">
-                      Submitted checkout orders will appear here automatically.
-                    </div>
-                  </div>
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full min-w-[900px] text-left text-sm">
+                <thead className="bg-slate-100 text-xs font-bold uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3">Order ID</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3">Payment status</th>
+                    <th className="px-4 py-3">Order status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                {ordersLoading && !ordersData && (
+                  <tbody>
+                    <tr><td colSpan={7} className="px-4 py-12 text-center text-slate-500">Loading orders…</td></tr>
+                  </tbody>
                 )}
+                {ordersData?.orders.map((order) => {
+                  const statusColor = STATUS_COLORS[order.status] ?? "#64748B"
+                  const paymentColor = order.paymentStatus === "PAID"
+                    ? "#059669"
+                    : ["FAILED", "CANCELLED"].includes(order.paymentStatus)
+                      ? "#DC2626"
+                      : "#D97706"
+                  const expanded = expandedOrderIds.includes(order.id)
+                  const addressEntries = Object.entries(order.deliveryAddress ?? {})
+                    .filter((entry): entry is [string, string] => typeof entry[1] === "string" && Boolean(entry[1].trim()))
+
+                  return (
+                    <tbody key={order.id} className="divide-y divide-slate-200">
+                      <tr className="hover:bg-slate-50">
+                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-bold text-slate-800">#{order.id}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-900">{order.customerName}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-600">
+                          {new Intl.DateTimeFormat("en-RW", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                            timeZone: "Africa/Kigali",
+                          }).format(new Date(order.createdAt))}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-bold text-slate-900">{formatPrice(order.total)}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold"
+                            style={{ color: paymentColor, borderColor: `${paymentColor}60`, background: `${paymentColor}15` }}
+                          >
+                            {order.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold"
+                            style={{ color: statusColor, borderColor: `${statusColor}60`, background: `${statusColor}15` }}
+                          >
+                            {order.status.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              aria-expanded={expanded}
+                              aria-controls={`order-details-${order.id}`}
+                              onClick={() => setExpandedOrderIds((current) => current.includes(order.id)
+                                ? current.filter((id) => id !== order.id)
+                                : [...current, order.id])}
+                              className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                            >
+                              {expanded ? "Hide details" : "View details"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setOrderForEdit(order)}
+                              className="rounded-lg bg-[#FFB800] px-3 py-1.5 text-xs font-bold text-slate-950 hover:brightness-95"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr id={`order-details-${order.id}`}>
+                          <td colSpan={7} className="bg-slate-50 px-4 py-4 sm:px-6">
+                            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(260px,1fr)]">
+                              <section>
+                                <h3 className="mb-2 text-sm font-bold text-slate-900">Products ordered</h3>
+                                <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                  <table className="w-full min-w-[460px] text-xs">
+                                    <thead className="bg-slate-100 font-bold text-slate-600">
+                                      <tr>
+                                        <th className="px-3 py-2 text-left">Product</th>
+                                        <th className="px-3 py-2 text-right">Quantity</th>
+                                        <th className="px-3 py-2 text-right">Unit price</th>
+                                        <th className="px-3 py-2 text-right">Total</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {(order.items ?? []).map((item, index) => (
+                                        <tr key={`${order.id}-${index}`}>
+                                          <td className="px-3 py-2 font-semibold text-slate-800">{item.productName}</td>
+                                          <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                          <td className="px-3 py-2 text-right">{item.unitPrice == null ? "—" : formatPrice(item.unitPrice)}</td>
+                                          <td className="px-3 py-2 text-right font-semibold">{item.lineTotal == null ? "—" : formatPrice(item.lineTotal)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </section>
+                              <section className="space-y-3 text-sm">
+                                <div>
+                                  <h3 className="mb-1 text-sm font-bold text-slate-900">Contact information</h3>
+                                  <div className="text-slate-700">Phone: {order.phone || "Not provided"}</div>
+                                  <div className="break-all text-slate-700">Email: {order.email || "Not provided"}</div>
+                                </div>
+                                <div>
+                                  <h3 className="mb-1 text-sm font-bold text-slate-900">Shipping address</h3>
+                                  {addressEntries.length ? (
+                                    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                                      {addressEntries.map(([key, value]) => (
+                                        <div key={key} className="contents">
+                                          <dt className="font-semibold capitalize text-slate-500">{key.replace(/([A-Z])/g, " $1").replace(/_/g, " ")}</dt>
+                                          <dd className="text-slate-800">{value}</dd>
+                                        </div>
+                                      ))}
+                                    </dl>
+                                  ) : <p className="text-xs text-slate-500">No shipping address recorded.</p>}
+                                </div>
+                                {order.customerInstructions && (
+                                  <p className="text-xs text-slate-600"><strong>Customer instructions:</strong> {order.customerInstructions}</p>
+                                )}
+                                {order.adminNotes && (
+                                  <p className="text-xs text-slate-600"><strong>Admin notes:</strong> {order.adminNotes}</p>
+                                )}
+                              </section>
+                            </div>
+                            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
+                              {order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleRecordPayment(order.id)}
+                                  className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100"
+                                >
+                                  Record paid
+                                </button>
+                              )}
+                              {order.status !== "CANCELLED" && order.status !== "DELIVERED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderIdToCancel(order.id)}
+                                  className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                                >
+                                  Cancel order
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteOrder(order.id)}
+                                className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-800 hover:bg-red-100"
+                              >
+                                Archive order
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  )
+                })}
+                {!ordersLoading && !ordersError && ordersData?.orders.length === 0 && (
+                  <tbody>
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center">
+                        <div className="mb-2 text-3xl text-slate-400" aria-hidden="true">▤</div>
+                        <div className="font-semibold text-slate-900">No customer orders found</div>
+                        <div className="mt-1 text-sm text-slate-500">Submitted checkout orders will appear here automatically.</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                )}
+              </table>
             </div>
 
             {ordersData && (
-              <div
-                className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
-                style={{ borderColor: "#F1FFF0", background: "#FFF7E8" }}
-              >
-                <div className="text-xs" style={{ color: "#0B5B24" }}>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-[#FFF7E8] p-4">
+                <div className="text-xs text-slate-700">
                   {ordersData.totalOrders === 0
                     ? "No orders"
-                    : `Showing ${(ordersPage - 1) * ordersData.pageSize + 1}–${Math.min(ordersPage * ordersData.pageSize, ordersData.totalOrders)} of ${ordersData.totalOrders} orders`}
+                    : `Showing ${ordersData.orders.length} of ${ordersData.totalOrders} orders`}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="mr-2 text-xs" style={{ color: "#0B5B24" }}>
-                    Page {ordersData.page} of{" "}
-                    {Math.max(1, ordersData.totalPages)}
-                  </span>
+                {ordersData.totalOrders > ORDERS_PAGE_SIZE && (
                   <button
                     type="button"
-                    disabled={!ordersData.hasPreviousPage || ordersLoading}
-                    onClick={() =>
-                      setOrdersPage((page) => Math.max(1, page - 1))
-                    }
-                    className="rounded-lg border px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    style={{ borderColor: "#FFB800", color: "#111111" }}
+                    disabled={ordersLoading}
+                    onClick={() => {
+                      if (ordersData.hasNextPage) {
+                        if (ordersError) setRefreshToken((value) => value + 1)
+                        else setOrdersPage((page) => page + 1)
+                      } else {
+                        setExpandedOrderIds([])
+                        setOrdersPage(1)
+                      }
+                    }}
+                    className="rounded-lg border border-[#FFB800] px-4 py-2 text-xs font-bold text-slate-900 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Previous
+                    {ordersLoading ? "Loading…" : ordersData.hasNextPage ? ordersError ? "Retry" : "View more" : "Show less"}
                   </button>
-                  <button
-                    type="button"
-                    disabled={!ordersData.hasNextPage || ordersLoading}
-                    onClick={() => setOrdersPage((page) => page + 1)}
-                    className="rounded-lg border px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
-                    style={{ borderColor: "#FFB800", color: "#111111" }}
-                  >
-                    Next
-                  </button>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -2871,24 +2662,24 @@ export default function AdminPage() {
         onOrderCreated={() => {
           setActionSuccess("New order placed and recorded successfully!")
           setTimeout(() => setActionSuccess(null), 3500)
+          setOrdersPage(1)
           setRefreshToken((v) => v + 1)
         }}
       />
 
-      <CustomerOrderDetailsModal
-        order={selectedOrderForDetails}
-        onClose={() => setSelectedOrderForDetails(null)}
-        onRecordPayment={(orderId) => {
-          handleRecordPayment(orderId)
-          setSelectedOrderForDetails(null)
-        }}
-        onCancelOrder={(orderId) => {
-          setSelectedOrderForDetails(null)
-          setOrderIdToCancel(orderId)
-        }}
-        onDeleteOrder={(orderId) => {
-          setSelectedOrderForDetails(null)
-          handleDeleteOrder(orderId)
+      <EditAdminOrderModal
+        order={orderForEdit}
+        onClose={() => setOrderForEdit(null)}
+        onOrderSaved={(updatedOrder) => {
+          setOrdersData((current) => current
+            ? {
+                ...current,
+                orders: current.orders.map((order) => order.id === updatedOrder.id ? updatedOrder : order),
+              }
+            : current)
+          setOrderForEdit(null)
+          setActionSuccess(`Order #${updatedOrder.id.slice(0, 8)} updated successfully.`)
+          setTimeout(() => setActionSuccess(null), 3500)
         }}
       />
 

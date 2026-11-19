@@ -123,7 +123,8 @@ export type AdminOrder = {
   customerName: string
   phone?: string | null
   email?: string | null
-  deliveryAddress?: Record<string, any> | null
+  deliveryAddress?: Record<string, unknown> | null
+  adminNotes?: string | null
   status: string
   paymentStatus: string
   paymentMethod: string
@@ -136,6 +137,13 @@ export type AdminOrder = {
   cancelReason?: string | null
   customerInstructions?: string | null
   items: OrderLineSnapshot[]
+}
+
+export type UpdateAdminOrderPayload = {
+  status: string
+  paymentStatus: string
+  deliveryAddress: Record<string, string>
+  adminNotes: string
 }
 
 export type CompanyOrderItem = {
@@ -556,6 +564,37 @@ export async function fetchAdminOrders(
   }
 
   return readJsonResponse(response) as Promise<AdminOrdersPage>
+}
+
+export async function updateAdminOrder(
+  orderId: string,
+  payload: UpdateAdminOrderPayload,
+): Promise<AdminOrder> {
+  const response = await apiFetch(apiUrl(`/api/admin/orders/${orderId}`), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAdminAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(
+      isRecord(data) && typeof data.message === "string"
+        ? data.message
+        : isRecord(data) && typeof data.error === "string"
+          ? data.error
+          : "Failed to update order",
+    )
+  }
+
+  const result = await readJsonResponse(response)
+  if (!isRecord(result) || !isRecord(result.order)) {
+    throw new Error("The updated order response was invalid.")
+  }
+  return result.order as AdminOrder
 }
 
 export function getAdminOrderEventsUrl() {

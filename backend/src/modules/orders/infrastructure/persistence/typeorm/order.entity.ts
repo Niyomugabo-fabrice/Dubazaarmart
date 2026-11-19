@@ -53,6 +53,9 @@ export class OrderEntity {
   @Column({ name: 'customer_instructions', type: 'text', nullable: true })
   customerInstructions!: string | null
 
+  @Column({ name: 'admin_notes', type: 'text', default: '' })
+  adminNotes!: string
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
 

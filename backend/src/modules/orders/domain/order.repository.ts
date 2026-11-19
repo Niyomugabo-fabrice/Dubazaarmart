@@ -29,6 +29,9 @@ export interface AdminOrderQuery {
 }
 
 export type OrderUpdates = Partial<Pick<OrderEntity, 'status' | 'paymentStatus' | 'cancelReason'>>
+export type AdminOrderUpdates = OrderUpdates & Pick<OrderEntity, 'deliveryAddress' | 'adminNotes'>
+
+export class OrderStateConflictError extends Error {}
 
 export interface CreateAdminOrderInput {
   customerName: string
@@ -48,6 +51,7 @@ export interface OrderRepository {
   listAdminOrders(query: AdminOrderQuery): Promise<{ rows: OrderEntity[]; totalOrders: number }>
   findById(id: string): Promise<OrderEntity | null>
   update(id: string, values: OrderUpdates): Promise<OrderEntity | null>
+  updateAdminOrder(id: string, values: AdminOrderUpdates): Promise<OrderEntity | null>
   cancel(id: string, reason: string): Promise<OrderEntity | null>
   archive(id: string): Promise<boolean>
 }

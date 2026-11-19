@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
-import type { AdminOrderQuery, CreateAdminOrderInput, CreateCustomerOrderInput, OrderRepository, OrderUpdates } from '../domain/order.repository'
+import { OrderStateConflictError } from '../domain/order.repository'
+import type { AdminOrderQuery, AdminOrderUpdates, CreateAdminOrderInput, CreateCustomerOrderInput, OrderRepository, OrderUpdates } from '../domain/order.repository'
 import { ORDER_REPOSITORY } from '../domain/order.repository'
 import { OrderEventsService } from './order-events.service'
 import { ProductService } from '../../products/application/product.service'
@@ -177,6 +178,68 @@ export class OrderService {
     return { success: true, order: serializeOrder(order) }
   }
 
+  async updateAdminOrder(id: string, body: unknown) {
+    if (!isRecord(body)) throw new BadRequestException('Order changes are required.')
+
+    const editableStatuses = new Set([
+      'PENDING',
+      'PENDING_PAYMENT',
+      'PAID',
+      'PROCESSING',
+      'PACKED',
+      'SHIPPED',
+      'OUT_FOR_DELIVERY',
+      'DELIVERED',
+      'CANCELLED',
+      'RETURNED',
+    ])
+    const paymentStatuses = new Set(['PENDING', 'PROCESSING', 'PAID', 'FAILED', 'CANCELLED', 'REFUNDED'])
+    if (typeof body.status !== 'string' || !editableStatuses.has(body.status)) {
+      throw new BadRequestException('Order status is invalid.')
+    }
+    if (typeof body.paymentStatus !== 'string' || !paymentStatuses.has(body.paymentStatus)) {
+      throw new BadRequestException('Payment status is invalid.')
+    }
+    if (!isRecord(body.deliveryAddress)) {
+      throw new BadRequestException('A shipping address is required.')
+    }
+    if (typeof body.adminNotes !== 'string' || body.adminNotes.length > 5000) {
+      throw new BadRequestException('Admin notes must be 5000 characters or fewer.')
+    }
+
+    const deliveryAddress = Object.create(null) as Record<string, string>
+    for (const [key, value] of Object.entries(body.deliveryAddress)) {
+      if (!key.trim() || typeof value !== 'string' || value.length > 500) {
+        throw new BadRequestException('Shipping address fields must be text with 500 characters or fewer.')
+      }
+      deliveryAddress[key] = value.trim()
+    }
+
+    const current = await this.orders.findById(id)
+    if (!current) throw new NotFoundException('Order not found')
+    if (current.status === 'CANCELLED' && body.status !== 'CANCELLED') {
+      throw new BadRequestException('Cancelled orders cannot be reopened.')
+    }
+
+    const updates: AdminOrderUpdates = {
+      status: body.status,
+      paymentStatus: body.status === 'CANCELLED' ? 'CANCELLED' : body.paymentStatus,
+      deliveryAddress,
+      adminNotes: body.adminNotes.trim(),
+    }
+
+    try {
+      const order = await this.orders.updateAdminOrder(id, updates)
+      if (!order) throw new NotFoundException('Order not found')
+      return { success: true, order: serializeAdminOrderListItem(order) }
+    } catch (error) {
+      if (error instanceof OrderStateConflictError) {
+        throw new ConflictException(error.message)
+      }
+      throw error
+    }
+  }
+
   async recordPayment(id: string) {
     const current = await this.orders.findById(id)
     if (!current) throw new NotFoundException('Order not found')
@@ -208,6 +271,10 @@ function serializeAdminOrderListItem(row: OrderEntity) {
   return {
     id: String(row.id),
     customerName: row.customerName,
+    phone: row.phone,
+    email: row.email,
+    deliveryAddress: row.deliveryAddress,
+    adminNotes: row.adminNotes,
     status: row.status,
     paymentStatus: row.paymentStatus,
     paymentMethod: row.paymentMethod,

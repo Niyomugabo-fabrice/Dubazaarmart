@@ -52,6 +52,12 @@ export class AdminOrdersController {
     return this.orders.createAdminOrder(body)
   }
 
+  @Patch(':id')
+  @Permissions('orders.update')
+  update(@Param('id') id: string, @Body() body: unknown) {
+    return this.orders.updateAdminOrder(id, body)
+  }
+
   @Sse('events')
   @Permissions('orders.view')
   eventsStream(): Observable<MessageEvent> {

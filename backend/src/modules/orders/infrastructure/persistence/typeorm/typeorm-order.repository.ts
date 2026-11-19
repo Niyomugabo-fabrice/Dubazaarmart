@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
-import { DataSource, IsNull } from 'typeorm'
-import type { AdminOrderQuery, CreateAdminOrderInput, CreateCustomerOrderInput, OrderRepository, OrderUpdates } from '../../../domain/order.repository'
+import { DataSource, EntityManager, IsNull } from 'typeorm'
+import { OrderStateConflictError } from '../../../domain/order.repository'
+import type { AdminOrderQuery, AdminOrderUpdates, CreateAdminOrderInput, CreateCustomerOrderInput, OrderRepository, OrderUpdates } from '../../../domain/order.repository'
 import { OrderEntity } from './order.entity'
 import { OrderItemEntity } from './order-item.entity'
 import { ProductEntity } from '../../../../products/infrastructure/persistence/typeorm/product.entity'
@@ -152,6 +153,32 @@ export class TypeOrmOrderRepository implements OrderRepository {
     return result.affected ? this.findById(id) : null
   }
 
+  async updateAdminOrder(id: string, values: AdminOrderUpdates): Promise<OrderEntity | null> {
+    return this.dataSource.transaction(async (manager) => {
+      const orderRepository = manager.getRepository(OrderEntity)
+      const order = await orderRepository.createQueryBuilder('order')
+        .setLock('pessimistic_write')
+        .where('order.id = :id', { id })
+        .andWhere('order.deletedAt IS NULL')
+        .getOne()
+      if (!order) return null
+
+      const items = await manager.getRepository(OrderItemEntity).findBy({ orderId: id })
+      if (order.status === 'CANCELLED' && values.status && values.status !== 'CANCELLED') {
+        throw new OrderStateConflictError('Cancelled orders cannot be reopened.')
+      }
+      if (values.status === 'CANCELLED' && order.status !== 'CANCELLED') {
+        await this.restoreOrderStock(manager, id, items)
+        order.cancelReason = order.cancelReason || 'Cancelled by admin'
+      }
+
+      Object.assign(order, values)
+      if (values.status === 'CANCELLED') order.paymentStatus = 'CANCELLED'
+      order.items = items
+      return orderRepository.save(order)
+    })
+  }
+
   cancel(id: string, reason: string): Promise<OrderEntity | null> {
     return this.dataSource.transaction(async (manager) => {
       const orderRepository = manager.getRepository(OrderEntity)
@@ -163,33 +190,7 @@ export class TypeOrmOrderRepository implements OrderRepository {
 
       const items = await manager.getRepository(OrderItemEntity).findBy({ orderId: id })
       if (order.status !== 'CANCELLED') {
-        const restockQuantities = new Map<string, number>()
-        for (const item of items) {
-          if (item.productId) {
-            restockQuantities.set(item.productId, (restockQuantities.get(item.productId) ?? 0) + item.quantity)
-          }
-        }
-
-        const productRepository = manager.getRepository(ProductEntity)
-        for (const [productId, quantity] of restockQuantities) {
-          const product = await productRepository.createQueryBuilder('product')
-            .setLock('pessimistic_write')
-            .where('product.id = :productId', { productId })
-            .getOne()
-          if (!product) continue
-
-          product.quantity += quantity
-          await productRepository.save(product)
-          await manager.getRepository(StockMovementEntity).insert({
-            productId: product.id,
-            productName: product.name,
-            sku: product.sku,
-            quantity,
-            movementType: 'ADJUSTMENT',
-            reason: 'Order cancelled and stock restored',
-            referenceId: id,
-          })
-        }
+        await this.restoreOrderStock(manager, id, items)
 
         order.status = 'CANCELLED'
         order.paymentStatus = 'CANCELLED'
@@ -200,6 +201,36 @@ export class TypeOrmOrderRepository implements OrderRepository {
       order.items = items
       return order
     })
+  }
+
+  private async restoreOrderStock(manager: EntityManager, orderId: string, items: OrderItemEntity[]) {
+    const restockQuantities = new Map<string, number>()
+    for (const item of items) {
+      if (item.productId) {
+        restockQuantities.set(item.productId, (restockQuantities.get(item.productId) ?? 0) + item.quantity)
+      }
+    }
+
+    const productRepository = manager.getRepository(ProductEntity)
+    for (const [productId, quantity] of restockQuantities) {
+      const product = await productRepository.createQueryBuilder('product')
+        .setLock('pessimistic_write')
+        .where('product.id = :productId', { productId })
+        .getOne()
+      if (!product) continue
+
+      product.quantity += quantity
+      await productRepository.save(product)
+      await manager.getRepository(StockMovementEntity).insert({
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        quantity,
+        movementType: 'ADJUSTMENT',
+        reason: 'Order cancelled and stock restored',
+        referenceId: orderId,
+      })
+    }
   }
 
   async archive(id: string): Promise<boolean> {

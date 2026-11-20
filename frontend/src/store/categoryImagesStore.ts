@@ -5,9 +5,9 @@ import { fetchCategoryImages } from "../lib/categoryImagesApi"
 
 export type CategoryImageMap = Record<string, string | null>
 
-export function useCategoryImages() {
-  const [categoryImages, setCategoryImages] = useState<CategoryImageMap>({})
-  const [loading, setLoading] = useState(true)
+export function useCategoryImages(initialImages?: CategoryImageMap) {
+  const [categoryImages, setCategoryImages] = useState<CategoryImageMap>(initialImages ?? {})
+  const [loading, setLoading] = useState(initialImages === undefined)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {

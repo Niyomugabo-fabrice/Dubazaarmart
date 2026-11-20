@@ -31,6 +31,17 @@ async function responseError(response: Response, fallback: string): Promise<neve
 
 export async function fetchCategoryImages(): Promise<CategoryImage[]> {
   const response = await apiFetch(apiUrl("/api/categories/images"))
+  return readCategoryImages(response)
+}
+
+export async function fetchPublicCategoryImages(): Promise<CategoryImage[]> {
+  const response = await fetch(apiUrl("/api/categories/images"), {
+    next: { revalidate: 300, tags: ["category-images"] },
+  })
+  return readCategoryImages(response)
+}
+
+async function readCategoryImages(response: Response): Promise<CategoryImage[]> {
   if (!response.ok) return responseError(response, "Category images could not be loaded.")
   const body: unknown = await response.json()
   if (!body || typeof body !== "object" || !("images" in body) || !Array.isArray(body.images)) {

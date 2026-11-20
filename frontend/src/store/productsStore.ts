@@ -4,7 +4,8 @@ import { apiFetch, apiUrl, mediaUrl } from '../services/api-client'
 
 let currentProducts: Product[] = []
 let listeners: Array<() => void> = []
-let productsLoading = false
+let productsLoading = true
+let productsInitialized = false
 let productsError: string | null = null
 let productsRequest: Promise<Product[]> | null = null
 
@@ -27,7 +28,7 @@ function notify() {
 export async function fetchProductsFromBackend(): Promise<Product[]> {
   if (productsRequest) return productsRequest
 
-  productsLoading = true
+  productsLoading = !productsInitialized
   productsError = null
   notify()
 
@@ -41,6 +42,7 @@ export async function fetchProductsFromBackend(): Promise<Product[]> {
       const data = await res.json()
       if (Array.isArray(data.products)) {
         currentProducts = data.products.map(normalizeProduct)
+        productsInitialized = true
         return currentProducts
       }
       productsError = 'The product catalog response was invalid.'
@@ -102,12 +104,19 @@ export async function deleteProductFromBackend(id: string): Promise<boolean> {
   return false
 }
 
-export function useProducts() {
-  const [productsList, setProductsList] = useState<Product[]>(currentProducts)
-  const [loading, setLoading] = useState(productsLoading)
-  const [error, setError] = useState<string | null>(productsError)
+export function useProducts(initialProducts?: Product[]) {
+  const [productsList, setProductsList] = useState<Product[]>(initialProducts ?? currentProducts)
+  const [loading, setLoading] = useState(initialProducts === undefined && productsLoading)
+  const [error, setError] = useState<string | null>(initialProducts === undefined ? productsError : null)
 
   useEffect(() => {
+    if (initialProducts !== undefined && currentProducts.length === 0 && !productsRequest) {
+      currentProducts = initialProducts
+      productsInitialized = true
+      productsLoading = false
+      productsError = null
+    }
+
     const update = () => {
       setProductsList([...currentProducts])
       setLoading(productsLoading)

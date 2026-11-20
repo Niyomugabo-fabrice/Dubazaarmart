@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
-import { categories } from '../data/products'
+import { categories, type Product } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import SiteLogo from '../components/SiteLogo'
 import { useProducts } from '../store/productsStore'
@@ -11,8 +11,13 @@ import { useWebsiteSettings } from '../store/settingsStore'
 import { swaggerUrl } from '../services/api-client'
 import { useAppNavigation } from '../lib/navigation'
 import { fetchPublicTestimonials, type Testimonial } from '../lib/testimonialsApi'
-import { useCategoryImages } from '../store/categoryImagesStore'
+import { useCategoryImages, type CategoryImageMap } from '../store/categoryImagesStore'
 import { fetchActiveHeroSlides, type HeroSlide } from '../lib/heroSlidesApi'
+
+interface HomePageProps {
+  initialProducts?: Product[]
+  initialCategoryImages?: CategoryImageMap
+}
 
 const HERO_LINES = [
   'Premium Electronics Direct from Dubai Wholesale',
@@ -56,11 +61,11 @@ function RotatingHeroMessage() {
   )
 }
 
-export default function HomePage() {
+export default function HomePage({ initialProducts, initialCategoryImages }: HomePageProps) {
   const { navigate } = useAppNavigation()
   const settings = useWebsiteSettings()
-  const { products: liveProducts, loading, error } = useProducts()
-  const { categoryImages, error: categoryImagesError } = useCategoryImages()
+  const { products: liveProducts, loading, error } = useProducts(initialProducts)
+  const { categoryImages, error: categoryImagesError } = useCategoryImages(initialCategoryImages)
   const products = liveProducts
 
   const [activeTab, setActiveTab] = useState<'featured' | 'popular' | 'new' | 'deals'>('featured')

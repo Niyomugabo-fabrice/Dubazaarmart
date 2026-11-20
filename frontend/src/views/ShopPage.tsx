@@ -222,7 +222,7 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-24" style={{ color: '#0B5B24' }}>
-              <div className="text-5xl mb-4">🔍</div>
+              <div className="text-5xl mb-4"></div>
               <div className="text-lg font-medium text-[#111111] mb-2">No products found</div>
               <div className="text-sm">Try adjusting your filters or search query</div>
             </div>

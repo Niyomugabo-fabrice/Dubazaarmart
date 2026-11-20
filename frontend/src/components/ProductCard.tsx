@@ -91,7 +91,7 @@ export default function ProductCard({ product }: Props) {
         </div>
 
         {/* Price & Cart */}
-        <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255,184,0,0.3)' }}>
+        <div className="flex flex-col gap-2 pt-2 border-t" style={{ borderColor: 'rgba(255,184,0,0.3)' }}>
           <Link href={productHref} onClick={rememberSelection}>
             {product.originalPrice > product.price && (
               <div className="text-xs line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</div>
@@ -101,10 +101,10 @@ export default function ProductCard({ product }: Props) {
           <button
             type="button"
             onClick={() => cartStore.add(product)}
-            className="w-8 h-8 rounded-xl flex items-center justify-center btn-gold text-xs font-bold transition-transform active:scale-90"
+            className="flex w-full items-center justify-center rounded-xl px-3 py-2 btn-gold text-xs font-bold transition-transform active:scale-95"
             aria-label={`Add ${product.name} to cart`}
           >
-            +
+            Add to cart
           </button>
         </div>
       </div>

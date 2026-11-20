@@ -28,6 +28,27 @@ function isExternalLink(link: string): boolean {
   return /^https?:\/\//i.test(link)
 }
 
+function getFooterLinkHref(label: string): string {
+  const category = categories.find((item) => item.name.toLowerCase() === label.toLowerCase())
+  if (category) return `/shop?category=${encodeURIComponent(category.id)}`
+
+  const links: Record<string, string> = {
+    'All Products': '/shop',
+    'About Us': '/about',
+    'Delivery Info': '/#delivery-info',
+    'Contact Us': '/contact',
+    'Terms & Conditions': '/contact?topic=terms',
+    'Privacy Policy': '/contact?topic=privacy',
+    Wishlist: '/wishlist',
+    'Track Order': '/contact?topic=tracking',
+    Returns: '/contact?topic=returns',
+    'Admin Dashboard': '/admin',
+    'Create Staff Account': '/admin/register',
+  }
+
+  return links[label] ?? '/'
+}
+
 function WhyUsIcon({ name }: { name: string }) {
   const iconPaths: Record<string, ReactNode> = {
     plane: <><path d="m3 21 18-9L3 3l3 9-3 9Z" /><path d="M6 12h9" /></>,
@@ -158,13 +179,13 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
       {/* Hero */}
       <section
         className="relative mx-3 my-3 overflow-hidden rounded-3xl border-2 border-white/70"
-        style={{ backgroundColor: '#FF6A00' }}
+        style={{ background: 'linear-gradient(90deg, #FF6A00 0%, #FFB000 100%)' }}
         role="region"
         aria-label="Homepage hero"
         aria-roledescription={heroSlides.length > 1 ? 'carousel' : undefined}
       >
         <div className="mx-auto grid w-full max-w-7xl items-center gap-2 pl-2 pr-4 py-1 sm:pl-3 sm:py-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:pl-4 lg:pr-8 lg:py-3">
-          <div className="announcement relative z-10 min-w-0" style={{ background: '#FF6A00' }}>
+          <div className="announcement relative z-10 min-w-0">
             <div className="max-w-xl">
               <h1 className="mb-2 whitespace-pre-line font-mono text-xl font-semibold uppercase leading-tight tracking-[0.08em] text-white sm:text-2xl lg:text-3xl">
                 {DEFAULT_HERO_HEADING}
@@ -433,7 +454,7 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
       </section>
 
       {/* Why choose us */}
-      <section className="announcement mx-3 my-3 rounded-3xl border-2 border-white/70 px-4 py-16" style={{ background: '#FF6A00' }}>
+      <section className="announcement mx-3 my-3 rounded-3xl border-2 border-white/70 px-4 py-16">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <div className="badge mb-2 text-white">WHY US</div>
@@ -441,13 +462,12 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {whyItems.map(item => (
-              <div key={item.title} className="group relative min-h-[180px] overflow-hidden rounded-2xl p-6" style={{ background: 'rgba(0,0,0,1)', border: '1px solid rgba(255,106,0,0.42)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-                <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-5 h-20 w-28 rounded-full bg-[#FF6A00]/30 blur-2xl" />
-                <div className="relative mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-[#FF6A00]/70 bg-black/25 text-white shadow-[0_0_18px_rgba(255,106,0,0.22)]">
+              <div key={item.title} className="group relative min-h-[180px] overflow-hidden rounded-2xl p-6" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.8)' }}>
+                <div className="relative mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-[#FF6A00]/70 bg-transparent text-white">
                   <WhyUsIcon name={item.icon} />
                 </div>
-                <h3 className="relative mb-2 text-sm font-semibold uppercase text-[#FF6A00]">{item.title}</h3>
-                <p className="relative text-sm leading-relaxed text-white">{item.desc}</p>
+                <h3 className="relative mb-2 text-sm font-bold uppercase text-black">{item.title}</h3>
+                <p className="relative text-sm font-bold leading-relaxed text-white">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -505,7 +525,7 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
       )}
 
       {/* Delivery info */}
-      <section className="py-12 px-4" style={{ background: '#FFF7E8' }}>
+      <section id="delivery-info" className="py-12 px-4" style={{ background: '#FFF7E8' }}>
         <div className="max-w-4xl mx-auto">
           <div className="rounded-2xl p-8 text-center" style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}>
             <div className="text-4xl mb-4">🇷🇼</div>
@@ -580,18 +600,14 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                 <h4 className="font-semibold text-[#111111] mb-4 text-sm">{col.title}</h4>
                 <div className="flex flex-col gap-2">
                   {col.links.map(link => (
-                    <button
+                    <Link
                       key={link}
-                      onClick={() => {
-                        if (link === 'Wishlist') navigate('wishlist')
-                        if (link === 'Admin Dashboard') navigate('admin')
-                        if (link === 'Create Staff Account') navigate('/admin/register')
-                      }}
+                      href={getFooterLinkHref(link)}
                       className="text-sm text-left hover:text-[#111111] transition-colors"
                       style={{ color: '#0B5B24' }}
                     >
                       {link}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>

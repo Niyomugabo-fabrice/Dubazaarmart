@@ -1,12 +1,24 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useWebsiteSettings } from '../store/settingsStore'
 
 export default function ContactPage() {
   const settings = useWebsiteSettings()
   const [sent, setSent] = useState(false)
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
+
+  useEffect(() => {
+    const topic = new URLSearchParams(window.location.search).get('topic')
+    const subjects: Record<string, string> = {
+      tracking: 'Order tracking request',
+      returns: 'Return request',
+      terms: 'Terms & Conditions question',
+      privacy: 'Privacy Policy question',
+    }
+    const subject = topic ? subjects[topic] : undefined
+    if (subject) setForm((current) => ({ ...current, subject }))
+  }, [])
 
   function update(k: string, v: string) {
     setForm(f => ({ ...f, [k]: v }))

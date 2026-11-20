@@ -21,7 +21,11 @@ function loadCart(): CartItem[] {
 }
 
 function saveCart(items: CartItem[]) {
-  localStorage.setItem(CART_KEY, JSON.stringify(items))
+  try {
+    localStorage.setItem(CART_KEY, JSON.stringify(items))
+  } catch {
+    // Keep the in-memory cart usable when browser storage is unavailable or full.
+  }
 }
 
 function loadWishlist(): string[] {

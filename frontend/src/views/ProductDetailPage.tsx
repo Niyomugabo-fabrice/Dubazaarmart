@@ -113,15 +113,20 @@ export default function ProductDetailPage({ product }: Props) {
             </div>
 
             {/* Price */}
-            <div className="flex items-end gap-3 mb-6">
-              <span className="text-4xl font-bold gold-text">{formatPrice(product.price)}</span>
+            <div className="flex items-center gap-3 mb-6">
               {product.originalPrice > product.price && (
                 <>
-                  <span className="text-xl line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</span>
+                  <div className="flex flex-col items-start">
+                    <span className="text-xl line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</span>
+                    <span className="text-4xl font-bold gold-text">{formatPrice(product.price)}</span>
+                  </div>
                   <span className="badge px-2 py-1 rounded" style={{ background: 'rgba(255,106,0,0.15)', color: '#FF6A00', border: '1px solid rgba(255,106,0,0.3)' }}>
                     Save {formatPrice(product.originalPrice - product.price)}
                   </span>
                 </>
+              )}
+              {product.originalPrice <= product.price && (
+                <span className="text-4xl font-bold gold-text">{formatPrice(product.price)}</span>
               )}
             </div>
 

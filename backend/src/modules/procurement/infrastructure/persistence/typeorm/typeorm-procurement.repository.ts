@@ -112,6 +112,36 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
         order.items = await itemsRepository.findBy({ orderId: id })
       }
 
+      if (values.status === 'RECEIVED' && order.status !== 'RECEIVED') {
+        const productsRepository = manager.getRepository(ProductEntity)
+        const movementsRepository = manager.getRepository(StockMovementEntity)
+        for (const item of order.items) {
+          const quantityReceived = item.quantityOrdered - item.quantityReceived
+          if (quantityReceived <= 0) continue
+
+          const product = await productsRepository.createQueryBuilder('product')
+            .setLock('pessimistic_write')
+            .where('LOWER(product.name) = LOWER(:name)', { name: item.productName })
+            .getOne()
+          if (product) {
+            product.quantity += quantityReceived
+            await productsRepository.save(product)
+          }
+          item.quantityReceived += quantityReceived
+          item.addedToStock = true
+          await movementsRepository.insert({
+            productId: product?.id ?? item.id,
+            productName: item.productName,
+            sku: product?.sku || '',
+            quantity: quantityReceived,
+            movementType: 'PURCHASE_RECEIPT',
+            reason: `Company Purchase Order Received – ${order.poNumber}`,
+            referenceId: id,
+          })
+        }
+        await itemsRepository.save(order.items)
+      }
+
       if (values.supplierName !== undefined) order.supplierName = values.supplierName
       if (values.supplierContact !== undefined) order.supplierContact = values.supplierContact
       if (values.shippingCompany !== undefined) order.shippingCompany = values.shippingCompany
@@ -175,7 +205,7 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
           sku: product?.sku || '',
           quantity: received.quantityReceived,
           movementType: 'PURCHASE_RECEIPT',
-          reason: 'Company Purchase Order Received',
+          reason: `Company Purchase Order Received – ${order.poNumber}`,
           referenceId: id,
         })
       }

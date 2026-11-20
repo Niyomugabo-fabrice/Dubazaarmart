@@ -93,10 +93,10 @@ export default function ProductCard({ product }: Props) {
         {/* Price & Cart */}
         <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255,184,0,0.3)' }}>
           <Link href={productHref} onClick={rememberSelection}>
-            <div className="text-base font-bold text-[#111111]">{formatPrice(product.price)}</div>
             {product.originalPrice > product.price && (
               <div className="text-xs line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</div>
             )}
+            <div className="text-base font-bold text-[#111111]">{formatPrice(product.price)}</div>
           </Link>
           <button
             type="button"

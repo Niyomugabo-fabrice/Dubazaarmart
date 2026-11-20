@@ -16,7 +16,7 @@ async function bootstrap() {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }))
   const origins = (config.get<string>('FRONTEND_URL') || '')
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean)
   const isProduction = config.get<string>('NODE_ENV') === 'production'
 

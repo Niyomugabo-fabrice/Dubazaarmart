@@ -27,8 +27,8 @@ export class ProcurementController {
 
   @Post(':id/receive')
   @Permissions('procurement.manage')
-  receive(@Param('id') id: string, @Body() body: Record<string, any>) {
-    return this.procurement.receive(id, body ?? {})
+  receive(@Param('id') id: string) {
+    return this.procurement.receive(id)
   }
 
   @Patch(':id')

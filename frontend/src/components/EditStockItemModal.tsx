@@ -126,13 +126,13 @@ export default function EditStockItemModal({ item, isOpen, onClose, onUpdated }:
           {/* Value preview */}
           <div className="p-3.5 rounded-xl bg-[#FFF7E8] border border-[#FFB800] space-y-1 text-xs">
             <div className="flex justify-between text-gray-700">
-              <span>Single Unit Value:</span>
-              <span className="font-mono font-bold">{unitCost.toLocaleString()} RWF</span>
+              <span>Single Unit Selling Price:</span>
+              <span className="font-mono font-bold">{item.sellingPrice.toLocaleString()} RWF</span>
             </div>
             <div className="flex justify-between text-gray-700">
               <span>Total Item Stock Value:</span>
               <span className="font-mono font-black text-[#FF6A00]">
-                {(quantity * unitCost).toLocaleString()} RWF
+                {(quantity * item.sellingPrice).toLocaleString()} RWF
               </span>
             </div>
           </div>

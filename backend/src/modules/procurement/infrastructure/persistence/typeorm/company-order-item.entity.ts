@@ -1,7 +1,8 @@
-import { Check, Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
+import { Check, Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
 import { CompanyOrderEntity } from './company-order.entity'
 
 @Entity({ name: 'company_order_items' })
+@Index('company_order_items_product_id_idx', ['productId'])
 @Check('company_order_items_unit_price_check', 'unit_price >= 0')
 @Check('company_order_items_quantity_ordered_check', 'quantity_ordered > 0')
 @Check('company_order_items_quantity_received_check', 'quantity_received >= 0')
@@ -12,6 +13,9 @@ export class CompanyOrderItemEntity {
 
   @Column({ name: 'order_id', type: 'uuid' })
   orderId!: string
+
+  @Column({ name: 'product_id', type: 'uuid', nullable: true })
+  productId!: string | null
 
   @ManyToOne(() => CompanyOrderEntity, (order) => order.items, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })

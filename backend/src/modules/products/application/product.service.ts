@@ -41,7 +41,7 @@ export class ProductService {
       price: String(price),
       originalPrice: String(originalPrice),
       discount: Number(dto.discount) || (originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0),
-      quantity: Math.max(0, Number(dto.quantity) || 0),
+      quantity: 0,
       active: dto.active !== false,
       image: dto.image || null,
       images: Array.isArray(dto.images) ? dto.images : dto.image ? [dto.image] : [],

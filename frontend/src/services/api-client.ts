@@ -41,8 +41,29 @@ export function subscribeAdminSession(listener: () => void): () => void {
 
 function apiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL
-  const base = configured.replace(/\/+$/, '')
+  let base = configured.replace(/\/+$/, '')
+  if (typeof window !== 'undefined') {
+    try {
+      const apiUrl = new URL(base)
+      const pageIsPrivateNetwork = isPrivateNetworkIPv4(window.location.hostname)
+      const apiIsLoopback = apiUrl.hostname === 'localhost' || apiUrl.hostname === '127.0.0.1'
+      if (pageIsPrivateNetwork && apiIsLoopback) {
+        apiUrl.hostname = window.location.hostname
+        base = apiUrl.toString().replace(/\/+$/, '')
+      }
+    } catch {
+      // Leave invalid configuration unchanged so URL construction reports the error.
+    }
+  }
   return /\/api\/v1$/i.test(base) ? base : `${base}/api/v1`
+}
+
+function isPrivateNetworkIPv4(hostname: string): boolean {
+  const octets = hostname.split('.').map(Number)
+  if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
+  return octets[0] === 10 ||
+    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+    (octets[0] === 192 && octets[1] === 168)
 }
 
 function backendPath(path: string): string {

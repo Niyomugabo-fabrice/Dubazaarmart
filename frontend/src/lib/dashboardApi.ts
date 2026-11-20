@@ -148,6 +148,7 @@ export type UpdateAdminOrderPayload = {
 
 export type CompanyOrderItem = {
   id: string
+  productId: string | null
   productName: string
   category: string
   unitPrice: number
@@ -189,8 +190,7 @@ export type UpdateCompanyOrderPayload = {
   notes: string
   items: Array<{
     id?: string
-    productName: string
-    category: string
+    productId: string
     unitPrice: number
     quantityOrdered: number
   }>
@@ -726,8 +726,7 @@ export async function createCompanyOrder(payload: {
   otherCharges?: number
   notes?: string
   items: Array<{
-    productName: string
-    category: string
+    productId: string
     unitPrice: number
     quantityOrdered: number
   }>
@@ -768,16 +767,15 @@ export async function updateCompanyOrder(
 
 export async function receiveCompanyOrder(
   poId: string,
-  receivedItems: Array<{ itemId: string; quantityReceived: number }>,
 ): Promise<{ success: boolean; po: CompanyOrder; addedCount: number; message: string }> {
   const response = await apiFetch(apiUrl(`/api/admin/company-orders/${poId}/receive`), {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAdminAuthHeaders() },
-    body: JSON.stringify({ receivedItems }),
+    body: JSON.stringify({}),
   })
   if (!response.ok) {
     const data = await readJsonResponse(response)
-    throw new Error(isRecord(data) && typeof data.error === "string" ? data.error : "Failed to receive company order items")
+    throw new Error(getApiErrorMessage(data, "Failed to receive company order items"))
   }
   return response.json()
 }

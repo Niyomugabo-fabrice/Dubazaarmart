@@ -2339,15 +2339,14 @@ export default function AdminPage() {
                 </div>
 
                 <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "#FFB800", background: "#FFFFFF" }}>
-                  <table className="w-full min-w-[760px] text-sm">
+                  <table className="w-full min-w-[700px] text-sm">
                     <thead>
                       <tr className="border-b text-left text-[11px] font-bold uppercase tracking-wider" style={{ background: "#FFF7E8", borderColor: "#FFB800", color: "#0B5B24" }}>
                         <th className="py-3 px-4">Product / SKU</th>
                         <th className="py-3 px-4">Status</th>
                         <th className="py-3 px-4">Stock vs Target</th>
-                        <th className="py-3 px-4 text-right">Unit Cost (RWF)</th>
-                        <th className="py-3 px-4 text-right">Stock Valuation</th>
                         <th className="py-3 px-4 text-right">Selling Price</th>
+                        <th className="py-3 px-4 text-right">Stock Valuation</th>
                         <th className="py-3 px-4 text-center">Actions</th>
                       </tr>
                     </thead>
@@ -2391,9 +2390,8 @@ export default function AdminPage() {
                                   />
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-right font-medium text-[#111111]">{formatPrice(item.unitCost)}</td>
-                              <td className="py-3 px-4 text-right font-black text-[#FF6A00]">{formatPrice(item.totalValue)}</td>
                               <td className="py-3 px-4 text-right font-bold text-[#111111]">{formatPrice(item.sellingPrice)}</td>
+                              <td className="py-3 px-4 text-right font-black text-[#FF6A00]">{formatPrice(item.totalValue)}</td>
                               <td className="py-3 px-4">
                                 <div className="flex items-center justify-center gap-1.5">
                                   <button

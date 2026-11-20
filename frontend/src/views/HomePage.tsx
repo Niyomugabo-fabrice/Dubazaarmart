@@ -141,10 +141,38 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
     setCurrentHeroSlide((index) => (index + direction + heroSlides.length) % heroSlides.length)
   }
 
+  function getHeroSlideLink(slide: HeroSlide) {
+    const link = slide.buttonLink?.trim() || '/shop'
+    if (isExternalLink(link)) return link
+
+    const [path, query = ''] = link.split('?')
+    if (path !== '/shop') return link
+
+    const params = new URLSearchParams(query)
+    if (params.has('category')) return link
+
+    const slideText = [slide.heading, slide.subheading, slide.buttonText].filter(Boolean).join(' ').toLowerCase()
+    const category = categories.find((item) =>
+      slideText.includes(item.name.toLowerCase()) || slideText.includes(item.id.replace(/-/g, ' ')),
+    )
+    const productCategory = [...new Set(products.map((product) => product.category.trim()).filter(Boolean))]
+      .find((item) => slideText.includes(item.toLowerCase()))
+    const brand = [...new Set(products.map((product) => product.brand.trim()).filter(Boolean))]
+      .find((item) => slideText.includes(item.toLowerCase()))
+    const categorySlug = /\biphone\b/i.test(slideText)
+      ? 'iphone'
+      : category?.id ?? productCategory?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        ?? brand?.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+        ?? slide.heading?.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        ?? 'uncategorized'
+
+    return `/shop?category=${encodeURIComponent(categorySlug || 'uncategorized')}`
+  }
+
   function renderHeroButton(slide: HeroSlide, isCurrentSlide: boolean) {
     const text = slide.buttonText?.trim()
     if (!text) return null
-    const link = slide.buttonLink?.trim() || '/shop'
+    const link = getHeroSlideLink(slide)
     const className = 'btn-gold inline-flex rounded-xl px-8 py-4 text-base font-bold'
     return isExternalLink(link) ? (
       <a href={link} target="_blank" rel="noopener noreferrer" tabIndex={isCurrentSlide ? undefined : -1} className={className}>
@@ -264,6 +292,23 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                       className="object-cover"
                     />
                   )}
+                  {activeHeroSlide && (
+                    isExternalLink(getHeroSlideLink(activeHeroSlide)) ? (
+                      <a
+                        href={getHeroSlideLink(activeHeroSlide)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Shop ${activeHeroSlide.heading || 'featured'} products`}
+                        className="absolute inset-0 z-10"
+                      />
+                    ) : (
+                      <Link
+                        href={getHeroSlideLink(activeHeroSlide)}
+                        aria-label={`Shop ${activeHeroSlide.heading || 'featured'} products`}
+                        className="absolute inset-0 z-10"
+                      />
+                    )
+                  )}
                 </div>
               </div>
               {heroSlides.length > 1 && (
@@ -331,7 +376,7 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                     type="button"
                     aria-hidden={isDuplicate}
                     tabIndex={isDuplicate ? -1 : 0}
-                    onClick={() => navigate('shop')}
+                    onClick={() => navigate(`/shop?category=${encodeURIComponent(cat.id)}`)}
                     className={`mr-4 flex w-36 flex-shrink-0 flex-col items-center gap-2 rounded-2xl p-3 text-center card-hover sm:w-40 ${
                       isDuplicate ? 'category-marquee-duplicate' : ''
                     }`}

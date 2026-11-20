@@ -14,6 +14,7 @@ import { OrderAdminNotes20261119213000 } from './migrations/20261119213000-Order
 import { TestimonialsManagement20261119232000 } from './migrations/20261119232000-TestimonialsManagement'
 import { CategoryImages20261119234000 } from './migrations/20261119234000-CategoryImages'
 import { HeroSlidesManagement20261120010000 } from './migrations/20261120010000-HeroSlidesManagement'
+import { CompanyOrderProductReferences20261120020000 } from './migrations/20261120020000-CompanyOrderProductReferences'
 
 export default new DataSource({
   type: 'postgres',
@@ -32,6 +33,7 @@ export default new DataSource({
     TestimonialsManagement20261119232000,
     CategoryImages20261119234000,
     HeroSlidesManagement20261120010000,
+    CompanyOrderProductReferences20261120020000,
   ],
   migrationsTableName: 'typeorm_migrations',
   synchronize: false,

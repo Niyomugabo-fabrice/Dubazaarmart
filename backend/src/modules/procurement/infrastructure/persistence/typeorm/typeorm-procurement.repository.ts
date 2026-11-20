@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectDataSource } from '@nestjs/typeorm'
-import { DataSource } from 'typeorm'
+import { DataSource, In, type EntityManager } from 'typeorm'
 import {
+  PurchaseOrderAlreadyReceivedError,
   PurchaseOrderUpdateError,
   type CompanyOrderQuery,
   type CreateCompanyOrderInput,
@@ -30,28 +31,40 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
   }
 
   create(input: CreateCompanyOrderInput) {
-    const repository = this.dataSource.getRepository(CompanyOrderEntity)
-    const itemsRepository = this.dataSource.getRepository(CompanyOrderItemEntity)
-    return repository.save(repository.create({
-      poNumber: input.poNumber,
-      supplierName: input.supplierName,
-      supplierContact: input.supplierContact,
-      shippingCompany: input.shippingCompany,
-      expectedArrival: input.expectedArrival,
-      shippingCost: String(input.shippingCost),
-      otherCharges: String(input.otherCharges),
-      totalAmount: String(input.totalAmount),
-      notes: input.notes,
-      items: input.items.map((item) => itemsRepository.create({
-        productName: item.productName,
-        category: item.category,
-        unitPrice: String(item.unitPrice),
-        quantityOrdered: item.quantityOrdered,
-        quantityReceived: 0,
-        totalPrice: String(item.totalPrice),
-        addedToStock: false,
-      })),
-    }))
+    return this.dataSource.transaction(async (manager) => {
+      const productsRepository = manager.getRepository(ProductEntity)
+      const productIds = input.items.map((item) => item.productId)
+      const products = await productsRepository.findBy({ id: In(productIds), active: true })
+      const productsById = new Map(products.map((product) => [product.id, product]))
+      if (productsById.size !== productIds.length) throw new PurchaseOrderUpdateError('Every purchase order line must use an existing product.')
+
+      const orderRepository = manager.getRepository(CompanyOrderEntity)
+      const itemsRepository = manager.getRepository(CompanyOrderItemEntity)
+      return orderRepository.save(orderRepository.create({
+        poNumber: input.poNumber,
+        supplierName: input.supplierName,
+        supplierContact: input.supplierContact,
+        shippingCompany: input.shippingCompany,
+        expectedArrival: input.expectedArrival,
+        shippingCost: String(input.shippingCost),
+        otherCharges: String(input.otherCharges),
+        totalAmount: String(input.totalAmount),
+        notes: input.notes,
+        items: input.items.map((item) => {
+          const product = productsById.get(item.productId)!
+          return itemsRepository.create({
+            productId: product.id,
+            productName: product.name,
+            category: product.category,
+            unitPrice: String(item.unitPrice),
+            quantityOrdered: item.quantityOrdered,
+            quantityReceived: 0,
+            totalPrice: String(item.totalPrice),
+            addedToStock: false,
+          })
+        }),
+      }))
+    })
   }
 
   async update(id: string, values: UpdateCompanyOrderInput) {
@@ -62,7 +75,9 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
         .where('po.id = :id', { id })
         .getOne()
       if (!order) return null
-
+      if (order.status === 'RECEIVED' && values.status !== undefined && values.status !== 'RECEIVED') {
+        throw new PurchaseOrderUpdateError('This purchase order has already been received.')
+      }
       const itemsRepository = manager.getRepository(CompanyOrderItemEntity)
       const existingItems = values.items
         ? await itemsRepository.createQueryBuilder('item')
@@ -71,7 +86,25 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
           .getMany()
         : []
 
+      if (order.status === 'RECEIVED' && values.items) {
+        const existingById = new Map(existingItems.map((item) => [item.id, item]))
+        const itemsUnchanged = values.items.length === existingItems.length && values.items.every((input) => {
+          const existing = input.id ? existingById.get(input.id) : undefined
+          return existing && input.productId === existing.productId && input.unitPrice === Number(existing.unitPrice) && input.quantityOrdered === existing.quantityOrdered
+        })
+        if (!itemsUnchanged) throw new PurchaseOrderUpdateError('Items on a received purchase order cannot be changed.')
+      }
+
       if (values.items) {
+        const productIds = values.items.map((item) => item.productId)
+        if (new Set(productIds).size !== productIds.length) {
+          throw new PurchaseOrderUpdateError('A product can only appear once on a purchase order.')
+        }
+        const products = await manager.getRepository(ProductEntity).findBy({ id: In(productIds) })
+        const productsById = new Map(products.map((product) => [product.id, product]))
+        if (productsById.size !== productIds.length) {
+          throw new PurchaseOrderUpdateError('Every purchase order line must use an existing product.')
+        }
         const existingById = new Map(existingItems.map((item) => [item.id, item]))
         const retainedIds = new Set<string>()
         const updatedItems = values.items.map((input) => {
@@ -80,20 +113,22 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
             throw new PurchaseOrderUpdateError('An item does not belong to this purchase order.')
           }
           if (existing) {
+            if (existing.quantityReceived > 0 && input.productId !== existing.productId) {
+              throw new PurchaseOrderUpdateError(`The product on ${existing.productName} cannot change after items have been received.`)
+            }
             if (input.quantityOrdered < existing.quantityReceived) {
               throw new PurchaseOrderUpdateError(`Quantity for ${existing.productName} cannot be less than the quantity already received.`)
             }
-            if (existing.quantityReceived > 0 && input.productName !== existing.productName) {
-              throw new PurchaseOrderUpdateError(`The name of ${existing.productName} cannot change after items have been received.`)
-            }
             retainedIds.add(existing.id)
           }
+          const product = productsById.get(input.productId)!
           const unitPriceCents = amountInCents(input.unitPrice)
           return itemsRepository.create({
             ...(existing ?? {}),
             orderId: id,
-            productName: input.productName,
-            category: input.category,
+            productId: product.id,
+            productName: product.name,
+            category: product.category,
             unitPrice: (unitPriceCents / 100).toFixed(2),
             quantityOrdered: input.quantityOrdered,
             quantityReceived: existing?.quantityReceived ?? 0,
@@ -113,32 +148,7 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
       }
 
       if (values.status === 'RECEIVED' && order.status !== 'RECEIVED') {
-        const productsRepository = manager.getRepository(ProductEntity)
-        const movementsRepository = manager.getRepository(StockMovementEntity)
-        for (const item of order.items) {
-          const quantityReceived = item.quantityOrdered - item.quantityReceived
-          if (quantityReceived <= 0) continue
-
-          const product = await productsRepository.createQueryBuilder('product')
-            .setLock('pessimistic_write')
-            .where('LOWER(product.name) = LOWER(:name)', { name: item.productName })
-            .getOne()
-          if (product) {
-            product.quantity += quantityReceived
-            await productsRepository.save(product)
-          }
-          item.quantityReceived += quantityReceived
-          item.addedToStock = true
-          await movementsRepository.insert({
-            productId: product?.id ?? item.id,
-            productName: item.productName,
-            sku: product?.sku || '',
-            quantity: quantityReceived,
-            movementType: 'PURCHASE_RECEIPT',
-            reason: `Company Purchase Order Received – ${order.poNumber}`,
-            referenceId: id,
-          })
-        }
+        await receiveAllRemainingItems(manager, order)
         await itemsRepository.save(order.items)
       }
 
@@ -169,7 +179,7 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
     return Boolean(result.affected)
   }
 
-  receive(id: string, receivedItems: Array<{ itemId: string; quantityReceived: number }>) {
+  receive(id: string) {
     return this.dataSource.transaction(async (manager) => {
       const orderRepository = manager.getRepository(CompanyOrderEntity)
       const order = await orderRepository.createQueryBuilder('po')
@@ -178,46 +188,54 @@ export class TypeOrmProcurementRepository implements ProcurementRepository {
         .getOne()
       if (!order) return null
       order.items = await manager.getRepository(CompanyOrderItemEntity).findBy({ orderId: id })
+      if (order.status === 'RECEIVED') throw new PurchaseOrderAlreadyReceivedError('This purchase order has already been received.')
 
-      let addedCount = 0
-      for (const received of receivedItems) {
-        const item = order.items.find((candidate) => candidate.id === received.itemId)
-        if (!item || received.quantityReceived <= 0) continue
-        if (item.quantityReceived + received.quantityReceived > item.quantityOrdered) {
-          throw new Error(`Received quantity exceeds the remaining quantity for ${item.productName}.`)
-        }
-        item.quantityReceived += received.quantityReceived
-        item.addedToStock = true
-        addedCount += received.quantityReceived
-
-        const product = await manager.getRepository(ProductEntity).createQueryBuilder('product')
-          .setLock('pessimistic_write')
-          .where('LOWER(product.name) = LOWER(:name)', { name: item.productName })
-          .getOne()
-        const productId = product?.id ?? item.id
-        if (product) {
-          product.quantity += received.quantityReceived
-          await manager.getRepository(ProductEntity).save(product)
-        }
-        await manager.getRepository(StockMovementEntity).insert({
-          productId,
-          productName: item.productName,
-          sku: product?.sku || '',
-          quantity: received.quantityReceived,
-          movementType: 'PURCHASE_RECEIPT',
-          reason: `Company Purchase Order Received – ${order.poNumber}`,
-          referenceId: id,
-        })
-      }
-
-      const totalOrdered = order.items.reduce((sum, item) => sum + item.quantityOrdered, 0)
-      const totalReceived = order.items.reduce((sum, item) => sum + item.quantityReceived, 0)
-      order.status = totalReceived >= totalOrdered ? 'RECEIVED' : 'PARTIALLY_RECEIVED'
+      const addedCount = await receiveAllRemainingItems(manager, order)
+      order.status = 'RECEIVED'
       await manager.getRepository(CompanyOrderItemEntity).save(order.items)
       const saved = await orderRepository.save(order)
       return { order: saved, addedCount }
     })
   }
+}
+
+async function receiveAllRemainingItems(manager: EntityManager, order: CompanyOrderEntity): Promise<number> {
+  const productsRepository = manager.getRepository(ProductEntity)
+  const movementsRepository = manager.getRepository(StockMovementEntity)
+  const receivedAt = new Date()
+  let addedCount = 0
+
+  for (const item of order.items) {
+    const quantityReceived = item.quantityOrdered - item.quantityReceived
+    if (quantityReceived <= 0) continue
+    if (!item.productId) throw new PurchaseOrderUpdateError(`Product for ${item.productName} is no longer available.`)
+
+    const product = await productsRepository.createQueryBuilder('product')
+      .setLock('pessimistic_write')
+      .where('product.id = :id', { id: item.productId })
+      .getOne()
+    if (!product) throw new PurchaseOrderUpdateError(`Product for ${item.productName} is no longer available.`)
+
+    product.quantity += quantityReceived
+    product.unitCost = String(item.unitPrice)
+    await productsRepository.save(product)
+    item.quantityReceived += quantityReceived
+    item.addedToStock = true
+    addedCount += quantityReceived
+
+    await movementsRepository.insert({
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      quantity: quantityReceived,
+      movementType: 'PURCHASE_RECEIPT',
+      reason: `Company Purchase Order Received – ${order.poNumber}`,
+      referenceId: order.id,
+      createdAt: receivedAt,
+    })
+  }
+
+  return addedCount
 }
 
 function amountInCents(value: number): number {

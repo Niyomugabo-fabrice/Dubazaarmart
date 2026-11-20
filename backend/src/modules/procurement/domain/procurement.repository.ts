@@ -17,7 +17,7 @@ export interface CreateCompanyOrderInput {
   otherCharges: number
   totalAmount: number
   notes: string
-  items: Array<{ productName: string; category: string; unitPrice: number; quantityOrdered: number; totalPrice: number }>
+  items: Array<{ productId: string; unitPrice: number; quantityOrdered: number; totalPrice: number }>
 }
 
 export interface UpdateCompanyOrderInput {
@@ -32,8 +32,7 @@ export interface UpdateCompanyOrderInput {
   notes?: string
   items?: Array<{
     id?: string
-    productName: string
-    category: string
+    productId: string
     unitPrice: number
     quantityOrdered: number
   }>
@@ -46,5 +45,7 @@ export interface ProcurementRepository {
   create(input: CreateCompanyOrderInput): Promise<CompanyOrderEntity>
   update(id: string, values: UpdateCompanyOrderInput): Promise<CompanyOrderEntity | null>
   archive(id: string): Promise<boolean>
-  receive(id: string, receivedItems: Array<{ itemId: string; quantityReceived: number }>): Promise<{ order: CompanyOrderEntity; addedCount: number } | null>
+  receive(id: string): Promise<{ order: CompanyOrderEntity; addedCount: number } | null>
 }
+
+export class PurchaseOrderAlreadyReceivedError extends Error {}

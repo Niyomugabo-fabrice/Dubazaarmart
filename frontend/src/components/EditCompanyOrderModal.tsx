@@ -2,10 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 import {
+  fetchStockSummary,
   updateCompanyOrder,
   type CompanyOrder,
+  type StockItemSummary,
   type UpdateCompanyOrderPayload,
 } from "../lib/dashboardApi"
+import PurchaseOrderProductPicker from "./PurchaseOrderProductPicker"
 
 interface Props {
   po: CompanyOrder | null
@@ -44,6 +47,8 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
   const [paymentStatus, setPaymentStatus] = useState<CompanyOrder["paymentStatus"]>("PENDING")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<EditableItem[]>([])
+  const [products, setProducts] = useState<StockItemSummary[]>([])
+  const [productsError, setProductsError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,13 +65,22 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
     setNotes(po.notes)
     setItems(po.items.map((item) => ({
       id: item.id,
-      productName: item.productName,
-      category: item.category,
+      productId: item.productId ?? "",
       unitPrice: item.unitPrice,
       quantityOrdered: item.quantityOrdered,
       quantityReceived: item.quantityReceived,
     })))
     setError(null)
+  }, [po])
+
+  useEffect(() => {
+    if (!po) return
+    let active = true
+    setProductsError(null)
+    void fetchStockSummary()
+      .then((overview) => { if (active) setProducts(overview.items) })
+      .catch((loadError) => { if (active) setProductsError(loadError instanceof Error ? loadError.message : "Products could not be loaded.") })
+    return () => { active = false }
   }, [po])
 
   if (!po) return null
@@ -86,7 +100,7 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
   function addItem() {
     setItems((current) => [
       ...current,
-      { productName: "", category: "electronics", unitPrice: 0, quantityOrdered: 1, quantityReceived: 0 },
+      { productId: "", unitPrice: 0, quantityOrdered: 1, quantityReceived: 0 },
     ])
   }
 
@@ -106,9 +120,13 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
       return
     }
     if (items.length === 0 || items.some((item) =>
-      !item.productName.trim() || !Number.isInteger(item.quantityOrdered) || item.quantityOrdered < 1
+      !item.productId || !Number.isInteger(item.quantityOrdered) || item.quantityOrdered < 1 || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0
     )) {
-      setError("Add at least one product with a name and a positive quantity.")
+      setError("Select a product for every line and enter a unit cost and quantity greater than 0.")
+      return
+    }
+    if (new Set(items.map((item) => item.productId)).size !== items.length) {
+      setError("A product can only appear once on a purchase order.")
       return
     }
 
@@ -127,8 +145,7 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
         notes: notes.trim(),
         items: items.map((item) => ({
           id: item.id,
-          productName: item.productName.trim(),
-          category: item.category.trim(),
+          productId: item.productId,
           unitPrice: item.unitPrice,
           quantityOrdered: item.quantityOrdered,
         })),
@@ -233,30 +250,21 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
                 const lineTotal = item.unitPrice * item.quantityOrdered
                 return (
                   <div key={item.id ?? `new-${index}`} className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-12">
-                    <label className="text-[11px] font-bold text-gray-600 sm:col-span-5">
+                    <label className="text-[11px] font-bold text-gray-600 sm:col-span-6">
                       Product
-                      <input
-                        required
-                        value={item.productName}
+                      <PurchaseOrderProductPicker
+                        products={products}
+                        selectedProductId={item.productId}
+                        onSelect={(product: StockItemSummary | null) => updateItem(index, { productId: product?.id ?? "" })}
                         disabled={item.quantityReceived > 0}
-                        onChange={(event) => updateItem(index, { productName: event.target.value })}
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-xs font-normal disabled:bg-gray-100"
                       />
                     </label>
                     <label className="text-[11px] font-bold text-gray-600 sm:col-span-2">
-                      Category
-                      <input
-                        value={item.category}
-                        onChange={(event) => updateItem(index, { category: event.target.value })}
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-2 text-xs font-normal"
-                      />
-                    </label>
-                    <label className="text-[11px] font-bold text-gray-600 sm:col-span-2">
-                      Unit price ($)
+                      Unit cost ($) *
                       <input
                         required
                         type="number"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                         value={item.unitPrice}
                         onChange={(event) => updateItem(index, { unitPrice: Number(event.target.value) || 0 })}
@@ -264,7 +272,7 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
                       />
                     </label>
                     <label className="text-[11px] font-bold text-gray-600 sm:col-span-1">
-                      Qty
+                      Qty *
                       <input
                         required
                         type="number"
@@ -287,7 +295,7 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
                           onClick={() => removeItem(index)}
                           disabled={items.length === 1}
                           className="mb-1 rounded px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
-                          aria-label={`Remove ${item.productName || "item"}`}
+                          aria-label={`Remove ${products.find((product) => product.id === item.productId)?.name || "item"}`}
                         >
                           Remove
                         </button>
@@ -297,6 +305,7 @@ export default function EditCompanyOrderModal({ po, onClose, onOrderSaved }: Pro
                 )
               })}
             </div>
+            {productsError && <p role="alert" className="mt-2 text-xs text-red-700">{productsError}</p>}
           </section>
 
           <div className="grid gap-4 sm:grid-cols-2">

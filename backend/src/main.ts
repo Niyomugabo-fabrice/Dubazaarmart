@@ -8,6 +8,21 @@ import express from 'express'
 import { AppModule } from './app.module'
 import { ApiExceptionFilter } from './common/filters/api-exception.filter'
 
+function isLocalDevelopmentOrigin(origin: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(origin)
+    if (protocol !== 'http:' && protocol !== 'https:') return false
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true
+    const octets = hostname.split('.').map(Number)
+    if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
+    return octets[0] === 10 ||
+      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+      (octets[0] === 192 && octets[1] === 168)
+  } catch {
+    return false
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false })
   const config = app.get(ConfigService)
@@ -28,7 +43,7 @@ async function bootstrap() {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true)
       if (origins.includes(origin)) return callback(null, true)
-      if (!isProduction && /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      if (!isProduction && isLocalDevelopmentOrigin(origin)) {
         return callback(null, true)
       }
       return callback(null, false)

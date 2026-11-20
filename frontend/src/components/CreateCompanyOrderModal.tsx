@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { createCompanyOrder, type CompanyOrder } from '../lib/dashboardApi'
+import { useEffect, useState } from 'react'
+import { createCompanyOrder, fetchStockSummary, type CompanyOrder, type StockItemSummary } from '../lib/dashboardApi'
+import PurchaseOrderProductPicker from './PurchaseOrderProductPicker'
 
 interface Props {
   isOpen: boolean
@@ -8,8 +9,7 @@ interface Props {
 }
 
 interface ProductItemRow {
-  productName: string
-  category: string
+  productId: string
   unitPrice: number
   quantityOrdered: number
 }
@@ -27,18 +27,33 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
   const [shippingCost, setShippingCost] = useState(0)
   const [otherCharges, setOtherCharges] = useState(0)
   const [notes, setNotes] = useState('')
+  const [products, setProducts] = useState<StockItemSummary[]>([])
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [productsError, setProductsError] = useState<string | null>(null)
 
   const [items, setItems] = useState<ProductItemRow[]>([
-    { productName: '', category: 'smartphones', unitPrice: 0, quantityOrdered: 1 },
+    { productId: '', unitPrice: 0, quantityOrdered: 1 },
   ])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!isOpen) return
+    let active = true
+    setProductsLoading(true)
+    setProductsError(null)
+    void fetchStockSummary()
+      .then((overview) => { if (active) setProducts(overview.items.filter((product) => product.active)) })
+      .catch((loadError) => { if (active) setProductsError(loadError instanceof Error ? loadError.message : 'Products could not be loaded.') })
+      .finally(() => { if (active) setProductsLoading(false) })
+    return () => { active = false }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   function addItem() {
-    setItems([...items, { productName: '', category: 'electronics', unitPrice: 0, quantityOrdered: 1 }])
+    setItems([...items, { productId: '', unitPrice: 0, quantityOrdered: 1 }])
   }
 
   function removeItem(index: number) {
@@ -63,9 +78,13 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
       return
     }
 
-    const validItems = items.filter(it => it.productName.trim() && it.quantityOrdered > 0 && it.unitPrice >= 0)
-    if (validItems.length === 0) {
-      setError('Please add at least 1 valid product with name, quantity, and unit cost.')
+    if (items.some((item) => !item.productId || !Number.isInteger(item.quantityOrdered) || item.quantityOrdered <= 0 || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)) {
+      setError('Select a product for every line and enter a unit cost and quantity greater than 0.')
+      return
+    }
+    const productIds = items.map((item) => item.productId)
+    if (new Set(productIds).size !== productIds.length) {
+      setError('A product can only appear once on a purchase order.')
       return
     }
 
@@ -83,7 +102,7 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
         shippingCost: Number(shippingCost) || 0,
         otherCharges: Number(otherCharges) || 0,
         notes: notes.trim(),
-        items: validItems,
+        items: items.map(({ productId, unitPrice, quantityOrdered }) => ({ productId, unitPrice, quantityOrdered })),
       })
 
       onOrderCreated(created)
@@ -195,7 +214,7 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
                 onClick={addItem}
                 className="px-3 py-1 text-xs font-bold rounded-lg bg-[#FF6A00]/10 text-[#FF6A00] hover:bg-[#FF6A00]/20"
               >
-                + Add Another Product
+                + Add another product
               </button>
             </div>
 
@@ -204,37 +223,22 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
                 const lineCost = (Number(it.unitPrice) || 0) * (Number(it.quantityOrdered) || 0)
                 return (
                   <div key={idx} className="p-3 rounded-xl border border-gray-200 bg-gray-50 grid sm:grid-cols-12 gap-2.5 items-center">
-                    <div className="sm:col-span-5">
-                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Product Name</label>
-                      <input
-                        required
-                        type="text"
-                        placeholder="e.g. Samsung Galaxy A51"
-                        value={it.productName}
-                        onChange={(e) => updateItem(idx, 'productName', e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs bg-white"
+                    <div className="sm:col-span-6">
+                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Product *</label>
+                      <PurchaseOrderProductPicker
+                        products={products}
+                        selectedProductId={it.productId}
+                        onSelect={(product) => {
+                          updateItem(idx, 'productId', product?.id ?? '')
+                        }}
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Category</label>
-                      <select
-                        value={it.category}
-                        onChange={(e) => updateItem(idx, 'category', e.target.value)}
-                        className="w-full px-2 py-1.5 rounded-lg border border-gray-300 text-xs bg-white"
-                      >
-                        <option value="smartphones">Smartphones</option>
-                        <option value="laptops">Laptops</option>
-                        <option value="audio">Audio / AirPods</option>
-                        <option value="accessories">Accessories</option>
-                        <option value="electronics">General Tech</option>
-                      </select>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Cost 1 Unit ($)</label>
+                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Unit Cost ($) *</label>
                       <input
                         required
                         type="number"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                         placeholder="150"
                         value={it.unitPrice || ''}
@@ -243,29 +247,31 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
                       />
                     </div>
                     <div className="sm:col-span-1">
-                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Qty</label>
+                      <label className="block text-[10px] text-gray-500 font-bold mb-0.5">Qty *</label>
                       <input
                         required
                         type="number"
                         min="1"
                         value={it.quantityOrdered || ''}
-                        onChange={(e) => updateItem(idx, 'quantityOrdered', parseInt(e.target.value) || 1)}
+                        onChange={(e) => updateItem(idx, 'quantityOrdered', parseInt(e.target.value) || 0)}
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-300 text-xs bg-white font-mono font-bold"
                       />
                     </div>
-                    <div className="sm:col-span-2 flex items-center justify-between pl-1">
+                    <div className="sm:col-span-3 flex items-center justify-between pl-1">
                       <div>
                         <div className="text-[10px] text-gray-500 font-bold">Total ($)</div>
                         <div className="font-mono text-xs font-black text-[#FF6A00]">
                           ${lineCost.toLocaleString()}
                         </div>
                       </div>
-                      {items.length > 1 && (
+                      {(
                         <button
                           type="button"
                           onClick={() => removeItem(idx)}
-                          className="text-red-500 hover:text-red-700 font-bold text-sm ml-2"
+                          disabled={items.length === 1}
+                          className="text-red-500 hover:text-red-700 font-bold text-sm ml-2 disabled:opacity-40"
                           title="Remove item"
+                          aria-label="Remove product line"
                         >
                           ✕
                         </button>
@@ -341,6 +347,10 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
             />
           </div>
 
+          {productsLoading && <div className="text-xs text-gray-500">Loading products…</div>}
+          {productsError && <div role="alert" className="text-xs font-medium text-red-700">{productsError}</div>}
+          {products.length === 0 && !productsLoading && !productsError && <div className="text-xs text-gray-500">Add products to the product list before creating a purchase order.</div>}
+
           {error && (
             <div className="p-3 rounded-lg bg-red-50 text-red-700 text-xs font-medium">
               {error}
@@ -358,7 +368,7 @@ export default function CreateCompanyOrderModal({ isOpen, onClose, onOrderCreate
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || productsLoading || products.length === 0}
               className="px-6 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-sm"
             >
               {loading ? 'Creating PO...' : 'Create Purchase Order'}

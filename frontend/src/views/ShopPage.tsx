@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { categories } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import { useProducts } from '../store/productsStore'
@@ -12,28 +13,74 @@ interface Props {
   initialQuery?: string
 }
 
+const PRODUCT_FAMILY_OPTIONS = [{ id: 'iphone', name: 'iPhone' }]
+
+function normalizeCategory(value?: string) {
+  const normalized = value?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  if (!normalized) return 'all'
+  return categories.find((category) =>
+    category.id.toLowerCase() === normalized || category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === normalized,
+  )?.id ?? normalized
+}
+
 export default function ShopPage({ initialCategory, initialQuery = '' }: Props = {}) {
+  const router = useRouter()
   const { products: liveProducts, loading, error, refresh } = useProducts()
   const { categoryImages } = useCategoryImages()
   const products = liveProducts
 
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all')
+  const [selectedCategory, setSelectedCategory] = useState(() => normalizeCategory(initialCategory))
   const [sortBy, setSortBy] = useState('featured')
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 3_000_000])
   const [searchQuery, setSearchQuery] = useState(initialQuery)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => setSelectedCategory(initialCategory || 'all'), [initialCategory])
+  useEffect(() => setSelectedCategory(normalizeCategory(initialCategory)), [initialCategory])
   useEffect(() => setSearchQuery(initialQuery), [initialQuery])
+
+  const brandOptions = useMemo(() => {
+    const brands = new Map<string, string>([['samsung', 'Samsung']])
+    for (const product of products) {
+      const brand = product.brand.trim()
+      if (!brand) continue
+      const id = brand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      if (id) brands.set(id, brand)
+    }
+    return [...brands.entries()].map(([id, name]) => ({ id, name }))
+  }, [products])
+
+  const categoryLabel = useMemo(() => {
+    const normalized = selectedCategory.toLowerCase()
+    return categories.find((category) => category.id.toLowerCase() === normalized || category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === normalized)?.name
+      ?? brandOptions.find((brand) => brand.id === normalized || brand.name.toLowerCase() === normalized)?.name
+      ?? PRODUCT_FAMILY_OPTIONS.find((option) => option.id === normalized)?.name
+      ?? selectedCategory.replace(/[-_]+/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
+  }, [selectedCategory, brandOptions])
+
+  function selectCategory(category: string) {
+    setSelectedCategory(category || 'all')
+    setSidebarOpen(false)
+    const query = category ? `?category=${encodeURIComponent(category)}` : ''
+    router.push(`/shop${query}`, { scroll: false })
+  }
 
   function formatPrice(n: number) {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
     return `${(n / 1000).toFixed(0)}K`
   }
 
+  const categoryProducts = useMemo(() => {
+    if (selectedCategory === 'all') return products
+    const normalized = selectedCategory.toLowerCase()
+    return products.filter((product) => {
+      const category = product.category.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      const brand = product.brand.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return category === normalized || brand === normalized || (normalized === 'iphone' && /iphone/i.test(product.name))
+    })
+  }, [products, selectedCategory])
+
   const filtered = useMemo(() => {
-    let list = [...products]
-    if (selectedCategory !== 'all') list = list.filter(p => p.category === selectedCategory)
+    let list = [...categoryProducts]
     if (searchQuery) list = list.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.brand.toLowerCase().includes(searchQuery.toLowerCase()))
     list = list.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1])
     if (sortBy === 'price-asc') list.sort((a, b) => a.price - b.price)
@@ -42,7 +89,7 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
     else if (sortBy === 'discount') list.sort((a, b) => b.discount - a.discount)
     else list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
     return list
-  }, [products, selectedCategory, sortBy, priceRange, searchQuery])
+  }, [categoryProducts, sortBy, priceRange, searchQuery])
 
   const Sidebar = () => (
     <div className="w-64 flex-shrink-0">
@@ -51,7 +98,7 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
         <h3 className="font-bold text-[#111111] mb-4 text-sm">Categories</h3>
         <button
           type="button"
-          onClick={() => setSelectedCategory('all')}
+          onClick={() => selectCategory('')}
           aria-pressed={selectedCategory === 'all'}
           className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
           style={selectedCategory === 'all' ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
@@ -65,7 +112,7 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
             <button
               key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => selectCategory(cat.id)}
               aria-pressed={selectedCategory === cat.id}
               className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
               style={selectedCategory === cat.id ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
@@ -88,6 +135,23 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
             </button>
           )
         })}
+        {brandOptions.length > 0 && (
+          <>
+            <h4 className="mt-4 mb-2 px-3 text-xs font-bold uppercase tracking-wide text-[#0B5B24]">Brands</h4>
+            {[...brandOptions, ...PRODUCT_FAMILY_OPTIONS.filter((option) => !brandOptions.some((brand) => brand.id === option.id))].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => selectCategory(option.id)}
+                aria-pressed={selectedCategory === option.id}
+                className="w-full text-left flex items-center justify-between py-2 px-3 rounded-lg mb-1 text-sm transition-all"
+                style={selectedCategory === option.id ? { background: 'rgba(255,106,0,0.15)', color: '#FF6A00' } : { color: '#111111' }}
+              >
+                <span>{option.name}</span>
+              </button>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Price range */}
@@ -131,7 +195,16 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
       {/* Header */}
       <div className="px-4 lg:px-8 py-8 max-w-7xl mx-auto">
         <div className="badge mb-2" style={{ color: '#FF6A00' }}>SHOP</div>
-        <h1 className="text-4xl font-bold text-[#111111] mb-6">All Electronics</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-4xl font-bold text-[#111111]">
+            {selectedCategory === 'all' ? 'All Electronics' : `Showing: ${categoryLabel}`}
+          </h1>
+          {selectedCategory !== 'all' && (
+            <button type="button" onClick={() => selectCategory('')} className="btn-ghost rounded-lg px-4 py-2 text-sm font-semibold">
+              Clear filter / View all products
+            </button>
+          )}
+        </div>
 
         {/* Search + Sort bar */}
         <div className="flex gap-3 flex-wrap">
@@ -222,9 +295,16 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-24" style={{ color: '#0B5B24' }}>
-              <div className="text-5xl mb-4"></div>
-              <div className="text-lg font-medium text-[#111111] mb-2">No products found</div>
-              <div className="text-sm">Try adjusting your filters or search query</div>
+              <div className="text-lg font-medium text-[#111111] mb-2">
+                {selectedCategory !== 'all' && categoryProducts.length === 0 ? 'No products in this category yet' : 'No products found'}
+              </div>
+              {selectedCategory !== 'all' && categoryProducts.length === 0 ? (
+                <button type="button" onClick={() => selectCategory('')} className="btn-gold mt-4 rounded-xl px-5 py-2.5 font-semibold">
+                  View all products
+                </button>
+              ) : (
+                <div className="text-sm">Try adjusting your filters or search query</div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

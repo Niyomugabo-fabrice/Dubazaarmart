@@ -9,42 +9,18 @@ interface Props {
 }
 
 export default function ReceiveCompanyOrderModal({ po, isOpen, onClose, onStockAdded }: Props) {
-  if (!isOpen || !po) return null
-
-  // Track quantities to receive for each item
-  const [receivedInputs, setReceivedInputs] = useState<Record<string, number>>(() => {
-    const init: Record<string, number> = {}
-    for (const it of po.items) {
-      const remaining = it.quantityOrdered - (it.quantityReceived || 0)
-      init[it.id] = Math.max(0, remaining)
-    }
-    return init
-  })
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  function updateQty(itemId: string, val: number, max: number) {
-    const safe = Math.min(Math.max(0, val), max)
-    setReceivedInputs(prev => ({ ...prev, [itemId]: safe }))
-  }
+  if (!isOpen || !po) return null
+  const order = po
 
   async function handleConfirmReceive(e: React.FormEvent) {
     e.preventDefault()
 
-    const toReceive = Object.entries(receivedInputs)
-      .map(([itemId, quantityReceived]) => ({ itemId, quantityReceived }))
-      .filter(item => item.quantityReceived > 0)
-
-    if (toReceive.length === 0) {
-      setError('Please specify at least 1 product quantity that has physically arrived.')
-      return
-    }
-
     try {
       setLoading(true)
       setError(null)
-      const res = await receiveCompanyOrder(po!.id, toReceive)
+      const res = await receiveCompanyOrder(order.id)
       onStockAdded(res.po, res.message)
       onClose()
     } catch (err) {
@@ -77,7 +53,7 @@ export default function ReceiveCompanyOrderModal({ po, isOpen, onClose, onStockA
         </div>
 
         <p className="mt-3 text-xs text-gray-600 leading-relaxed">
-          Verify physical shipments. Enter only the quantities that have actually arrived at the DubazaarMart warehouse. Arrived quantities will immediately increment stock and log in Stock Movements.
+          Confirm the full shipment. Every remaining product quantity will be added to stock and logged together in Stock Movement History.
         </p>
 
         <form onSubmit={handleConfirmReceive} className="mt-4 space-y-4">
@@ -85,7 +61,6 @@ export default function ReceiveCompanyOrderModal({ po, isOpen, onClose, onStockA
             {po.items.map(it => {
               const alreadyReceived = it.quantityReceived || 0
               const remaining = it.quantityOrdered - alreadyReceived
-              const currentInput = receivedInputs[it.id] ?? 0
 
               return (
                 <div key={it.id} className="p-3.5 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-between gap-4">
@@ -96,18 +71,7 @@ export default function ReceiveCompanyOrderModal({ po, isOpen, onClose, onStockA
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <label className="text-xs font-semibold text-gray-700">Received now:</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={remaining}
-                      disabled={remaining <= 0}
-                      value={currentInput}
-                      onChange={(e) => updateQty(it.id, parseInt(e.target.value) || 0, remaining)}
-                      className="w-20 px-2.5 py-1.5 rounded-lg border border-gray-300 text-center font-mono font-bold text-sm bg-white disabled:bg-gray-100 disabled:text-gray-400 focus:border-[#17D719]"
-                    />
-                  </div>
+                  <div className="flex-shrink-0 rounded-lg bg-green-50 px-3 py-2 text-sm font-black text-green-700">+{remaining}</div>
                 </div>
               )
             })}
@@ -133,7 +97,7 @@ export default function ReceiveCompanyOrderModal({ po, isOpen, onClose, onStockA
               disabled={loading}
               className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-[#17D719] hover:brightness-110 shadow-sm"
             >
-              {loading ? 'Adding to Stock...' : 'Confirm & Add to Stock'}
+              {loading ? 'Marking as Received...' : 'Mark as Received'}
             </button>
           </div>
         </form>

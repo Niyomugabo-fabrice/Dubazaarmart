@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import type { ProcurementRepository, UpdateCompanyOrderInput } from '../domain/procurement.repository'
-import { PROCUREMENT_REPOSITORY, PurchaseOrderUpdateError } from '../domain/procurement.repository'
+import { PROCUREMENT_REPOSITORY, PurchaseOrderAlreadyReceivedError, PurchaseOrderUpdateError } from '../domain/procurement.repository'
 import type { CompanyOrderEntity } from '../infrastructure/persistence/typeorm/company-order.entity'
 
 @Injectable()
@@ -19,15 +19,18 @@ export class ProcurementService {
     }
     const arrival = new Date(expectedArrival)
     if (Number.isNaN(arrival.getTime())) throw new BadRequestException('Expected arrival date is invalid.')
+    const seenProducts = new Set<string>()
     const normalizedItems = items.map((item: any) => {
-      const unitPrice = Number(item.unitPrice || 0)
-      const quantityOrdered = Number(item.quantityOrdered || 1)
-      if (!item.productName || !Number.isFinite(unitPrice) || unitPrice < 0 || !Number.isInteger(quantityOrdered) || quantityOrdered <= 0) {
-        throw new BadRequestException('Each purchase item needs a name, non-negative price, and positive whole quantity.')
+      const productId = typeof item.productId === 'string' ? item.productId.trim() : ''
+      const unitPrice = Number(item.unitPrice)
+      const quantityOrdered = Number(item.quantityOrdered)
+      if (!productId || !Number.isFinite(unitPrice) || unitPrice <= 0 || !Number.isInteger(quantityOrdered) || quantityOrdered <= 0) {
+        throw new BadRequestException('Each purchase item needs a product, positive unit cost, and positive whole quantity.')
       }
+      if (seenProducts.has(productId)) throw new BadRequestException('A product can only appear once on a purchase order.')
+      seenProducts.add(productId)
       return {
-        productName: String(item.productName),
-        category: String(item.category || 'electronics'),
+        productId,
         unitPrice,
         quantityOrdered,
         totalPrice: unitPrice * quantityOrdered,
@@ -40,18 +43,24 @@ export class ProcurementService {
       throw new BadRequestException('Shipping costs and other charges must be non-negative numbers.')
     }
     const poNumber = `PO-${Date.now().toString().slice(-6)}`
-    const companyOrder = await this.procurement.create({
-      poNumber,
-      supplierName: String(supplierName),
-      supplierContact: String(body.supplierContact || ''),
-      shippingCompany: String(body.shippingCompany || ''),
-      expectedArrival: arrival,
-      shippingCost,
-      otherCharges,
-      totalAmount: itemsTotal + shippingCost + otherCharges,
-      notes: String(body.notes || ''),
-      items: normalizedItems,
-    })
+    let companyOrder: CompanyOrderEntity
+    try {
+      companyOrder = await this.procurement.create({
+        poNumber,
+        supplierName: String(supplierName),
+        supplierContact: String(body.supplierContact || ''),
+        shippingCompany: String(body.shippingCompany || ''),
+        expectedArrival: arrival,
+        shippingCost,
+        otherCharges,
+        totalAmount: itemsTotal + shippingCost + otherCharges,
+        notes: String(body.notes || ''),
+        items: normalizedItems,
+      })
+    } catch (error) {
+      if (error instanceof PurchaseOrderUpdateError) throw new BadRequestException(error.message)
+      throw error
+    }
     return { success: true, companyOrder: serializeCompanyOrder(companyOrder) }
   }
 
@@ -87,19 +96,9 @@ export class ProcurementService {
     return { success: true, message: 'Company order archived' }
   }
 
-  async receive(id: string, body: Record<string, any>) {
-    if (!Array.isArray(body.receivedItems) || body.receivedItems.length === 0) {
-      throw new BadRequestException('receivedItems array is required')
-    }
-    const receivedItems = body.receivedItems.map((item: any) => ({
-      itemId: String(item.itemId || ''),
-      quantityReceived: Number(item.quantityReceived || 0),
-    }))
-    if (receivedItems.some((item) => !item.itemId || !Number.isInteger(item.quantityReceived) || item.quantityReceived < 0)) {
-      throw new BadRequestException('Received item quantities must be non-negative whole numbers.')
-    }
+  async receive(id: string) {
     try {
-      const result = await this.procurement.receive(id, receivedItems)
+      const result = await this.procurement.receive(id)
       if (!result) throw new NotFoundException('Company order not found')
       return {
         success: true,
@@ -108,6 +107,8 @@ export class ProcurementService {
         message: `Successfully received ${result.addedCount} units into stock.`,
       }
     } catch (error) {
+      if (error instanceof PurchaseOrderAlreadyReceivedError) throw new BadRequestException(error.message)
+      if (error instanceof PurchaseOrderUpdateError) throw new BadRequestException(error.message)
       if (error instanceof Error && error.message.startsWith('Received quantity exceeds')) {
         throw new BadRequestException(error.message)
       }
@@ -155,17 +156,19 @@ function normalizeUpdateItems(value: unknown): NonNullable<UpdateCompanyOrderInp
     throw new BadRequestException('At least one purchase order item is required.')
   }
   const seenIds = new Set<string>()
+  const seenProducts = new Set<string>()
   return value.map((item: unknown) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new BadRequestException('Each purchase order item must be an object.')
     }
     const input = item as Record<string, unknown>
-    const productName = requireText(input.productName, 'Product name')
-    const category = input.category === undefined ? 'electronics' : requireText(input.category, 'Category', true)
+    const productId = requireText(input.productId, 'Product')
+    if (seenProducts.has(productId)) throw new BadRequestException('A product can only appear once on a purchase order.')
+    seenProducts.add(productId)
     const unitPrice = parseNonNegativeNumber(input.unitPrice, 'Unit price')
     const quantityOrdered = Number(input.quantityOrdered)
-    if (!Number.isInteger(quantityOrdered) || quantityOrdered <= 0) {
-      throw new BadRequestException('Item quantity must be a positive whole number.')
+    if (unitPrice <= 0 || !Number.isInteger(quantityOrdered) || quantityOrdered <= 0) {
+      throw new BadRequestException('Each item requires a positive unit cost and quantity.')
     }
     let id: string | undefined
     if (input.id !== undefined) {
@@ -175,7 +178,7 @@ function normalizeUpdateItems(value: unknown): NonNullable<UpdateCompanyOrderInp
       id = input.id
       seenIds.add(id)
     }
-    return { id, productName, category, unitPrice, quantityOrdered }
+    return { id, productId, unitPrice, quantityOrdered }
   })
 }
 
@@ -197,6 +200,7 @@ function serializeCompanyOrder(row: CompanyOrderEntity) {
     notes: row.notes || '',
     items: (row.items ?? []).map((item) => ({
       id: String(item.id),
+      productId: item.productId,
       productName: item.productName,
       category: item.category,
       unitPrice: Number(item.unitPrice),

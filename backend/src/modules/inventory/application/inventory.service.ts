@@ -17,9 +17,9 @@ export class InventoryService {
       const quantity = Number(row.quantity || 0)
       const targetStock = Number(row.expectedFullStock || 20)
       const minStock = Number(row.minStock || 5)
-      const unitCost = Number(row.unitCost || 0)
       const sellingPrice = Number(row.price || 0)
-      const totalValue = quantity * (unitCost > 0 ? unitCost : sellingPrice)
+      const unitCost = Number(row.unitCost || 0)
+      const totalValue = quantity * sellingPrice
       totalStockUnits += quantity
       totalInventoryValue += totalValue
       let statusColor: 'RED' | 'YELLOW' | 'GREEN' = 'GREEN'

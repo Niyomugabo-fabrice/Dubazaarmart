@@ -49,16 +49,7 @@ export default function AnnouncementBanner() {
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
             {announcements.map((announcement) => {
-              const content = (
-                <>
-                  <span className="rounded bg-black/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
-                    Announcement
-                  </span>
-                  <span className="truncate font-bold">{announcement.title}</span>
-                  <span className="hidden truncate font-normal sm:inline">{announcement.message}</span>
-                  {announcement.link && <span className="flex-shrink-0 underline">View →</span>}
-                </>
-              )
+              const content = <span className="truncate font-bold">{announcement.title}</span>
 
               return (
                 <div key={announcement.id} className="flex min-w-full items-center justify-center gap-2 text-center">

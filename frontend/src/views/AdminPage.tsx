@@ -27,6 +27,7 @@ import {
   type WebsiteSettings,
 } from "../lib/dashboardApi"
 import SiteLogo from "../components/SiteLogo"
+import LiveCountdown from "../components/LiveCountdown"
 import { useAdminAuth } from "../store/adminAuthStore"
 import { useProducts, fetchProductsFromBackend } from "../store/productsStore"
 import AdminLoginView from "../components/AdminLoginView"
@@ -1709,6 +1710,13 @@ export default function AdminPage() {
                             timeStyle: "short",
                             timeZone: "Africa/Kigali",
                           }).format(new Date(order.createdAt))}
+                          <div className="mt-1">
+                            <LiveCountdown
+                              targetDate={order.requestedDeliveryTime || new Date(new Date(order.createdAt).getTime() + 48 * 3600 * 1000).toISOString()}
+                              isCompleted={order.status === "DELIVERED" || order.status === "CANCELLED"}
+                              completedText={order.status === "DELIVERED" ? "Delivered" : "Cancelled"}
+                            />
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-right font-bold text-slate-900">{formatPrice(order.total)}</td>
                         <td className="px-4 py-3">
@@ -1998,6 +2006,14 @@ export default function AdminPage() {
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Date</div>
                         <div className="text-sm text-slate-700">{formattedPlacedDate}</div>
+                        <div className="mt-1">
+                          <LiveCountdown
+                            targetDate={po.expectedArrival}
+                            isCompleted={po.status === "RECEIVED" || po.status === "CANCELLED"}
+                            completedText={po.status === "RECEIVED" ? "Received" : "Cancelled"}
+                            variant="company"
+                          />
+                        </div>
                       </div>
                       <div>
                         <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total</div>

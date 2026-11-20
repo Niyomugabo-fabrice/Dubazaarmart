@@ -16,6 +16,7 @@ export class HealthController {
       return {
         status: 'ok',
         service: 'DubazaarMart API',
+        commit: process.env.RENDER_GIT_COMMIT ?? null,
         database: 'PostgreSQL (Connected)',
         dbTime: rows[0]?.db_time,
         timestamp: new Date().toISOString(),

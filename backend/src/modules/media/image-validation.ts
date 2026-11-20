@@ -11,6 +11,12 @@ export const CATEGORY_IMAGE_MIME_TYPES = new Set([
   'image/webp',
 ])
 
+export const HERO_SLIDE_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+])
+
 export function detectImageMimeType(buffer: Buffer): string | null {
   if (
     buffer.length >= 3 &&

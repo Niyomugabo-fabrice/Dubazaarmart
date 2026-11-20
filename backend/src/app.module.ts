@@ -13,6 +13,7 @@ import { MediaModule } from './modules/media/media.module'
 import { AuditModule } from './modules/audit/audit.module'
 import { TestimonialsModule } from './modules/testimonials/testimonials.module'
 import { CategoriesModule } from './modules/categories/categories.module'
+import { HeroesModule } from './modules/heroes/heroes.module'
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CategoriesModule } from './modules/categories/categories.module'
     AuditModule,
     TestimonialsModule,
     CategoriesModule,
+    HeroesModule,
   ],
 })
 export class AppModule {}

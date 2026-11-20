@@ -114,6 +114,34 @@ body {
   background: linear-gradient(to right, transparent, #0874F9, #FF6A00, #17D719, transparent);
 }
 
+@keyframes categoryMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.category-marquee-track {
+  animation: categoryMarquee 60s linear infinite;
+}
+
+.category-marquee-track:hover,
+.category-marquee-track:focus-within {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-marquee-track {
+    animation: none !important;
+  }
+
+  .category-marquee-duplicate {
+    display: none;
+  }
+
+  .category-marquee-viewport {
+    overflow-x: auto;
+  }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }

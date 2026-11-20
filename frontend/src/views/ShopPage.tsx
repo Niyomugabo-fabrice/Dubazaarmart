@@ -127,7 +127,7 @@ export default function ShopPage({ initialCategory, initialQuery = '' }: Props =
   )
 
   return (
-    <div className="min-h-screen pt-20" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen pt-6" style={{ background: '#FFFFFF' }}>
       {/* Header */}
       <div className="px-4 lg:px-8 py-8 max-w-7xl mx-auto">
         <div className="badge mb-2" style={{ color: '#FF6A00' }}>SHOP</div>

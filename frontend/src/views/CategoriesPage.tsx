@@ -9,7 +9,7 @@ export default function CategoriesPage() {
   const { categoryImages, error } = useCategoryImages()
 
   return (
-    <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen pt-6 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="badge mb-2 pt-8" style={{ color: '#FF6A00' }}>BROWSE</div>
         <h1 className="text-4xl font-bold text-[#111111] mb-3">All Categories</h1>

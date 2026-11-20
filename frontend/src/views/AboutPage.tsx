@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen pt-6 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-4xl mx-auto px-4 lg:px-8">
         <div className="badge mb-2 pt-8" style={{ color: '#FF6A00' }}>OUR STORY</div>
         <h1 className="text-4xl font-bold text-[#111111] mb-6">About Dubazaarmart</h1>

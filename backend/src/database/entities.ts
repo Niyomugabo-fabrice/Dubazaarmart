@@ -10,6 +10,7 @@ import { WebsiteSettingsEntity } from '../modules/settings/infrastructure/persis
 import { AnnouncementEntity } from '../modules/settings/infrastructure/persistence/typeorm/announcement.entity'
 import { TestimonialEntity } from '../modules/testimonials/infrastructure/persistence/typeorm/testimonial.entity'
 import { CategoryImageEntity } from '../modules/categories/infrastructure/persistence/typeorm/category-image.entity'
+import { HeroSlideEntity } from '../modules/heroes/infrastructure/persistence/typeorm/hero-slide.entity'
 
 export const databaseEntities = [
   UserEntity,
@@ -24,4 +25,5 @@ export const databaseEntities = [
   AnnouncementEntity,
   TestimonialEntity,
   CategoryImageEntity,
+  HeroSlideEntity,
 ]

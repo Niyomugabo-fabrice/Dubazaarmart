@@ -1,6 +1,7 @@
 "use client"
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState, useEffect, useMemo } from 'react'
 import { categories } from '../data/products'
 import ProductCard from '../components/ProductCard'
@@ -11,12 +12,21 @@ import { swaggerUrl } from '../services/api-client'
 import { useAppNavigation } from '../lib/navigation'
 import { fetchPublicTestimonials, type Testimonial } from '../lib/testimonialsApi'
 import { useCategoryImages } from '../store/categoryImagesStore'
+import { fetchActiveHeroSlides, type HeroSlide } from '../lib/heroSlidesApi'
 
 const HERO_LINES = [
   'Premium Electronics Direct from Dubai Wholesale',
   'Unbeatable Dubai Prices · Save up to 30%',
   'Fast & Secure Nationwide Delivery Across Rwanda',
 ]
+const HERO_ROTATION_INTERVAL_MS = 5000
+const HERO_FALLBACK_IMAGE = '/hero-fallback.svg'
+const DEFAULT_HERO_HEADING = 'Premium Electronics. Dubai Wholesale Prices.'
+const DEFAULT_HERO_SUBHEADING = 'Discover quality electronics sourced directly from Dubai and delivered to you at competitive wholesale prices anywhere in Rwanda.'
+
+function isExternalLink(link: string): boolean {
+  return /^https?:\/\//i.test(link)
+}
 
 function RotatingHeroMessage() {
   const [activeLine, setActiveLine] = useState(0)
@@ -58,6 +68,33 @@ export default function HomePage() {
   const [subscribed, setSubscribed] = useState(false)
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [testimonialError, setTestimonialError] = useState(false)
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([])
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    void fetchActiveHeroSlides()
+      .then((slides) => {
+        if (active) setHeroSlides(slides)
+      })
+      .catch((loadError) => {
+        if (!active) return
+        console.error('Hero slides could not be loaded. Showing the default hero.', loadError)
+        setHeroSlides([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (heroSlides.length <= 1 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const timer = setInterval(() => {
+      setCurrentHeroSlide((index) => (index + 1) % heroSlides.length)
+    }, HERO_ROTATION_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [heroSlides.length])
 
   useEffect(() => {
     let active = true
@@ -93,102 +130,174 @@ export default function HomePage() {
     { icon: '↩️', title: 'Easy Returns', desc: '14-day hassle-free returns on all eligible products.' },
     { icon: '💬', title: '24/7 Support', desc: 'Our team is always available via WhatsApp and email.' },
   ]
+  const activeHeroSlide = heroSlides[currentHeroSlide]
+
+  function changeHeroSlide(direction: -1 | 1) {
+    setCurrentHeroSlide((index) => (index + direction + heroSlides.length) % heroSlides.length)
+  }
+
+  function renderHeroButton(slide: HeroSlide, isCurrentSlide: boolean) {
+    const text = slide.buttonText?.trim()
+    if (!text) return null
+    const link = slide.buttonLink?.trim() || '/shop'
+    const className = 'btn-gold inline-flex rounded-xl px-8 py-4 text-base font-bold'
+    return isExternalLink(link) ? (
+      <a href={link} target="_blank" rel="noopener noreferrer" tabIndex={isCurrentSlide ? undefined : -1} className={className}>
+        {text}
+      </a>
+    ) : (
+      <Link href={link} tabIndex={isCurrentSlide ? undefined : -1} className={className}>
+        {text}
+      </Link>
+    )
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#FFFFFF' }}>
       {/* Hero */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=1600&h=900&fit=crop&auto=format"
-            alt=""
-            fill
-            sizes="100vw"
-            unoptimized
-            loading="lazy"
-            className="object-cover opacity-20"
-          />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FFFFFF 50%, rgba(255,247,232,0.88) 100%)' }} />
-          {/* Gold radial */}
-          <div className="absolute top-1/2 right-1/3 w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #FF6A00 0%, transparent 70%)', transform: 'translate(50%, -50%)' }} />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 pt-20 pb-16">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full mb-5 text-xs font-semibold" style={{ background: 'rgba(255,106,0,0.1)', border: '1px solid rgba(255,106,0,0.3)', color: '#FF6A00' }}>
-                <span className="w-2 h-2 rounded-full bg-[#17D719] animate-pulse" />
-                Dubai-sourced · Rwanda-delivered
-              </div>
-
-              {/* Reduced size, highly attractive Hero Headline */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.18] mb-4 text-[#111111]">
-                <span>Premium</span>{' '}
-                <span className="bg-gradient-to-r from-[#FF6A00] via-[#FFB800] to-[#17D719] bg-clip-text text-transparent">
-                  Electronics.
-                </span>
-                <br />
-                <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#111111]/90">
-                  Dubai Wholesale Prices.
-                </span>
-              </h1>
-
-              <RotatingHeroMessage />
-
-              <p className="text-base sm:text-lg mb-8 max-w-lg leading-relaxed text-[#111111]/80">
-                Discover quality electronics sourced directly from Dubai and delivered to you at competitive wholesale prices anywhere in Rwanda.
-              </p>
-
-              <div className="flex flex-wrap gap-4">
-                <button onClick={() => navigate('shop')} className="btn-gold px-8 py-4 rounded-xl text-base font-bold">
-                  Shop Now →
-                </button>
-                <button onClick={() => navigate('categories')} className="btn-ghost px-8 py-4 rounded-xl text-base font-bold">
-                  Browse Categories
-                </button>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-6 mt-14 pt-8" style={{ borderTop: '1px solid #F1FFF0' }}>
-                {[
-                  { val: '2,500+', label: 'Products' },
-                  { val: '18,000+', label: 'Customers' },
-                  { val: '4.9★', label: 'Rating' },
-                ].map(stat => (
-                  <div key={stat.label}>
-                    <div className="text-2xl font-bold gold-text">{stat.val}</div>
-                    <div className="text-sm mt-0.5" style={{ color: '#0B5B24' }}>{stat.label}</div>
+      <section
+        className="relative overflow-hidden bg-white"
+        role="region"
+        aria-label="Homepage hero"
+        aria-roledescription={heroSlides.length > 1 ? 'carousel' : undefined}
+      >
+        <div className="pointer-events-none absolute -right-32 -top-36 h-80 w-80 rounded-full bg-[#0874F9]/5" aria-hidden="true" />
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-10 sm:py-14 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:px-8 lg:py-16">
+          <div className="relative z-10 min-w-0">
+            {activeHeroSlide ? (
+              <div
+                className="max-w-xl"
+                aria-live="off"
+                aria-roledescription="slide"
+                aria-label={`Slide ${currentHeroSlide + 1} of ${heroSlides.length}`}
+              >
+                {activeHeroSlide.heading && (
+                  <h1 className="logo-gradient-text mb-4 whitespace-pre-line text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                    {activeHeroSlide.heading}
+                  </h1>
+                )}
+                {activeHeroSlide.subheading && (
+                  <p className="mb-8 max-w-xl border-l-2 border-[#FF6A00] pl-4 whitespace-pre-line text-base leading-relaxed text-slate-600 sm:text-lg">
+                    {activeHeroSlide.subheading}
+                  </p>
+                )}
+                {activeHeroSlide.buttonText && (
+                  <div className="flex flex-wrap gap-4">
+                    {renderHeroButton(activeHeroSlide, true)}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="max-w-xl">
+                <div className="mb-5 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold" style={{ background: 'rgba(255,106,0,0.1)', borderColor: 'rgba(255,106,0,0.3)', color: '#FF6A00' }}>
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-[#17D719]" />
+                  Dubai-sourced · Rwanda-delivered
+                </div>
+                <h1 className="logo-gradient-text mb-4 whitespace-pre-line text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+                  {DEFAULT_HERO_HEADING}
+                </h1>
+                <RotatingHeroMessage />
+                <p className="mb-8 max-w-xl border-l-2 border-[#FF6A00] pl-4 text-base leading-relaxed text-slate-600 sm:text-lg">
+                  {DEFAULT_HERO_SUBHEADING}
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <button onClick={() => navigate('shop')} className="btn-gold rounded-xl px-8 py-4 text-base font-bold">
+                    Shop Now →
+                  </button>
+                  <button onClick={() => navigate('categories')} className="btn-ghost rounded-xl px-8 py-4 text-base font-bold">
+                    Browse Categories
+                  </button>
+                </div>
+                <div className="mt-8 grid max-w-lg grid-cols-3 gap-4 border-t border-[#F1FFF0] pt-5 sm:gap-6">
+                  {[
+                    { val: '2,500+', label: 'Products' },
+                    { val: '18,000+', label: 'Customers' },
+                    { val: '4.9★', label: 'Rating' },
+                  ].map((stat) => (
+                    <div key={stat.label}>
+                      <div className="text-xl font-bold gold-text sm:text-2xl">{stat.val}</div>
+                      <div className="mt-0.5 text-xs text-[#0B5B24] sm:text-sm">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-            {/* Hero product showcase */}
-            <div className="hidden lg:flex justify-center relative">
-              <div className="relative">
-                <div className="relative w-80 h-80 rounded-3xl overflow-hidden" style={{ border: '1px solid rgba(255,106,0,0.2)', background: '#FFF7E8' }}>
-                  <Image
-                    src="https://images.unsplash.com/photo-1675315936697-1bd8e939948e?w=640&h=640&fit=crop&auto=format"
-                    alt="Samsung Galaxy S24 Ultra"
-                    fill
-                    sizes="320px"
-                    unoptimized
-                    loading="lazy"
-                    className="object-cover"
-                  />
-                </div>
-                {/* Floating card */}
-                <div className="absolute -bottom-4 -left-8 px-4 py-3 rounded-2xl" style={{ background: '#FFF7E8', border: '1px solid #FFB800', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-                  <div className="text-xs mb-0.5" style={{ color: '#FF6A00' }}>Samsung Galaxy S24 Ultra</div>
-                  <div className="font-bold text-[#111111]">RWF 1,450,000</div>
-                  <div className="text-xs" style={{ color: '#0B5B24', textDecoration: 'line-through' }}>RWF 1,800,000</div>
-                </div>
-                <div className="absolute -top-4 -right-4 px-3 py-2 rounded-xl badge" style={{ background: '#FF6A00', color: '#000' }}>
-                  Save 19%
+          <div className="relative z-10 min-w-0">
+            <div className="mx-auto w-full max-w-[30rem]">
+              <div className="rounded-[1.4rem] bg-gradient-to-r from-[#0874F9] via-[#FF6A00] to-[#17D719] p-[3px]">
+                <div className="relative aspect-[16/9] overflow-hidden rounded-[1.2rem] bg-white">
+                  {heroSlides.length > 0 ? (
+                    heroSlides.map((slide, index) => (
+                      <div
+                        key={slide.id}
+                        className={`absolute inset-0 transition-opacity duration-700 ease-out motion-reduce:transition-none ${
+                          index === currentHeroSlide ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        style={{ opacity: index === currentHeroSlide ? 1 : 0 }}
+                        aria-hidden="true"
+                      >
+                        <Image
+                          src={slide.imageUrl}
+                          alt=""
+                          fill
+                          sizes="(min-width: 1024px) 55vw, 100vw"
+                          unoptimized
+                          loading={index === currentHeroSlide ? 'eager' : 'lazy'}
+                          className="object-cover"
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    <Image
+                      src={HERO_FALLBACK_IMAGE}
+                      alt=""
+                      fill
+                      sizes="(min-width: 1024px) 55vw, 100vw"
+                      loading="eager"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
               </div>
+              {heroSlides.length > 1 && (
+                <div className="mt-3 flex items-center justify-between gap-3 text-[#111111]">
+                  <button
+                    type="button"
+                    onClick={() => changeHeroSlide(-1)}
+                    aria-label="Previous hero slide"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-[#0874F9] transition hover:bg-[#0874F9]/10"
+                  >
+                    ‹
+                  </button>
+                  <div className="flex items-center justify-center gap-2" role="tablist" aria-label="Hero slides">
+                    {heroSlides.map((slide, index) => (
+                      <button
+                        key={slide.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={index === currentHeroSlide}
+                        aria-label={`Show hero slide ${index + 1} of ${heroSlides.length}`}
+                        onClick={() => setCurrentHeroSlide(index)}
+                        className={`h-2 rounded-full transition-all ${
+                          index === currentHeroSlide
+                            ? 'w-7 bg-gradient-to-r from-[#0874F9] via-[#FF6A00] to-[#17D719]'
+                            : 'w-2 bg-slate-300 hover:bg-slate-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => changeHeroSlide(1)}
+                    aria-label="Next hero slide"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-[#0874F9] transition hover:bg-[#0874F9]/10"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -206,32 +315,40 @@ export default function HomePage() {
               All Categories →
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            {categories.slice(0, 7).map((cat) => {
-              const imageUrl = categoryImages[cat.id]
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => navigate('shop')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl card-hover text-center"
-                  style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
-                >
-                  <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-gray-200">
-                    {imageUrl ? (
-                      <Image
-                        src={imageUrl}
-                        alt=""
-                        width={96}
-                        height={96}
-                        unoptimized
-                        className="h-24 w-24 object-cover"
-                      />
-                    ) : null}
-                  </span>
-                  <span className="text-xs font-medium" style={{ color: '#111111' }}>{cat.name}</span>
-                </button>
-              )
-            })}
+          <div className="category-marquee-viewport overflow-hidden" role="region" aria-roledescription="carousel" aria-label="Shop by category">
+            <div className="category-marquee-track flex w-max">
+              {[...categories, ...categories].map((cat, index) => {
+                const imageUrl = categoryImages[cat.id]
+                const isDuplicate = index >= categories.length
+                return (
+                  <button
+                    key={`${cat.id}-${index}`}
+                    type="button"
+                    aria-hidden={isDuplicate}
+                    tabIndex={isDuplicate ? -1 : 0}
+                    onClick={() => navigate('shop')}
+                    className={`mr-4 flex w-36 flex-shrink-0 flex-col items-center gap-2 rounded-2xl p-3 text-center card-hover sm:w-40 ${
+                      isDuplicate ? 'category-marquee-duplicate' : ''
+                    }`}
+                    style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
+                  >
+                    <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-gray-200">
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt=""
+                          width={96}
+                          height={96}
+                          unoptimized
+                          className="h-24 w-24 object-cover"
+                        />
+                      ) : null}
+                    </span>
+                    <span className="text-xs font-medium" style={{ color: '#111111' }}>{cat.name}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
           {categoryImagesError && (
             <p role="alert" className="mt-4 text-center text-xs text-[#0B5B24]">

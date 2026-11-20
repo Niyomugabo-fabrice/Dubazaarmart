@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { Product } from '../data/products'
 import { categories } from '../data/products'
-import ImageUploader from './ImageUploader'
+import ProductImagesField from './ProductImagesField'
 import { addProductToBackend } from '../store/productsStore'
+import { parseProductSpecs } from '../lib/product-specs'
 
 interface Props {
   isOpen: boolean
@@ -10,39 +11,37 @@ interface Props {
   onProductAdded: (newProd: Product) => void
 }
 
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&h=600&fit=crop&auto=format'
-
 export default function AddProductModal({ isOpen, onClose, onProductAdded }: Props) {
   const [name, setName] = useState('')
-  const [category, setCategory] = useState('smartphones')
-  const [brand, setBrand] = useState('Samsung')
+  const [category, setCategory] = useState('')
+  const [brand, setBrand] = useState('')
   const [price, setPrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
-  const [quantity, setQuantity] = useState('15')
+  const [quantity, setQuantity] = useState('')
   const [sku, setSku] = useState('')
-  const [badge, setBadge] = useState('New Arrival')
-  const [image, setImage] = useState('')
+  const [badge, setBadge] = useState('')
+  const [images, setImages] = useState<string[]>([])
   const [description, setDescription] = useState('')
-  const [featured, setFeatured] = useState(true)
+  const [specsText, setSpecsText] = useState('')
+  const [featured, setFeatured] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [uploaderKey, setUploaderKey] = useState(0)
 
   useEffect(() => {
     if (!isOpen) return
     setName('')
-    setCategory('smartphones')
-    setBrand('Samsung')
+    setCategory('')
+    setBrand('')
     setPrice('')
     setOriginalPrice('')
-    setQuantity('15')
+    setQuantity('')
     setSku('')
-    setBadge('New Arrival')
-    setImage('')
+    setBadge('')
+    setImages([])
     setDescription('')
-    setFeatured(true)
+    setSpecsText('')
+    setFeatured(false)
     setError(null)
-    setUploaderKey((key) => key + 1)
   }, [isOpen])
 
   if (!isOpen) return null
@@ -63,23 +62,37 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
       setError('Please provide a valid price in RWF.')
       return
     }
+    if (!category) {
+      setError('Please select a product category.')
+      return
+    }
+
+    let specs: Record<string, string>
+    try {
+      specs = parseProductSpecs(specsText)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Please check the product specifications.')
+      return
+    }
 
     setSubmitting(true)
 
+    const productImages = images.filter(Boolean)
     const generatedSku = sku.trim() || `DUB-${category.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
 
     const payload: Partial<Product> = {
       name: name.trim(),
       category,
-      brand: brand.trim() || 'Dubai Sourced',
+      brand: brand.trim(),
       price: numPrice,
       originalPrice: numOrig >= numPrice ? numOrig : numPrice,
-      quantity: isNaN(numQty) || numQty < 0 ? 10 : numQty,
+      quantity: isNaN(numQty) || numQty < 0 ? 0 : numQty,
       sku: generatedSku,
-      badge: badge === 'None' ? undefined : badge,
-      image: image.trim() || DEFAULT_IMAGE,
-      images: [image.trim() || DEFAULT_IMAGE],
-      description: description.trim() || `${name.trim()} - authentic Dubai-sourced product with full warranty.`,
+      badge: badge.trim() || undefined,
+      image: productImages[0] || '',
+      images: productImages,
+      description: description.trim(),
+      specs,
       featured,
       active: true,
       condition: 'New',
@@ -94,12 +107,41 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
       if (!newProduct) throw new Error('Failed to save product')
 
       onProductAdded(newProduct)
+      setName('')
+      setCategory('')
+      setBrand('')
+      setPrice('')
+      setOriginalPrice('')
+      setQuantity('')
+      setSku('')
+      setBadge('')
+      setImages([])
+      setDescription('')
+      setSpecsText('')
+      setFeatured(false)
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error adding product')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleClose() {
+    setName('')
+    setCategory('')
+    setBrand('')
+    setPrice('')
+    setOriginalPrice('')
+    setQuantity('')
+    setSku('')
+    setBadge('')
+    setImages([])
+    setDescription('')
+    setSpecsText('')
+    setFeatured(false)
+    setError(null)
+    onClose()
   }
 
   return (
@@ -119,7 +161,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 rounded-full flex items-center justify-center text-black/60 hover:text-black hover:bg-black/5 text-xl font-bold"
           >
             ×
@@ -145,10 +187,10 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
               <input
                 type="text"
                 required
-                placeholder="e.g. Sony PlayStation 5 Slim 1TB"
+                placeholder="Enter product name"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
@@ -161,8 +203,14 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
                 value={category}
                 onChange={e => setCategory(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl text-sm"
-                style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
+                style={{
+                  background: '#FFF7E8',
+                  border: '1px solid #FFB800',
+                  color: category ? '#111111' : '#9CA3AF',
+                  opacity: category ? 1 : 0.5,
+                }}
               >
+                <option value="">Select a category</option>
                 {categories.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -179,39 +227,40 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
               </label>
               <input
                 type="text"
-                placeholder="e.g. Sony"
+                placeholder="Enter brand"
                 value={brand}
                 onChange={e => setBrand(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1 text-[#111111]">
-                Selling Price (RWF) *
+                Price (RWF) *
               </label>
               <input
                 type="number"
                 required
-                placeholder="e.g. 780000"
+                placeholder="e.g. 4999.99"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1 text-[#111111]">
-                Original Price (RWF)
+                Discount / Original Price (RWF)
               </label>
               <input
                 type="number"
-                placeholder="e.g. 920000"
+                min="0"
+                placeholder="e.g. 5999.99"
                 value={originalPrice}
                 onChange={e => setOriginalPrice(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
@@ -223,10 +272,10 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
               <input
                 type="number"
                 min="0"
-                placeholder="e.g. 15"
+                placeholder="Enter stock quantity"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
@@ -239,10 +288,10 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
               </label>
               <input
                 type="text"
-                placeholder="e.g. SNY-PS5S-1TB"
+                placeholder="Optional SKU"
                 value={sku}
                 onChange={e => setSku(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl text-sm"
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
@@ -255,9 +304,14 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
                 value={badge}
                 onChange={e => setBadge(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl text-sm"
-                style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
+                style={{
+                  background: '#FFF7E8',
+                  border: '1px solid #FFB800',
+                  color: badge ? '#111111' : '#9CA3AF',
+                  opacity: badge ? 1 : 0.5,
+                }}
               >
-                <option value="None">None</option>
+                <option value="">No badge</option>
                 <option value="New Arrival">New Arrival</option>
                 <option value="Best Seller">Best Seller</option>
                 <option value="Hot Deal">Hot Deal</option>
@@ -268,12 +322,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
             </div>
           </div>
 
-          <ImageUploader
-            key={uploaderKey}
-            value={image}
-            onChange={setImage}
-            label="Product Image (Upload Photo from Device)"
-          />
+          <ProductImagesField images={images} onChange={setImages} />
 
           <div>
             <label className="block text-xs font-semibold mb-1 text-[#111111]">
@@ -281,12 +330,27 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
             </label>
             <textarea
               rows={2}
-              placeholder="Product highlights, specifications, and warranty details..."
+              placeholder="Enter product description"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl text-sm resize-none"
+              className="w-full px-3.5 py-2.5 rounded-xl text-sm resize-none placeholder:text-gray-400 placeholder:opacity-50"
               style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold mb-1 text-[#111111]">
+              Specifications
+            </label>
+            <textarea
+              rows={3}
+              placeholder={'e.g. Color: Black\nStorage: 256 GB'}
+              value={specsText}
+              onChange={e => setSpecsText(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl text-sm resize-y placeholder:text-gray-400 placeholder:opacity-50"
+              style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
+            />
+            <p className="mt-1 text-[11px] text-gray-500">Enter one specification per line as “name: value”.</p>
           </div>
 
           <div className="flex items-center gap-2 pt-1">
@@ -305,7 +369,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
           <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: '#F1FFF0' }}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={submitting}
               className="px-5 py-2.5 rounded-xl text-xs font-semibold btn-ghost"
             >
@@ -322,7 +386,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
                   Saving Product...
                 </>
               ) : (
-                'Add Product to Store'
+                'Add Product'
               )}
             </button>
           </div>

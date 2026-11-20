@@ -66,6 +66,15 @@ export class ProductService {
     if (dto.name !== undefined) data.name = String(dto.name).trim()
     if (dto.price !== undefined) data.price = String(dto.price)
     if (dto.originalPrice !== undefined) data.originalPrice = String(dto.originalPrice)
+    if (dto.discount !== undefined) {
+      data.discount = Number(dto.discount)
+    } else if (dto.price !== undefined || dto.originalPrice !== undefined) {
+      const price = Number(dto.price ?? current.price)
+      const originalPrice = Number(dto.originalPrice ?? current.originalPrice ?? current.price)
+      data.discount = originalPrice > price
+        ? Math.round(((originalPrice - price) / originalPrice) * 100)
+        : 0
+    }
     if (dto.quantity !== undefined) data.quantity = Number(dto.quantity)
     if (dto.category !== undefined) data.category = String(dto.category).trim()
     if (dto.brand !== undefined) data.brand = String(dto.brand).trim()
@@ -73,6 +82,8 @@ export class ProductService {
     if (dto.image !== undefined) data.image = dto.image || null
     if (dto.images !== undefined) data.images = Array.isArray(dto.images) ? dto.images : []
     if (dto.active !== undefined) data.active = Boolean(dto.active)
+    if (dto.featured !== undefined) data.featured = Boolean(dto.featured)
+    if (dto.specs !== undefined) data.specs = dto.specs
     if (dto.badge !== undefined) data.badge = dto.badge || null
     if (Object.keys(data).length === 0) throw new BadRequestException('No fields provided for update')
     return { success: true, product: serializeProduct(await this.save({ ...current, ...data })) }

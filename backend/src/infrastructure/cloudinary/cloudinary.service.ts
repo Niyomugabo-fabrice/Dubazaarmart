@@ -26,7 +26,9 @@ export class CloudinaryService {
         ? [{ width: 300, height: 300, crop: 'limit' }, { quality: 'auto:good' }, { fetch_format: 'auto' }]
         : folder === 'categories'
           ? [{ width: 400, height: 400, crop: 'limit' }, { quality: 'auto:good' }, { fetch_format: 'auto' }]
-          : [{ quality: 'auto:good' }, { fetch_format: 'auto' }],
+          : folder === 'hero-slides'
+            ? [{ width: 1920, crop: 'limit' }, { quality: 'auto:good' }, { fetch_format: 'auto' }]
+            : [{ quality: 'auto:good' }, { fetch_format: 'auto' }],
     }
     if (filename) options.public_id = filename
     if (folder === 'categories') {

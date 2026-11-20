@@ -37,7 +37,7 @@ export default function ProductDetailPage({ product }: Props) {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen pt-6 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 py-6 text-sm" style={{ color: '#0B5B24' }}>

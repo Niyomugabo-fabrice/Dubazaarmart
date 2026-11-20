@@ -60,6 +60,9 @@ const TestimonialsPanel = dynamic(() => import("./admin/TestimonialsPanel"), {
 const CategoryImagesPanel = dynamic(() => import("./admin/CategoryImagesPanel"), {
   loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading categories…</div>,
 })
+const HeroSlidesPanel = dynamic(() => import("./admin/HeroSlidesPanel"), {
+  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading hero slides…</div>,
+})
 
 function DashboardIcon({ name }: { name: string }) {
   const common = {
@@ -266,7 +269,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const ORDERS_PAGE_SIZE = 10
 
-type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "inventory" | "announcements" | "testimonials" | "categories" | "settings" | "staff" | "audit"
+type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "inventory" | "announcements" | "testimonials" | "categories" | "heroSlides" | "settings" | "staff" | "audit"
 
 export default function AdminPage() {
   const { navigate } = useAppNavigation()
@@ -294,7 +297,7 @@ export default function AdminPage() {
   const [section, setSectionState] = useState<AdminSection>(() => {
     if (typeof window === "undefined") return "overview"
     const stored = sessionStorage.getItem("dubazaar_admin_section") as AdminSection
-    if (stored && ["overview", "orders", "companyOrders", "products", "inventory", "announcements", "testimonials", "categories", "settings", "staff", "audit"].includes(stored)) {
+    if (stored && ["overview", "orders", "companyOrders", "products", "inventory", "announcements", "testimonials", "categories", "heroSlides", "settings", "staff", "audit"].includes(stored)) {
       return stored
     }
     return "overview"
@@ -335,12 +338,13 @@ export default function AdminPage() {
       announcements: "announcements.view",
       testimonials: "testimonials.view",
       categories: "categories.view",
+      heroSlides: "heroSlides.view",
     }
     if (isManager || (section !== "settings" && section !== "staff" && section !== "audit" &&
       (!requiredPermissions[section] || hasPermission(requiredPermissions[section] as string)))) return
     const fallback: AdminSection = isManager
       ? "overview"
-      : (["overview", "orders", "products", "inventory", "companyOrders", "announcements", "testimonials", "categories"] as AdminSection[])
+      : (["overview", "orders", "products", "inventory", "companyOrders", "announcements", "testimonials", "categories", "heroSlides"] as AdminSection[])
         .find((candidate) => {
           const permission = requiredPermissions[candidate]
           return permission !== undefined && hasPermission(permission)
@@ -696,6 +700,7 @@ export default function AdminPage() {
     { id: "announcements", label: "Announcements", icon: "📣", permission: "announcements.view" },
     { id: "testimonials", label: "Testimonials", icon: "⭐", permission: "testimonials.view" },
     { id: "categories", label: "Categories", icon: "▦", permission: "categories.view" },
+    { id: "heroSlides", label: "Hero Section", icon: "🖼️", permission: "heroSlides.view" },
   ]
   if (isManager) {
     navItems.push(
@@ -2651,6 +2656,9 @@ export default function AdminPage() {
         )}
         {section === "testimonials" && <TestimonialsPanel />}
         {section === "categories" && <CategoryImagesPanel />}
+        {section === "heroSlides" && (
+          <HeroSlidesPanel canManage={isManager || admin?.role === "STAFF"} />
+        )}
         {section === "staff" && isManager && <StaffManagementPanel />}
         {section === "audit" && isManager && <AuditLogPanel />}
       </main>

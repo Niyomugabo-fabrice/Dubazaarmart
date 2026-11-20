@@ -20,6 +20,8 @@ export const STAFF_OPERATIONAL_PERMISSION_KEYS = [
   'testimonials.delete',
   'categories.view',
   'categories.manage',
+  'heroSlides.view',
+  'heroSlides.manage',
 ] as const
 
 export const STAFF_PERMISSION_KEYS = [

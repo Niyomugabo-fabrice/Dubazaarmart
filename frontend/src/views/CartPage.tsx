@@ -63,7 +63,7 @@ export default function CartPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen pt-20 flex items-center justify-center" style={{ background: '#FFFFFF' }}>
+      <div className="min-h-screen pt-6 flex items-center justify-center" style={{ background: '#FFFFFF' }}>
         <div className="text-center">
           <div className="text-7xl mb-6">🛒</div>
           <h2 className="text-2xl font-bold text-[#111111] mb-3">Your cart is empty</h2>
@@ -80,7 +80,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen pt-6 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-5xl mx-auto px-4 lg:px-8">
         <div className="badge mb-2 pt-6" style={{ color: '#FF6A00' }}>CART</div>
         <h1 className="text-3xl font-bold text-[#111111] mb-8">Your Cart ({cartItems.length} items)</h1>

@@ -14,6 +14,7 @@ All API routes are under `/api/v1`. Product, order, inventory, dashboard, settin
 | GET | `/announcements/active` | Read current announcements |
 | GET | `/testimonials` | Read testimonials visible on the storefront |
 | GET | `/categories/images` | Read public category image URLs |
+| GET | `/hero-slides/active` | Read active homepage hero slides in display order |
 | POST | `/auth/register` | Submit a pending STAFF registration request when manager-enabled |
 | POST | `/media/upload` | Upload a product or testimonial image to Cloudinary; requires `media.upload` or MANAGER |
 
@@ -47,6 +48,9 @@ Protected requests use `Authorization: Bearer <access-token>`. Browser requests 
 | GET, POST, PATCH, DELETE | `/admin/announcements` | View announcements; manager-only changes (`announcements.manage`) |
 | GET, POST, PATCH, DELETE | `/admin/testimonials` | List, add, edit, delete, and control testimonial visibility (`testimonials.*`) |
 | POST | `/admin/categories/:id/image` | Upload or replace a category image (`categories.manage`; JPG, PNG, or WebP up to 2MB) |
+| GET, POST | `/admin/hero-slides` | List or add homepage hero slides (`heroSlides.view`, `heroSlides.manage`) |
+| PATCH, DELETE | `/admin/hero-slides/:id` | Edit, activate/deactivate, or delete a hero slide (`heroSlides.manage`) |
+| PATCH | `/admin/hero-slides/reorder` | Save the display order for every hero slide (`heroSlides.manage`) |
 | GET | `/admin/dashboard` | Read dashboard analytics (`reports.view`; `7d`, `30d`, or `12m`) |
 | GET, POST | `/admin/users` | List/create STAFF accounts (MANAGER only) |
 | GET, PATCH, DELETE | `/admin/users/:id` | Read/update STAFF details or soft-delete (MANAGER only) |
@@ -54,7 +58,8 @@ Protected requests use `Authorization: Bearer <access-token>`. Browser requests 
 | GET | `/admin/audit-logs` | Read append-only sign-in and administrative audit records (MANAGER only) |
 
 Category images are optimized in the browser to 400x400 pixels or smaller and converted to WebP when supported.
+Hero slide images are optimized in the browser to a maximum width of 1920 pixels, converted to WebP when supported, and limited to 3MB. Hero slide create/edit requests use `multipart/form-data` with an optional replacement `file` field; new slides require an image. Button links may be site-relative paths or HTTP(S) URLs.
 
-STAFF accounts have full operational access, including testimonial and category image management, except user management, audit logs, settings, and announcement changes, which remain MANAGER-only. Managers can manage staff and other manager accounts; an account cannot deactivate, suspend, or remove itself. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER. Customer contact information is stored on orders; customers do not have sign-in accounts.
+STAFF accounts have full operational access, including testimonial, category image, and hero slide management, except user management, audit logs, settings, and announcement changes, which remain MANAGER-only. Managers can manage staff and other manager accounts; an account cannot deactivate, suspend, or remove itself. New public registrations are pending and cannot sign in until a manager verifies and activates them. Only active, verified STAFF accounts can be promoted to MANAGER. Customer contact information is stored on orders; customers do not have sign-in accounts.
 
 Interactive OpenAPI documentation is served from `/docs`.

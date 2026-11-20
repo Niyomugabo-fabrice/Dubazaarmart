@@ -5,9 +5,17 @@ interface Props {
   value: string
   onChange: (url: string) => void
   label?: string
+  required?: boolean
+  allowRemove?: boolean
 }
 
-export default function ImageUploader({ value, onChange, label = 'Product Image' }: Props) {
+export default function ImageUploader({
+  value,
+  onChange,
+  label = 'Product Image',
+  required = true,
+  allowRemove = true,
+}: Props) {
   const [mode, setMode] = useState<'upload' | 'link' | 'preset'>('upload')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -132,7 +140,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="block text-xs font-bold text-[#111111]">
-          {label} <span className="text-red-500">*</span>
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
         <div className="flex items-center gap-1 text-[11px]">
           <button
@@ -219,13 +227,15 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
                   >
                     {uploading ? 'Processing…' : '📁 Change Image'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onChange('')}
-                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-                  >
-                    Remove
-                  </button>
+                  {allowRemove && (
+                    <button
+                      type="button"
+                      onClick={() => onChange('')}
+                      className="px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -248,7 +258,7 @@ export default function ImageUploader({ value, onChange, label = 'Product Image'
                 {uploading ? '⏳' : '📷'}
               </div>
               <div className="text-sm font-bold text-[#111111]">
-                {uploading ? 'Uploading image from device…' : 'Click to upload image or drag & drop'}
+                {uploading ? 'Uploading image from device…' : 'Click or drag to upload images'}
               </div>
               <p className="mt-1 text-xs text-[#0B5B24]">
                 PNG, JPG, JPEG, WEBP, GIF from your phone, tablet, or computer (Max 10MB)

@@ -13,6 +13,7 @@ import { AnnouncementsManagement20261119000000 } from './migrations/202611190000
 import { OrderAdminNotes20261119213000 } from './migrations/20261119213000-OrderAdminNotes'
 import { TestimonialsManagement20261119232000 } from './migrations/20261119232000-TestimonialsManagement'
 import { CategoryImages20261119234000 } from './migrations/20261119234000-CategoryImages'
+import { HeroSlidesManagement20261120010000 } from './migrations/20261120010000-HeroSlidesManagement'
 
 export default new DataSource({
   type: 'postgres',
@@ -30,6 +31,7 @@ export default new DataSource({
     OrderAdminNotes20261119213000,
     TestimonialsManagement20261119232000,
     CategoryImages20261119234000,
+    HeroSlidesManagement20261120010000,
   ],
   migrationsTableName: 'typeorm_migrations',
   synchronize: false,

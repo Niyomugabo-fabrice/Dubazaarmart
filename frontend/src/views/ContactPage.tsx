@@ -13,7 +13,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-16" style={{ background: '#FFFFFF' }}>
+    <div className="min-h-screen pt-6 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-5xl mx-auto px-4 lg:px-8">
         <div className="badge mb-2 pt-8" style={{ color: '#FF6A00' }}>GET IN TOUCH</div>
         <h1 className="text-4xl font-bold text-[#111111] mb-3">Contact Us</h1>

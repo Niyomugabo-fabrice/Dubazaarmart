@@ -12,7 +12,7 @@ export default function WishlistPage() {
   const wishlistProducts = products.filter((product) => wishlist.includes(product.id))
 
   return (
-    <main className="min-h-screen bg-white pb-16 pt-24">
+    <main className="min-h-screen bg-white pb-16 pt-6">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         <div className="badge mb-2" style={{ color: "#FF6A00" }}>SAVED ITEMS</div>
         <h1 className="mb-8 text-3xl font-bold text-[#111111]">Your wishlist</h1>

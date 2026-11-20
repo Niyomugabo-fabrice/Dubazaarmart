@@ -5,6 +5,7 @@ services:
     region: ohio
     plan: free
     rootDir: backend
+    autoDeployTrigger: checksPass
     buildCommand: pnpm install --frozen-lockfile && pnpm run build
     startCommand: node dist/main.js
     healthCheckPath: /api/v1/health

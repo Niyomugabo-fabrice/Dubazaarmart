@@ -26,8 +26,8 @@ export function useCategoryImages(initialImages?: CategoryImageMap) {
   }, [])
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    if (initialImages === undefined) void refresh()
+  }, [initialImages, refresh])
 
   const updateCategoryImage = useCallback((categoryId: string, imageUrl: string) => {
     setCategoryImages((current) => ({ ...current, [categoryId]: imageUrl }))

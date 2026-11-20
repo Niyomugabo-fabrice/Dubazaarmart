@@ -3,17 +3,17 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { categories } from '../data/products'
-import { useCategoryImages } from '../store/categoryImagesStore'
+import { useCategoryImages, type CategoryImageMap } from '../store/categoryImagesStore'
 
-export default function CategoriesPage() {
-  const { categoryImages, error } = useCategoryImages()
+export default function CategoriesPage({ initialCategoryImages }: { initialCategoryImages?: CategoryImageMap }) {
+  const { categoryImages, error } = useCategoryImages(initialCategoryImages)
 
   return (
     <div className="min-h-screen pt-6 pb-16" style={{ background: '#FFFFFF' }}>
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="badge mb-2 pt-8" style={{ color: '#FF6A00' }}>BROWSE</div>
         <h1 className="text-4xl font-bold text-[#111111] mb-3">All Categories</h1>
-        <p className="mb-10" style={{ color: '#111111' }}>Browse our full range of electronics sourced from Dubai</p>
+        <p className="mb-10" style={{ color: '#111111' }}>Browse our full range of electronics sourced from Dubai and China</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {categories.map((cat) => {
             const imageUrl = categoryImages[cat.id]

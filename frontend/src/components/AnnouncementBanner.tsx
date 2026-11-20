@@ -38,7 +38,7 @@ export default function AnnouncementBanner() {
   return (
     <div
       className="relative z-40 text-xs font-semibold text-white shadow-sm"
-      style={{ background: "linear-gradient(90deg, #FF6A00 0%, #FFB800 50%, #0B5B24 100%)" }}
+      style={{ background: "linear-gradient(90deg, #FF6A00 0%, #FFB000 100%)" }}
       role="region"
       aria-label="Store announcements"
     >

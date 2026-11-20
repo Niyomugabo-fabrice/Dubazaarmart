@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createPageMetadata } from '@/lib/seo'
+import { fetchPublicCategoryImages } from '@/lib/categoryImagesApi'
 import { categories as knownCategories } from '@/data/products'
 import { fetchActiveProducts } from '@/lib/server-products'
 import ShopPage from '@/views/ShopPage'
@@ -49,5 +50,10 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function Page({ searchParams }: Props) {
   const params = await searchParams
   const category = Array.isArray(params.category) ? params.category[0] : params.category
-  return <ShopPage initialCategory={category} />
+  const imagesResult = await Promise.allSettled([fetchPublicCategoryImages()])
+  const initialCategoryImages = imagesResult[0].status === 'fulfilled'
+    ? Object.fromEntries(imagesResult[0].value.map(({ categoryId, imageUrl }) => [categoryId, imageUrl]))
+    : undefined
+
+  return <ShopPage initialCategory={category} initialCategoryImages={initialCategoryImages} />
 }

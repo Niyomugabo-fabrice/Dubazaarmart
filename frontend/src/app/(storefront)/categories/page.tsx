@@ -1,4 +1,5 @@
 import { createPageMetadata } from '@/lib/seo'
+import { fetchPublicCategoryImages } from '@/lib/categoryImagesApi'
 import CategoriesPage from '@/views/CategoriesPage'
 
 export const metadata = createPageMetadata({
@@ -7,6 +8,11 @@ export const metadata = createPageMetadata({
   path: '/categories',
 })
 
-export default function Page() {
-  return <CategoriesPage />
+export default async function Page() {
+  const imagesResult = await Promise.allSettled([fetchPublicCategoryImages()])
+  const initialCategoryImages = imagesResult[0].status === 'fulfilled'
+    ? Object.fromEntries(imagesResult[0].value.map(({ categoryId, imageUrl }) => [categoryId, imageUrl]))
+    : undefined
+
+  return <CategoriesPage initialCategoryImages={initialCategoryImages} />
 }

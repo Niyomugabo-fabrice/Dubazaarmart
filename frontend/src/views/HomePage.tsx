@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { categories, type Product } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import SiteLogo from '../components/SiteLogo'
@@ -19,45 +19,29 @@ interface HomePageProps {
   initialCategoryImages?: CategoryImageMap
 }
 
-const HERO_LINES = [
-  'Premium Electronics Direct from Dubai Wholesale',
-  'Unbeatable Dubai Prices · Save up to 30%',
-  'Fast & Secure Nationwide Delivery Across Rwanda',
-]
 const HERO_ROTATION_INTERVAL_MS = 5000
 const HERO_FALLBACK_IMAGE = '/hero-fallback.svg'
-const DEFAULT_HERO_HEADING = 'Premium Electronics. Dubai Wholesale Prices.'
-const DEFAULT_HERO_SUBHEADING = 'Discover quality electronics sourced directly from Dubai and delivered to you at competitive wholesale prices anywhere in Rwanda.'
+const DEFAULT_HERO_HEADING = "Dubazaarmart"
+const DEFAULT_HERO_SUBHEADING = 'Shop authentic electronics sourced from Dubai and China, delivered across Rwanda.'
 
 function isExternalLink(link: string): boolean {
   return /^https?:\/\//i.test(link)
 }
 
-function RotatingHeroMessage() {
-  const [activeLine, setActiveLine] = useState(0)
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    const timer = setInterval(() => {
-      setActiveLine(index => (index + 1) % HERO_LINES.length)
-    }, 2800)
-    return () => clearInterval(timer)
-  }, [])
+function WhyUsIcon({ name }: { name: string }) {
+  const iconPaths: Record<string, ReactNode> = {
+    plane: <><path d="m3 21 18-9L3 3l3 9-3 9Z" /><path d="M6 12h9" /></>,
+    truck: <><path d="M3 6h11v12H3z" /><path d="M14 10h4l3 4v4h-7z" /><circle cx="7.5" cy="18" r="1.5" /><circle cx="17.5" cy="18" r="1.5" /></>,
+    shield: <><path d="M12 3 4.5 6v5c0 5 3.2 8.2 7.5 10 4.3-1.8 7.5-5 7.5-10V6L12 3Z" /><path d="m9 12 2 2 4-4" /></>,
+    badge: <><circle cx="12" cy="9" r="6" /><path d="m8 14-1 7 5-3 5 3-1-7" /><path d="m10 9 1.3 1.3L14 7.5" /></>,
+    returns: <><path d="M3 11a9 9 0 0 1 15.4-6.4L21 7" /><path d="M21 3v4h-4" /><path d="M21 13a9 9 0 0 1-15.4 6.4L3 17" /><path d="M3 21v-4h4" /></>,
+    support: <><path d="M3 13v-2a9 9 0 0 1 18 0v2" /><path d="M5 13h2v6H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Z" /><path d="M17 13h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2z" /><path d="M17 19a5 5 0 0 1-5 3" /></>,
+  }
 
   return (
-    <div className="mb-6 inline-flex items-center gap-2.5 rounded-2xl border px-3.5 py-2 transition-all duration-300" style={{ background: '#FFF7E8', borderColor: '#FFB800', boxShadow: '0 4px 20px rgba(255,106,0,0.08)' }}>
-      <span className="inline-flex items-center justify-center rounded-lg bg-[#FF6A00]/15 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-[#FF6A00]">
-        LIVE
-      </span>
-      <span
-        key={activeLine}
-        aria-live="off"
-        className="text-xs sm:text-sm font-semibold transition-all duration-500 bg-gradient-to-r from-[#FF6A00] via-[#E94B00] to-[#0B5B24] bg-clip-text text-transparent"
-      >
-        ⚡ {HERO_LINES[activeLine]}
-      </span>
-    </div>
+    <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {iconPaths[name] ?? iconPaths.shield}
+    </svg>
   )
 }
 
@@ -128,12 +112,12 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
   }), [products, activeTab])
 
   const whyItems = [
-    { icon: '✈️', title: 'Sourced from Dubai', desc: 'Direct from UAE wholesalers — authentic products at wholesale prices.' },
-    { icon: '🚀', title: 'Fast Delivery', desc: 'Nationwide delivery across Rwanda within 2–5 business days.' },
-    { icon: '🔒', title: 'Secure Payments', desc: 'Pay securely via MTN Mobile Money or Airtel Money.' },
-    { icon: '✅', title: '100% Authentic', desc: 'Every product is verified genuine with official warranty.' },
-    { icon: '↩️', title: 'Easy Returns', desc: '14-day hassle-free returns on all eligible products.' },
-    { icon: '💬', title: '24/7 Support', desc: 'Our team is always available via WhatsApp and email.' },
+    { icon: 'plane', title: 'Sourced from Dubai', desc: 'Direct from UAE wholesalers — authentic products at wholesale prices.' },
+    { icon: 'truck', title: 'Fast Delivery', desc: 'Nationwide delivery across Rwanda within 2–5 business days.' },
+    { icon: 'shield', title: 'Secure Payments', desc: 'Pay securely via MTN Mobile Money or Airtel Money.' },
+    { icon: 'badge', title: '100% Authentic', desc: 'Every product is verified genuine with official warranty.' },
+    { icon: 'returns', title: 'Easy Returns', desc: '14-day hassle-free returns on all eligible products.' },
+    { icon: 'support', title: '24/7 Support', desc: 'Our team is always available via WhatsApp and email.' },
   ]
   const activeHeroSlide = heroSlides[currentHeroSlide]
 
@@ -169,97 +153,51 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
     return `/shop?category=${encodeURIComponent(categorySlug || 'uncategorized')}`
   }
 
-  function renderHeroButton(slide: HeroSlide, isCurrentSlide: boolean) {
-    const text = slide.buttonText?.trim()
-    if (!text) return null
-    const link = getHeroSlideLink(slide)
-    const className = 'btn-gold inline-flex rounded-xl px-8 py-4 text-base font-bold'
-    return isExternalLink(link) ? (
-      <a href={link} target="_blank" rel="noopener noreferrer" tabIndex={isCurrentSlide ? undefined : -1} className={className}>
-        {text}
-      </a>
-    ) : (
-      <Link href={link} tabIndex={isCurrentSlide ? undefined : -1} className={className}>
-        {text}
-      </Link>
-    )
-  }
-
   return (
     <div className="min-h-screen" style={{ background: '#FFFFFF' }}>
       {/* Hero */}
       <section
-        className="relative overflow-hidden bg-white"
+        className="relative mx-3 my-3 overflow-hidden rounded-3xl border-2 border-white/70"
+        style={{ backgroundColor: '#FF6A00' }}
         role="region"
         aria-label="Homepage hero"
         aria-roledescription={heroSlides.length > 1 ? 'carousel' : undefined}
       >
-        <div className="pointer-events-none absolute -right-32 -top-36 h-80 w-80 rounded-full bg-[#0874F9]/5" aria-hidden="true" />
-        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-10 sm:py-14 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:px-8 lg:py-16">
-          <div className="relative z-10 min-w-0">
-            {activeHeroSlide ? (
-              <div
-                className="max-w-xl"
-                aria-live="off"
-                aria-roledescription="slide"
-                aria-label={`Slide ${currentHeroSlide + 1} of ${heroSlides.length}`}
-              >
-                {activeHeroSlide.heading && (
-                  <h1 className="logo-gradient-text mb-4 whitespace-pre-line text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                    {activeHeroSlide.heading}
-                  </h1>
-                )}
-                {activeHeroSlide.subheading && (
-                  <p className="mb-8 max-w-xl border-l-2 border-[#FF6A00] pl-4 whitespace-pre-line text-base leading-relaxed text-slate-600 sm:text-lg">
-                    {activeHeroSlide.subheading}
-                  </p>
-                )}
-                {activeHeroSlide.buttonText && (
-                  <div className="flex flex-wrap gap-4">
-                    {renderHeroButton(activeHeroSlide, true)}
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-2 pl-2 pr-4 py-1 sm:pl-3 sm:py-2 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-12 lg:pl-4 lg:pr-8 lg:py-3">
+          <div className="announcement relative z-10 min-w-0" style={{ background: '#FF6A00' }}>
+            <div className="max-w-xl">
+              <h1 className="mb-2 whitespace-pre-line font-mono text-xl font-semibold uppercase leading-tight tracking-[0.08em] text-white sm:text-2xl lg:text-3xl">
+                {DEFAULT_HERO_HEADING}
+              </h1>
+              <p className="mb-3 max-w-xl border-l-2 border-[#FF6A00] pl-4 text-sm leading-snug text-white sm:text-base">
+                {DEFAULT_HERO_SUBHEADING}
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <button onClick={() => navigate('shop')} className="rounded-xl border border-[#FF6A00] bg-white px-7 py-2 text-sm font-bold text-[#FF6A00]">
+                  Shop Now →
+                </button>
+                <button onClick={() => navigate('categories')} className="btn-ghost rounded-xl px-7 py-2 text-sm font-bold" style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.65)' }}>
+                  Browse Categories
+                </button>
+              </div>
+              <div className="mt-3 grid max-w-lg grid-cols-3 gap-4 border-t border-[#F1FFF0] pt-2 sm:gap-6">
+                {[
+                  { val: '100+', label: 'Products' },
+                  { val: '8000+', label: 'Customers' },
+                  { val: '4.9★', label: 'Rating' },
+                ].map((stat) => (
+                  <div key={stat.label}>
+                      <div className="text-lg font-bold text-white sm:text-xl">{stat.val}</div>
+                    <div className="mt-0.5 text-xs text-white sm:text-sm">{stat.label}</div>
                   </div>
-                )}
+                ))}
               </div>
-            ) : (
-              <div className="max-w-xl">
-                <div className="mb-5 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold" style={{ background: 'rgba(255,106,0,0.1)', borderColor: 'rgba(255,106,0,0.3)', color: '#FF6A00' }}>
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-[#17D719]" />
-                  Dubai-sourced · Rwanda-delivered
-                </div>
-                <h1 className="logo-gradient-text mb-4 whitespace-pre-line text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-                  {DEFAULT_HERO_HEADING}
-                </h1>
-                <RotatingHeroMessage />
-                <p className="mb-8 max-w-xl border-l-2 border-[#FF6A00] pl-4 text-base leading-relaxed text-slate-600 sm:text-lg">
-                  {DEFAULT_HERO_SUBHEADING}
-                </p>
-                <div className="flex flex-wrap gap-4">
-                  <button onClick={() => navigate('shop')} className="btn-gold rounded-xl px-8 py-4 text-base font-bold">
-                    Shop Now →
-                  </button>
-                  <button onClick={() => navigate('categories')} className="btn-ghost rounded-xl px-8 py-4 text-base font-bold">
-                    Browse Categories
-                  </button>
-                </div>
-                <div className="mt-8 grid max-w-lg grid-cols-3 gap-4 border-t border-[#F1FFF0] pt-5 sm:gap-6">
-                  {[
-                    { val: '2,500+', label: 'Products' },
-                    { val: '18,000+', label: 'Customers' },
-                    { val: '4.9★', label: 'Rating' },
-                  ].map((stat) => (
-                    <div key={stat.label}>
-                      <div className="text-xl font-bold gold-text sm:text-2xl">{stat.val}</div>
-                      <div className="mt-0.5 text-xs text-[#0B5B24] sm:text-sm">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
 
           <div className="relative z-10 min-w-0">
             <div className="mx-auto w-full max-w-[30rem]">
-              <div className="rounded-[1.4rem] bg-gradient-to-r from-[#0874F9] via-[#FF6A00] to-[#17D719] p-[3px]">
+              <div className="rounded-[1.4rem] bg-white p-[3px]">
                 <div className="relative aspect-[16/9] overflow-hidden rounded-[1.2rem] bg-white">
                   {heroSlides.length > 0 ? (
                     heroSlides.map((slide, index) => (
@@ -312,12 +250,12 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                 </div>
               </div>
               {heroSlides.length > 1 && (
-                <div className="mt-3 flex items-center justify-between gap-3 text-[#111111]">
+                <div className="mt-3 flex items-center justify-between gap-3 text-white">
                   <button
                     type="button"
                     onClick={() => changeHeroSlide(-1)}
                     aria-label="Previous hero slide"
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-[#0874F9] transition hover:bg-[#0874F9]/10"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-white transition hover:bg-white/10"
                   >
                     ‹
                   </button>
@@ -332,8 +270,8 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                         onClick={() => setCurrentHeroSlide(index)}
                         className={`h-2 rounded-full transition-all ${
                           index === currentHeroSlide
-                            ? 'w-7 bg-gradient-to-r from-[#0874F9] via-[#FF6A00] to-[#17D719]'
-                            : 'w-2 bg-slate-300 hover:bg-slate-400'
+                            ? 'w-7 bg-white'
+                            : 'w-2 bg-white/50 hover:bg-white/80'
                         }`}
                       />
                     ))}
@@ -342,7 +280,7 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                     type="button"
                     onClick={() => changeHeroSlide(1)}
                     aria-label="Next hero slide"
-                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-[#0874F9] transition hover:bg-[#0874F9]/10"
+                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-white transition hover:bg-white/10"
                   >
                     ›
                   </button>
@@ -356,12 +294,12 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
       {/* Categories strip */}
       <section className="py-16 px-4" style={{ background: '#FFF7E8' }}>
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-8">
-            <div>
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
+            <div className="text-center sm:col-start-2">
               <div className="badge mb-2" style={{ color: '#FF6A00' }}>EXPLORE</div>
-              <h2 className="text-3xl font-bold text-[#111111]">Shop by Category</h2>
+              <h2 className="font-mono text-1.7xl font-bold uppercase tracking-[0.08em] text-[#111111]">Shop by Category</h2>
             </div>
-            <button onClick={() => navigate('categories')} className="text-sm btn-ghost px-4 py-2 rounded-lg font-medium">
+            <button onClick={() => navigate('categories')} className="text-sm btn-ghost justify-self-center px-4 py-2 rounded-lg font-medium sm:col-start-3 sm:justify-self-end">
               All Categories →
             </button>
           </div>
@@ -411,10 +349,10 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
       {/* Featured Products */}
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-8">
-            <div>
+          <div className="mb-8 flex justify-center">
+            <div className="text-center">
               <div className="badge mb-2" style={{ color: '#FF6A00' }}>COLLECTION</div>
-              <h2 className="text-3xl font-bold text-[#111111]">Our Products</h2>
+              <h2 className="font-mono text-1.7xl font-bold uppercase tracking-[0.08em] text-[#111111]">Our Products</h2>
             </div>
           </div>
 
@@ -495,18 +433,21 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
       </section>
 
       {/* Why choose us */}
-      <section className="py-16 px-4" style={{ background: '#FFF7E8' }}>
+      <section className="announcement mx-3 my-3 rounded-3xl border-2 border-white/70 px-4 py-16" style={{ background: '#FF6A00' }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <div className="badge mb-2" style={{ color: '#FF6A00' }}>WHY US</div>
-            <h2 className="text-3xl font-bold text-[#111111]">Why Choose Dubazaarmart</h2>
+            <div className="badge mb-2 text-white">WHY US</div>
+            <h2 className="text-2xl font-semibold uppercase text-white sm:text-3xl">Why Choose Dubazaarmart</h2>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {whyItems.map(item => (
-              <div key={item.title} className="p-6 rounded-2xl" style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}>
-                <div className="text-3xl mb-4">{item.icon}</div>
-                <h3 className="font-bold text-[#111111] mb-2">{item.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: '#0B5B24' }}>{item.desc}</p>
+              <div key={item.title} className="group relative min-h-[180px] overflow-hidden rounded-2xl p-6" style={{ background: 'rgba(0,0,0,1)', border: '1px solid rgba(255,106,0,0.42)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+                <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-5 h-20 w-28 rounded-full bg-[#FF6A00]/30 blur-2xl" />
+                <div className="relative mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-[#FF6A00]/70 bg-black/25 text-white shadow-[0_0_18px_rgba(255,106,0,0.22)]">
+                  <WhyUsIcon name={item.icon} />
+                </div>
+                <h3 className="relative mb-2 text-sm font-semibold uppercase text-[#FF6A00]">{item.title}</h3>
+                <p className="relative text-sm leading-relaxed text-white">{item.desc}</p>
               </div>
             ))}
           </div>

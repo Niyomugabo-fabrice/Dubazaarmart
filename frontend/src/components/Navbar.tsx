@@ -38,7 +38,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50" style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #F1FFF0' }}>
+    <header className="sticky top-0 z-50" style={{ background: '#FFFFFF', backdropFilter: 'blur(20px)', borderBottom: '1px solid #E2E8F0', boxShadow: '0 2px 10px rgba(15,23,42,0.06)' }}>
       <AnnouncementBanner />
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-16">

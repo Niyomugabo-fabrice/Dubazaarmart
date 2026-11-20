@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { categories } from '../data/products'
 import ProductCard from '../components/ProductCard'
 import { useProducts } from '../store/productsStore'
-import { useCategoryImages } from '../store/categoryImagesStore'
+import { useCategoryImages, type CategoryImageMap } from '../store/categoryImagesStore'
 import Image from 'next/image'
 
 interface Props {
   initialCategory?: string
   initialQuery?: string
+  initialCategoryImages?: CategoryImageMap
 }
 
 const PRODUCT_FAMILY_OPTIONS = [{ id: 'iphone', name: 'iPhone' }]
@@ -23,10 +24,10 @@ function normalizeCategory(value?: string) {
   )?.id ?? normalized
 }
 
-export default function ShopPage({ initialCategory, initialQuery = '' }: Props = {}) {
+export default function ShopPage({ initialCategory, initialQuery = '', initialCategoryImages }: Props = {}) {
   const router = useRouter()
   const { products: liveProducts, loading, error, refresh } = useProducts()
-  const { categoryImages } = useCategoryImages()
+  const { categoryImages } = useCategoryImages(initialCategoryImages)
   const products = liveProducts
 
   const [selectedCategory, setSelectedCategory] = useState(() => normalizeCategory(initialCategory))

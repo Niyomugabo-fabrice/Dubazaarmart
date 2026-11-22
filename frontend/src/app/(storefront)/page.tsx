@@ -4,8 +4,8 @@ import { fetchActiveProducts } from '@/lib/server-products'
 import HomePage from '@/views/HomePage'
 
 export const metadata = createPageMetadata({
-  title: 'Dubai Wholesale Electronics in Rwanda',
-  description: 'Shop genuine Dubai-sourced smartphones, laptops, smartwatches, and electronics delivered across Rwanda.',
+  title: 'Electronics & Shipping from China and Dubai',
+  description: 'Shop electronics, request product sourcing, or ship purchases from China and Dubai to Rwanda with DubazaarMart.',
   path: '/',
 })
 

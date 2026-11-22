@@ -6,18 +6,18 @@ import AppProviders from '@/providers/AppProviders'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://dubazaarmart.vercel.app'),
   title: {
-    default: 'DubazaarMart - Premium Dubai Electronics in Rwanda',
+    default: 'DubazaarMart - Shop Electronics & Ship from China and Dubai',
     template: '%s | DubazaarMart',
   },
   description:
-    'Genuine Dubai-sourced smartphones, laptops, smartwatches, and electronics delivered same-day in Kigali, Rwanda.',
+    'Shop electronics and products, source items from China or Dubai, and use our shipping-only service for delivery to Rwanda.',
   icons: {
     icon: '/site-icon.png',
     apple: '/site-icon.png',
   },
   openGraph: {
-    title: 'DubazaarMart - Dubai Wholesale Electronics',
-    description: 'Direct Dubai import electronics with official warranties in Rwanda.',
+    title: 'DubazaarMart - Shopping and Shipping from China & Dubai',
+    description: 'Buy products, request sourcing, or ship purchases from China and Dubai to Rwanda.',
     type: 'website',
     siteName: 'DubazaarMart',
     locale: 'en_RW',

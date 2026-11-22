@@ -4,7 +4,7 @@ import CategoriesPage from '@/views/CategoriesPage'
 
 export const metadata = createPageMetadata({
   title: 'Categories',
-  description: 'Browse DubazaarMart electronics by category.',
+  description: 'Browse DubazaarMart electronics and products, sourced and shipped from China and Dubai.',
   path: '/categories',
 })
 

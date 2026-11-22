@@ -3,7 +3,7 @@ import ContactPage from '@/views/ContactPage'
 
 export const metadata = createPageMetadata({
   title: 'Contact DubazaarMart',
-  description: 'Contact DubazaarMart customer support in Rwanda.',
+  description: 'Contact DubazaarMart for product sourcing and shipping quotes from China or Dubai to Rwanda.',
   path: '/contact',
 })
 

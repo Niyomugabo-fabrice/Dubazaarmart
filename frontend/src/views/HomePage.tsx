@@ -21,8 +21,8 @@ interface HomePageProps {
 
 const HERO_ROTATION_INTERVAL_MS = 5000
 const HERO_FALLBACK_IMAGE = '/hero-fallback.svg'
-const DEFAULT_HERO_HEADING = "Dubazaarmart"
-const DEFAULT_HERO_SUBHEADING = 'Shop authentic electronics sourced from Dubai and China, delivered across Rwanda.'
+const DEFAULT_HERO_HEADING = 'Shop Smarter. Ship Faster.'
+const DEFAULT_HERO_SUBHEADING = "Buy electronics and products from Dubai and China, or let us ship what you've already bought. We handle sourcing, shipping and delivery, right to your door."
 
 function isExternalLink(link: string): boolean {
   return /^https?:\/\//i.test(link)
@@ -80,6 +80,15 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
   const [testimonialError, setTestimonialError] = useState(false)
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([])
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0)
+  const [quoteSent, setQuoteSent] = useState(false)
+  const [quoteForm, setQuoteForm] = useState({
+    fullName: '',
+    phone: '',
+    product: '',
+    shipFrom: '',
+    deliveryLocation: '',
+    message: '',
+  })
 
   useEffect(() => {
     let active = true
@@ -133,10 +142,10 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
   }), [products, activeTab])
 
   const whyItems = [
-    { icon: 'plane', title: 'Sourced from Dubai', desc: 'Direct from UAE wholesalers — authentic products at wholesale prices.' },
-    { icon: 'truck', title: 'Fast Delivery', desc: 'Nationwide delivery across Rwanda within 2–5 business days.' },
+    { icon: 'plane', title: 'China & Dubai Shipping', desc: 'Reliable shipping services from China and Dubai straight to Rwanda.' },
+    { icon: 'truck', title: 'Fast Delivery', desc: 'Nationwide delivery across Rwanda, with sourcing and tracking support.' },
     { icon: 'shield', title: 'Secure Payments', desc: 'Pay securely via MTN Mobile Money or Airtel Money.' },
-    { icon: 'badge', title: '100% Authentic', desc: 'Every product is verified genuine with official warranty.' },
+    { icon: 'badge', title: 'Products & Sourcing', desc: 'Shop listed products or ask us to source a specific item for you.' },
     { icon: 'returns', title: 'Easy Returns', desc: '14-day hassle-free returns on all eligible products.' },
     { icon: 'support', title: '24/7 Support', desc: 'Our team is always available via WhatsApp and email.' },
   ]
@@ -197,8 +206,13 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                 <button onClick={() => navigate('shop')} className="rounded-xl border border-[#FF6A00] bg-white px-7 py-2 text-sm font-bold text-[#FF6A00]">
                   Shop Now →
                 </button>
-                <button onClick={() => navigate('categories')} className="btn-ghost rounded-xl px-7 py-2 text-sm font-bold" style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.65)' }}>
-                  Browse Categories
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('shipping-quote')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="btn-ghost rounded-xl px-7 py-2 text-sm font-bold"
+                  style={{ color: '#FFFFFF', borderColor: 'rgba(255,255,255,0.65)' }}
+                >
+                  Get a Shipping Quote
                 </button>
               </div>
               <div className="mt-3 grid max-w-lg grid-cols-3 gap-4 border-t border-[#F1FFF0] pt-2 sm:gap-6">
@@ -308,6 +322,150 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Our Services */}
+      <section className="px-4 py-16">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-10 text-center">
+            <div className="badge mb-2" style={{ color: '#FF6A00' }}>WHAT WE OFFER</div>
+            <h2 className="font-mono text-2xl font-bold uppercase tracking-[0.08em] text-[#111111]">Our Services</h2>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {[
+              {
+                icon: '🛒',
+                title: 'Electronics Shop',
+                text: 'Buy quality electronics and everyday products directly from our ready-to-order catalog.',
+              },
+              {
+                icon: '🔎',
+                title: 'Product Sourcing',
+                text: 'Tell us what you need. We find and buy your requested product from trusted sellers in China or Dubai.',
+              },
+              {
+                icon: '🚚',
+                title: 'Shipping from China & Dubai',
+                text: 'Already bought something in China or Dubai? We provide secure shipping-only service and deliver it to your door.',
+              },
+            ].map((service) => (
+              <article
+                key={service.title}
+                className="rounded-2xl p-6 text-center"
+                style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}
+              >
+                <div className="mb-4 text-4xl" aria-hidden="true">{service.icon}</div>
+                <h3 className="mb-3 text-lg font-bold text-[#111111]">{service.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: '#0B5B24' }}>{service.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="px-4 py-16" style={{ background: '#FFF7E8' }}>
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-10 text-center">
+            <div className="badge mb-2" style={{ color: '#FF6A00' }}>SIMPLE PROCESS</div>
+            <h2 className="font-mono text-2xl font-bold uppercase tracking-[0.08em] text-[#111111]">How It Works</h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              ['1', 'Choose or request a product'],
+              ['2', 'We buy and ship it from China or Dubai'],
+              ['3', 'You receive it at your door'],
+            ].map(([number, text], index) => (
+              <div key={number} className="relative text-center">
+                {index < 2 && (
+                  <div className="absolute left-[62%] top-7 hidden h-px w-[76%] bg-[#FFB800] md:block" aria-hidden="true" />
+                )}
+                <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold text-white" style={{ background: '#FF6A00' }}>
+                  {number}
+                </div>
+                <p className="mx-auto max-w-[220px] font-semibold text-[#111111]">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Shipping Quote */}
+      <section id="shipping-quote" className="px-4 py-16">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-8 text-center">
+            <div className="badge mb-2" style={{ color: '#FF6A00' }}>SHIPPING REQUEST</div>
+            <h2 className="font-mono text-2xl font-bold uppercase tracking-[0.08em] text-[#111111]">Get a Shipping Quote</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm" style={{ color: '#0B5B24' }}>
+              Share the product details and destination. Our team will contact you with availability and a quote.
+            </p>
+          </div>
+          <div className="rounded-3xl p-6 sm:p-8" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
+            {quoteSent ? (
+              <div role="status" aria-live="polite" className="py-10 text-center">
+                <div className="mb-4 text-5xl" aria-hidden="true">✅</div>
+                <h3 className="mb-2 text-xl font-bold text-[#111111]">Request Received</h3>
+                <p style={{ color: '#0B5B24' }}>We will contact you shortly with shipping options and a quote.</p>
+              </div>
+            ) : (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  setQuoteSent(true)
+                }}
+                className="grid gap-5 md:grid-cols-2"
+              >
+                {[
+                  { id: 'quote-full-name', key: 'fullName', label: 'Full Name', type: 'text', placeholder: 'Your full name', required: true },
+                  { id: 'quote-phone', key: 'phone', label: 'Phone / WhatsApp', type: 'tel', placeholder: '+250...', required: true },
+                  { id: 'quote-product', key: 'product', label: 'Product Link or Description', type: 'text', placeholder: 'Paste a link or describe the product', required: true },
+                  { id: 'quote-delivery', key: 'deliveryLocation', label: 'Delivery Location', type: 'text', placeholder: 'City or district in Rwanda', required: true },
+                ].map((field) => (
+                  <div key={field.id}>
+                    <label htmlFor={field.id} className="mb-1.5 block text-xs font-medium" style={{ color: '#0B5B24' }}>{field.label}</label>
+                    <input
+                      id={field.id}
+                      type={field.type}
+                      value={quoteForm[field.key as keyof typeof quoteForm]}
+                      onChange={(event) => setQuoteForm((current) => ({ ...current, [field.key]: event.target.value }))}
+                      placeholder={field.placeholder}
+                      required={field.required}
+                      className="w-full rounded-xl px-4 py-3 text-sm"
+                    />
+                  </div>
+                ))}
+                <div className="md:col-span-2">
+                  <label htmlFor="quote-origin" className="mb-1.5 block text-xs font-medium" style={{ color: '#0B5B24' }}>Ship From</label>
+                  <select
+                    id="quote-origin"
+                    value={quoteForm.shipFrom}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, shipFrom: event.target.value }))}
+                    required
+                    className="w-full rounded-xl px-4 py-3 text-sm"
+                  >
+                    <option value="" disabled>Select a country</option>
+                    <option value="China">China</option>
+                    <option value="Dubai">Dubai</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label htmlFor="quote-message" className="mb-1.5 block text-xs font-medium" style={{ color: '#0B5B24' }}>Message</label>
+                  <textarea
+                    id="quote-message"
+                    value={quoteForm.message}
+                    onChange={(event) => setQuoteForm((current) => ({ ...current, message: event.target.value }))}
+                    placeholder="Size, quantity, preferred delivery date, or other details..."
+                    rows={5}
+                    className="w-full resize-none rounded-xl px-4 py-3 text-sm"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <button type="submit" className="btn-gold w-full rounded-xl px-6 py-3 font-bold">Request My Quote</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </section>
@@ -530,7 +688,7 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
           <div className="rounded-2xl p-8 text-center" style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}>
             <div className="text-4xl mb-4">🇷🇼</div>
             <h3 className="text-2xl font-bold text-[#111111] mb-3">Nationwide Delivery in Rwanda</h3>
-            <p className="mb-6" style={{ color: '#111111' }}>We deliver to all provinces including Kigali, Northern, Southern, Eastern, and Western provinces. Standard delivery 2–3 days, express available.</p>
+            <p className="mb-6" style={{ color: '#111111' }}>We deliver products and shipping orders to all provinces, including Kigali, Northern, Southern, Eastern, and Western Rwanda. Orders can ship from China or Dubai, with delivery times confirmed in your quote.</p>
             <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
               {[['🏙️', 'Kigali', '1–2 days'], ['🌍', 'Other cities', '2–3 days'], ['🏡', 'Rural areas', '3–5 days']].map(([icon, loc, time]) => (
                 <div key={String(loc)} className="text-center">
@@ -583,7 +741,7 @@ export default function HomePage({ initialProducts, initialCategoryImages }: Hom
                 <SiteLogo className="h-12 w-12" priority={false} />
               </div>
               <p className="text-sm leading-relaxed mb-4" style={{ color: '#0B5B24' }}>
-                Premium electronics from Dubai, delivered to Rwanda. Quality guaranteed.
+                Electronics, product sourcing, and reliable shipping from China and Dubai, delivered to your door in Rwanda.
               </p>
               <div className="text-sm" style={{ color: '#0B5B24' }}>
                 <div>📞 {settings.phoneNumber || '+250789545954'}</div>

@@ -92,8 +92,11 @@ export default function ShopPage({ initialCategory, initialQuery = '', initialCa
     return list
   }, [categoryProducts, sortBy, priceRange, searchQuery])
 
-  const Sidebar = () => (
-    <div className="w-64 flex-shrink-0">
+  // A JSX element rather than a nested component: a component defined inside
+  // ShopPage would be a new type on every render, remounting the filters and
+  // resetting the rail's scroll position on each filter click.
+  const filterPanels = (
+    <div>
       {/* Categories */}
       <div className="p-5 rounded-2xl mb-4" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
         <h3 className="font-bold text-[#111111] mb-4 text-sm">Categories</h3>
@@ -248,21 +251,21 @@ export default function ShopPage({ initialCategory, initialQuery = '', initialCa
       </div>
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 pb-16 flex gap-8">
-        {/* Sidebar desktop */}
-        <div className="hidden lg:block">
-          <Sidebar />
-        </div>
+        {/* Sidebar desktop: sticky, scrolls independently of the product grid */}
+        <aside aria-label="Product filters" className="shop-filters-rail hidden lg:block w-64 flex-shrink-0">
+          {filterPanels}
+        </aside>
 
         {/* Mobile sidebar */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <button type="button" className="absolute inset-0 h-full w-full cursor-default" style={{ background: 'rgba(0,0,0,0.8)' }} onClick={() => setSidebarOpen(false)} aria-label="Close product filters" />
-            <aside id="mobile-product-filters" aria-label="Product filters" className="absolute left-0 top-0 bottom-0 w-72 p-4 overflow-y-auto" style={{ background: '#FFFFFF' }}>
+            <aside id="mobile-product-filters" aria-label="Product filters" className="absolute left-0 top-0 bottom-0 w-72 p-4 overflow-y-auto overscroll-contain" style={{ background: '#FFFFFF' }}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-bold text-[#111111]">Filters</h2>
                 <button type="button" onClick={() => setSidebarOpen(false)} className="rounded-lg px-3 py-2 text-sm btn-ghost" aria-label="Close product filters">Close</button>
               </div>
-              <Sidebar />
+              {filterPanels}
             </aside>
           </div>
         )}

@@ -13,7 +13,7 @@ export default function CategoriesPage({ initialCategoryImages }: { initialCateg
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="badge mb-2 pt-8" style={{ color: '#FF6A00' }}>BROWSE</div>
         <h1 className="text-4xl font-bold text-[#111111] mb-3">All Categories</h1>
-        <p className="mb-10" style={{ color: '#111111' }}>Browse our full range of electronics sourced from Dubai and China</p>
+        <p className="mb-10" style={{ color: '#111111' }}>Browse electronics and products available through our shop, sourcing, and China/Dubai shipping services.</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {categories.map((cat) => {
             const imageUrl = categoryImages[cat.id]

@@ -3,7 +3,7 @@ import AboutPage from '@/views/AboutPage'
 
 export const metadata = createPageMetadata({
   title: 'About DubazaarMart',
-  description: 'Learn about DubazaarMart and our Dubai-sourced electronics in Rwanda.',
+  description: 'Learn about DubazaarMart electronics, product sourcing, and shipping services from China and Dubai to Rwanda.',
   path: '/about',
 })
 

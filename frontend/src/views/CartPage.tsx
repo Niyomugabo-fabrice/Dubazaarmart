@@ -67,7 +67,7 @@ export default function CartPage() {
         <div className="text-center">
           <div className="text-7xl mb-6">🛒</div>
           <h2 className="text-2xl font-bold text-[#111111] mb-3">Your cart is empty</h2>
-          <p className="mb-8" style={{ color: '#0B5B24' }}>Discover amazing electronics from Dubai</p>
+          <p className="mb-8" style={{ color: '#0B5B24' }}>Discover electronics and products available from our China and Dubai services</p>
           <Link
             href="/shop"
             className="btn-gold px-8 py-3 rounded-xl font-bold inline-block"

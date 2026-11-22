@@ -22,21 +22,21 @@ export default function AboutPage() {
 
         <div className="prose max-w-none space-y-6 mb-12">
           <p className="text-lg leading-relaxed" style={{ color: '#111111' }}>
-            Dubazaarmart.com was founded with a simple mission: to make premium electronics accessible to everyone in Rwanda at fair prices. We source our products directly from trusted wholesalers in Dubai — one of the world&apos;s biggest electronics trading hubs — eliminating unnecessary middlemen.
+            DubazaarMart helps customers in Rwanda shop smarter by offering quality electronics and other products, plus dependable shipping services from China and Dubai. We source, buy, and ship products to make international shopping simpler and more accessible.
           </p>
           <p className="leading-relaxed" style={{ color: '#111111' }}>
-            Every product we sell is carefully verified for authenticity. We work only with authorized distributors and provide official manufacturer warranties on all items. When you shop with us, you&apos;re guaranteed to receive the real thing.
+            Customers can buy items listed on our website, ask us to find and purchase a product from China or Dubai, or use our shipping-only service for products they have already bought. Every option is handled with clear communication from purchase or collection through delivery.
           </p>
           <p className="leading-relaxed" style={{ color: '#111111' }}>
-            Payment is fast and familiar — we support MTN Mobile Money and Airtel Money, Rwanda&apos;s most trusted payment platforms. Your PIN never leaves your phone.
+            Shipping from China and Dubai is one of our main services. We coordinate trusted suppliers and shipping partners, then arrange delivery to the customer&apos;s location in Rwanda. Payment is available by familiar local methods, including MTN Mobile Money and Airtel Money.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-6 mb-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {[
-            { icon: '🇦🇪', title: 'Dubai Sourced', desc: 'Direct from UAE wholesalers at wholesale prices' },
+            { icon: '🇦🇪', title: 'China & Dubai Shipping', desc: 'Main international shipping service for products and customer purchases' },
+            { icon: '🔎', title: 'Product Sourcing', desc: 'We find and buy requested products from China or Dubai' },
             { icon: '🇷🇼', title: 'Rwanda Delivered', desc: 'Nationwide delivery to all provinces' },
-            { icon: '✅', title: '100% Authentic', desc: 'Every product verified and warranted' },
           ].map(item => (
             <div key={item.title} className="p-6 rounded-2xl text-center" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
               <div className="text-4xl mb-4">{item.icon}</div>

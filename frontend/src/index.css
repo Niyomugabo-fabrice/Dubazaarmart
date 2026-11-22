@@ -38,6 +38,32 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Shop filters rail: stays below the sticky site header and scrolls on its own,
+ * independently of the product grid. overscroll-behavior stops a scroll that
+ * reaches the end of the filter list from scrolling the page as well.
+ * --site-header-height is published by the Navbar; 4rem is the header without
+ * an announcement bar.
+ */
+.shop-filters-rail {
+  position: sticky;
+  top: calc(var(--site-header-height, 4rem) + 1.5rem);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--site-header-height, 4rem) - 3rem);
+  max-height: calc(100dvh - var(--site-header-height, 4rem) - 3rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Keep the page behind the open mobile filters drawer from scrolling. */
+@media (width < 64rem) {
+  html:has(#mobile-product-filters) {
+    overflow: hidden;
+  }
+}
+
 .announcement {
   background: linear-gradient(90deg, #FF6A00 0%, #FFB000 100%);
   font-family: Arial, Helvetica, sans-serif;

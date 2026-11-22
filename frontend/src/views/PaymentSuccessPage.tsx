@@ -26,31 +26,6 @@ export default function PaymentSuccessPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!order?.requestedDeliveryTime) return
-
-    function calcTime() {
-      const target = new Date(order!.requestedDeliveryTime!).getTime()
-      const now = Date.now()
-      const diff = target - now
-
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isOverdue: true })
-        return
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
-      const minutes = Math.floor((diff / 1000 / 60) % 60)
-      const seconds = Math.floor((diff / 1000) % 60)
-      setTimeLeft({ days, hours, minutes, seconds, isOverdue: false })
-    }
-
-    calcTime()
-    const timer = setInterval(calcTime, 1000)
-    return () => clearInterval(timer)
-  }, [order?.requestedDeliveryTime])
-
   const placedAt = order
     ? new Intl.DateTimeFormat('en-RW', {
         dateStyle: 'medium',
@@ -58,6 +33,35 @@ export default function PaymentSuccessPage() {
         timeZone: 'Africa/Kigali',
       }).format(new Date(order.createdAt))
     : null
+  const deliveryTarget = order
+    ? order.requestedDeliveryTime || new Date(new Date(order.createdAt).getTime() + 48 * 3600 * 1000).toISOString()
+    : null
+
+  useEffect(() => {
+    if (!deliveryTarget) return
+    const target = new Date(deliveryTarget).getTime()
+    if (!Number.isFinite(target)) return
+
+    function updateCountdown() {
+      const diff = target - Date.now()
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isOverdue: true })
+        return
+      }
+
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+        isOverdue: false,
+      })
+    }
+
+    updateCountdown()
+    const timer = setInterval(updateCountdown, 1000)
+    return () => clearInterval(timer)
+  }, [deliveryTarget])
 
   function formatPrice(amount: number) {
     return `${amount.toLocaleString()} RWF`
@@ -98,7 +102,7 @@ export default function PaymentSuccessPage() {
         </p>
 
         {/* Live Delivery Arrival Countdown */}
-        {order?.requestedDeliveryTime && timeLeft && (
+        {order && timeLeft && (
           <div className="mb-6 p-5 rounded-2xl border-2 border-[#FFB800] bg-[#FFF7E8] text-left">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-[#FF6A00]">
@@ -118,10 +122,10 @@ export default function PaymentSuccessPage() {
             <div className="text-xs text-gray-700 mb-3">
               Target arrival:{' '}
               <strong className="text-black">
-                {new Date(order.requestedDeliveryTime).toLocaleString('en-RW', {
+                {order.requestedDeliveryTime ? new Date(order.requestedDeliveryTime).toLocaleString('en-RW', {
                   dateStyle: 'medium',
                   timeStyle: 'short',
-                })}
+                }) : 'Estimated within 48 hours of order placement'}
               </strong>
             </div>
 

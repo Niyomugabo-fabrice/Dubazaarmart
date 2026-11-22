@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCart } from '../store/cartStore'
@@ -14,6 +14,24 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const headerRef = useRef<HTMLElement>(null)
+
+  // Publish the sticky header's live height so sticky page elements (such as the
+  // shop filters) can sit directly below it. The height changes when announcements
+  // appear or are dismissed and when the mobile search or menu opens.
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header) return
+    const root = document.documentElement
+    const publishHeight = () => root.style.setProperty('--site-header-height', `${header.offsetHeight}px`)
+    publishHeight()
+    const observer = new ResizeObserver(publishHeight)
+    observer.observe(header, { box: 'border-box' })
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--site-header-height')
+    }
+  }, [])
 
   const navItems = [
     { id: 'home', label: 'Home', href: '/' },
@@ -38,7 +56,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50" style={{ background: '#FFFFFF', backdropFilter: 'blur(20px)', borderBottom: '1px solid #E2E8F0', boxShadow: '0 2px 10px rgba(15,23,42,0.06)' }}>
+    <header ref={headerRef} className="sticky top-0 z-50" style={{ background: '#FFFFFF', backdropFilter: 'blur(20px)', borderBottom: '1px solid #E2E8F0', boxShadow: '0 2px 10px rgba(15,23,42,0.06)' }}>
       <AnnouncementBanner />
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-16">

@@ -2,20 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useCart } from '../store/cartStore'
 import SiteLogo from './SiteLogo'
 import AnnouncementBanner from './AnnouncementBanner'
 
 export default function Navbar() {
   const pathname = usePathname()
-  const isHomePage = pathname === '/'
-  const router = useRouter()
   const { count } = useCart()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [servicesOpen, setServicesOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const headerRef = useRef<HTMLElement>(null)
   const servicesMenuRef = useRef<HTMLDivElement>(null)
 
@@ -72,7 +68,7 @@ export default function Navbar() {
     { id: 'shipping', label: 'Shipping', href: '/shipping' },
     { id: 'wholesale', label: 'Wholesale', href: '/wholesale' },
     { id: 'shop', label: 'Retail Shop', href: '/shop' },
-    { id: 'about', label: 'About', href: '/about' },
+    { id: 'about', label: 'About Us', href: '/about' },
     { id: 'contact', label: 'Contact', href: '/contact' },
   ]
 
@@ -81,52 +77,31 @@ export default function Navbar() {
     return pathname.startsWith(href)
   }
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
-      setSearchOpen(false)
-      setMobileOpen(false)
-    }
-  }
-
   return (
     <header
       ref={headerRef}
-      className={isHomePage
-        ? 'absolute inset-x-0 top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-sm'
-        : 'sticky top-0 z-50 border-b border-[#E2E8F0] bg-white/95 backdrop-blur-md shadow-[0_2px_12px_rgba(10,31,68,0.05)]'}
+      className="sticky top-0 z-50 border-b border-[#E2E8F0] bg-white/95 backdrop-blur-md shadow-[0_2px_12px_rgba(10,31,68,0.05)]"
     >
-      {!isHomePage && <AnnouncementBanner />}
-      <div className={`mx-auto px-4 ${isHomePage ? 'max-w-[1080px]' : 'max-w-7xl lg:px-8'}`}>
-        <div className={isHomePage
-          ? 'grid h-12 grid-cols-[1fr_auto_1fr] items-center gap-3 md:h-10'
-          : 'flex h-16 items-center justify-between gap-4'}>
+      <AnnouncementBanner />
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/" className="flex shrink-0 items-center" aria-label="DubazaarMart home">
-            {isHomePage ? (
-              <span className="flex items-center gap-2">
-                <SiteLogo showName={false} className="h-8 w-8" size={32} />
-                <span className="flex flex-col leading-none">
-                  <span className="text-[13px] font-extrabold tracking-tight text-[#0A1F44]">DubazaarMart</span>
-                  <span className="mt-0.5 text-[8px] font-medium text-[#526579]">Global Trade &amp; Retail</span>
-                </span>
-              </span>
-            ) : <SiteLogo />}
+            <SiteLogo className="h-10 w-10" size={40} />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav aria-label="Primary navigation" className={`hidden items-center ${isHomePage ? 'justify-center gap-5 md:flex' : 'gap-5 lg:flex'}`}>
+          <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-6">
             <Link
               href="/"
-              className={`relative py-1 font-semibold transition-colors ${isHomePage ? 'text-[11px]' : 'text-sm'} ${
-                pathname === '/' ? (isHomePage ? 'text-[#0756D9]' : 'text-[#FF6A00]') : 'text-[#0A1F44] hover:text-[#FF6A00]'
+              className={`relative whitespace-nowrap py-1 text-sm font-semibold transition-colors ${
+                pathname === '/' ? 'text-[#FF6A00]' : 'text-[#0A1F44] hover:text-[#FF6A00]'
               }`}
               aria-current={pathname === '/' ? 'page' : undefined}
             >
               Home
               {pathname === '/' && (
-                <span className={`absolute inset-x-0 -bottom-1 h-0.5 rounded-full ${isHomePage ? 'bg-[#0756D9]' : 'bg-[#FF6A00]'}`} />
+                <span className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-[#FF6A00]" />
               )}
             </Link>
 
@@ -136,9 +111,9 @@ export default function Navbar() {
                 type="button"
                 onClick={() => setServicesOpen((prev) => !prev)}
                 aria-expanded={servicesOpen}
-                className={`flex items-center gap-1 py-1 font-semibold transition-colors ${isHomePage ? 'text-[11px]' : 'text-sm'} ${
+                className={`flex items-center gap-1 whitespace-nowrap py-1 text-sm font-semibold transition-colors ${
                   ['/sourcing', '/shipping', '/wholesale', '/shop'].some((p) => pathname.startsWith(p))
-                    ? (isHomePage ? 'text-[#0756D9]' : 'text-[#FF6A00]')
+                    ? 'text-[#FF6A00]'
                     : 'text-[#0A1F44] hover:text-[#FF6A00]'
                 }`}
               >
@@ -171,122 +146,41 @@ export default function Navbar() {
               )}
             </div>
 
-            {isHomePage && (
-              <Link href="/shop" className="py-1 text-[11px] font-semibold text-[#0A1F44] transition-colors hover:text-[#0756D9]">
-                Products
-              </Link>
-            )}
-
-            {!isHomePage && <Link
+            <Link
               href="/shop"
-              className={`relative py-1 text-sm font-semibold transition-colors ${
+              className={`relative whitespace-nowrap py-1 text-sm font-semibold transition-colors ${
                 isItemActive('/shop') ? 'text-[#FF6A00]' : 'text-[#0A1F44] hover:text-[#FF6A00]'
               }`}
               aria-current={isItemActive('/shop') ? 'page' : undefined}
             >
               Retail Shop
-            </Link>}
+            </Link>
 
-            {!isHomePage && <Link
-              href="/wholesale"
-              className={`relative py-1 text-sm font-semibold transition-colors ${
-                isItemActive('/wholesale') ? 'text-[#FF6A00]' : 'text-[#0A1F44] hover:text-[#FF6A00]'
-              }`}
-              aria-current={isItemActive('/wholesale') ? 'page' : undefined}
-            >
-              Wholesale
-            </Link>}
-
-            {!isHomePage && <Link
+            <Link
               href="/about"
-              className={`relative py-1 text-sm font-semibold transition-colors ${
+              className={`relative whitespace-nowrap py-1 text-sm font-semibold transition-colors ${
                 isItemActive('/about') ? 'text-[#FF6A00]' : 'text-[#0A1F44] hover:text-[#FF6A00]'
               }`}
               aria-current={isItemActive('/about') ? 'page' : undefined}
             >
               About Us
-            </Link>}
+            </Link>
 
-            {!isHomePage && <Link
+            <Link
               href="/contact"
-              className={`relative py-1 text-sm font-semibold transition-colors ${
+              className={`relative whitespace-nowrap py-1 text-sm font-semibold transition-colors ${
                 isItemActive('/contact') ? 'text-[#FF6A00]' : 'text-[#0A1F44] hover:text-[#FF6A00]'
               }`}
               aria-current={isItemActive('/contact') ? 'page' : undefined}
             >
               Contact
-            </Link>}
-            {isHomePage && (
-              <>
-                <Link
-                  href="/about"
-                  className={`relative py-1 text-sm font-semibold transition-colors ${
-                    isItemActive('/about') ? 'text-[#0756D9]' : 'text-[#0A1F44] hover:text-[#0756D9]'
-                  }`}
-                >
-                  About Us
-                </Link>
-                <Link href="/contact" className="py-1 text-sm font-semibold text-[#0A1F44] transition-colors hover:text-[#0756D9]">
-                  Contact
-                </Link>
-              </>
-            )}
+            </Link>
           </nav>
 
           {/* Right Actions */}
-          <div className={isHomePage ? 'col-start-3 flex items-center justify-end md:contents' : 'flex items-center gap-2 sm:gap-3'}>
-            {/* Desktop Search Pill */}
-          <form onSubmit={handleSearch} className={`relative hidden items-center ${isHomePage ? 'hidden' : 'xl:flex'}`}>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search products"
-                placeholder="Search anything..."
-                className={`h-9 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] pl-4 pr-9 text-xs text-[#0A1F44] placeholder:text-slate-400 focus:border-[#0756D9] focus:bg-white ${isHomePage ? 'w-36' : 'w-48 text-sm'}`}
-              />
-              <button
-                type="submit"
-                aria-label="Submit search"
-                className="absolute right-2.5 p-1 text-[#475569] transition-colors hover:text-[#FF6A00]"
-              >
-                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
-              </button>
-            </form>
-
-            {/* Compact Search Toggle (< xl) */}
-            <div className={`relative ${isHomePage ? 'hidden' : 'xl:hidden'}`}>
-              {searchOpen ? (
-                <form onSubmit={handleSearch} className="flex items-center">
-                  <input
-                    autoFocus
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    aria-label="Search products"
-                    placeholder="Search anything..."
-                    className="h-9 w-36 sm:w-44 rounded-full border border-[#FF6A00] bg-[#F8FAFC] px-3 text-sm text-[#0A1F44]"
-                    onBlur={() => !searchQuery && setSearchOpen(false)}
-                  />
-                </form>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSearchOpen(true)}
-                  className="rounded-full p-2 text-[#0A1F44] transition-colors hover:bg-[#F8FAFC] hover:text-[#0756D9]"
-                  aria-label="Open search"
-                >
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {/* Account */}
-            {!isHomePage && <Link
+            <Link
               href="/account"
               className="rounded-full p-2 text-[#0A1F44] transition-colors hover:bg-[#F8FAFC] hover:text-[#FF6A00]"
               aria-label="Account"
@@ -296,10 +190,10 @@ export default function Navbar() {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-            </Link>}
+            </Link>
 
             {/* Cart */}
-            {!isHomePage && <Link
+            <Link
               href="/cart"
               className="relative rounded-full p-2 text-[#0A1F44] transition-colors hover:bg-[#F8FAFC] hover:text-[#FF6A00]"
               aria-label={`Shopping cart, ${count} item${count === 1 ? '' : 's'}`}
@@ -315,21 +209,21 @@ export default function Navbar() {
                   {count > 9 ? '9+' : count}
                 </span>
               )}
-            </Link>}
+            </Link>
 
             {/* Get Started CTA */}
-            {!isHomePage && <Link
+            <Link
               href="/#services"
-              className="hidden sm:inline-flex items-center justify-center rounded-full bg-[#0756D9] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#0648B5]"
+              className="hidden sm:inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#FF6A00] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#E55A00]"
             >
               Get Started
-            </Link>}
+            </Link>
 
             {/* Mobile menu toggle */}
             <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className={`${isHomePage ? 'md:hidden' : 'lg:hidden'} rounded-lg p-2 text-[#0A1F44] transition-colors hover:bg-[#F8FAFC] hover:text-[#FF6A00]`}
+              className="lg:hidden rounded-lg p-2 text-[#0A1F44] transition-colors hover:bg-[#F8FAFC] hover:text-[#FF6A00]"
               aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
               aria-expanded={mobileOpen}
               aria-controls="mobile-navigation"

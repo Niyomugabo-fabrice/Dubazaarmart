@@ -138,24 +138,27 @@ export default function HomePage() {
 
   return (
     <div className="bg-white text-[#0A1F44]">
-      <section className="relative isolate min-h-[430px] overflow-hidden bg-[#EAF3FF] sm:min-h-[320px] lg:min-h-[282px]">
+      <section className="relative isolate min-h-[420px] overflow-hidden bg-[#EAF3FF] sm:min-h-[350px] lg:min-h-[380px]">
         <div className="absolute inset-0 bg-[#EAF3FF]" />
-        <div className="absolute inset-y-0 left-0 w-full sm:left-[32%] sm:w-[68%]">
+        <div className="absolute inset-y-0 right-0 w-full sm:left-[28%] sm:w-[72%]">
           <Image
             src={heroImageUrl}
             alt="DubazaarMart homepage hero"
             fill
             priority
             unoptimized
-            sizes="(min-width: 640px) 68vw, 100vw"
-            className="object-cover object-center sm:object-fill"
+            sizes="(min-width: 640px) 72vw, 100vw"
+            className="object-cover object-right sm:object-center"
           />
         </div>
-        <div aria-hidden="true" className="absolute inset-y-0 left-0 z-[2] w-[48%] bg-[linear-gradient(90deg,#ffffff_0%,#ffffff_66%,rgba(255,255,255,0.94)_76%,rgba(255,255,255,0)_100%)]" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 z-[2] w-[85%] bg-[linear-gradient(90deg,#ffffff_0%,#ffffff_55%,rgba(255,255,255,0.88)_72%,rgba(255,255,255,0)_100%)] sm:w-[46%] sm:bg-[linear-gradient(90deg,#ffffff_0%,#ffffff_64%,rgba(255,255,255,0.92)_78%,rgba(255,255,255,0)_100%)]"
+        />
         <div aria-hidden="true" className="absolute inset-x-0 bottom-0 z-[2] h-5 bg-gradient-to-t from-white/25 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[430px] max-w-[1080px] items-center px-5 pb-8 pt-12 sm:min-h-[320px] sm:px-5 sm:pb-6 sm:pt-12 lg:min-h-[282px] lg:pb-2 lg:pt-10">
-          <div className="max-w-[430px]">
-            <h1 className="text-[1.75rem] font-black leading-[1.02] tracking-[-0.035em] text-[#102744] sm:text-[1.8rem] lg:text-[1.9rem]">
+        <div className="relative z-10 mx-auto flex min-h-[420px] max-w-7xl items-center px-4 py-10 sm:min-h-[350px] sm:px-6 sm:py-10 lg:min-h-[380px] lg:px-8 lg:py-12">
+          <div className="max-w-[440px]">
+            <h1 className="text-[1.85rem] font-black leading-[1.04] tracking-[-0.035em] text-[#102744] sm:text-[2.1rem] lg:text-[2.25rem]">
               One Partner for
               <br />
               <span className="text-[#0874F9]">Shipping,</span>{" "}
@@ -164,18 +167,18 @@ export default function HomePage() {
               <span className="text-[#168D42]">Wholesale</span> &amp;{" "}
               <span className="text-[#0874F9]">Retail</span>
             </h1>
-            <p className="mt-2 max-w-[370px] text-[11px] leading-[1.35] text-[#26384D] sm:text-[11px]">
+            <p className="mt-3 max-w-[390px] text-xs leading-relaxed text-[#26384D] sm:text-sm">
               From global sourcing and freight management to wholesale distribution and retail sales, we provide complete commerce solutions that move products from suppliers to customers efficiently.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href="/contact?topic=quote" className="inline-flex items-center rounded-md bg-[#F26A21] px-4 py-2 text-[10px] font-bold text-white shadow-sm transition-colors hover:bg-[#D95412] sm:text-[11px]">
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              <Link href="/contact?topic=quote" className="inline-flex items-center rounded-md bg-[#F26A21] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#D95412]">
                 Get a Quote <ArrowIcon />
               </Link>
-              <Link href="#services" className="inline-flex items-center rounded-md border border-[#0756D9] bg-white/90 px-4 py-2 text-[10px] font-bold text-[#12304F] transition-colors hover:bg-white sm:text-[11px]">
+              <Link href="#services" className="inline-flex items-center rounded-md border border-[#0756D9] bg-white/90 px-4 py-2 text-xs font-bold text-[#12304F] transition-colors hover:bg-white">
                 Explore Services
               </Link>
             </div>
-            <div className="mt-3 flex max-w-[430px] flex-wrap gap-x-4 gap-y-1 text-[8px] font-semibold text-[#26384D] sm:flex-nowrap sm:gap-x-3 sm:text-[8px]">
+            <div className="mt-4 flex max-w-[440px] flex-wrap gap-x-4 gap-y-1.5 text-[10px] font-semibold text-[#26384D] sm:text-[11px]">
               <span className="inline-flex items-center gap-1"><span className="text-[#168D42]">✓</span> Reliable Service</span>
               <span className="inline-flex items-center gap-1"><span className="text-[#0874F9]">◎</span> Global Network</span>
               <span className="inline-flex items-center gap-1"><span className="text-[#0874F9]">●</span> Business &amp; Consumer Focus</span>

@@ -6,11 +6,11 @@ import AppProviders from '@/providers/AppProviders'
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://dubazaarmart.vercel.app'),
   title: {
-    default: 'DubazaarMart - Shop Electronics & Ship from China and Dubai',
+    default: 'DubazaarMart — Discover. Trade. Grow.',
     template: '%s | DubazaarMart',
   },
   description:
-    'Shop electronics and products, source items from China or Dubai, and use our shipping-only service for delivery to Rwanda.',
+    'Your one-stop platform for international sourcing, global shipping, wholesale distribution, and retail shopping in Rwanda.',
   icons: {
     icon: '/site-icon.png',
     apple: '/site-icon.png',

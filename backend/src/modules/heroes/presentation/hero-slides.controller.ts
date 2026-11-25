@@ -48,6 +48,7 @@ export class AdminHeroSlidesController {
   }
 
   @Post()
+  @Roles('MANAGER')
   @Permissions('heroSlides.manage')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(heroSlideImageInterceptor())
@@ -56,12 +57,14 @@ export class AdminHeroSlidesController {
   }
 
   @Patch('reorder')
+  @Roles('MANAGER')
   @Permissions('heroSlides.manage')
   reorder(@Body() dto: ReorderHeroSlidesDto) {
     return this.heroSlides.reorder(dto.slideIds)
   }
 
   @Patch(':id')
+  @Roles('MANAGER')
   @Permissions('heroSlides.manage')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(heroSlideImageInterceptor())
@@ -74,6 +77,7 @@ export class AdminHeroSlidesController {
   }
 
   @Delete(':id')
+  @Roles('MANAGER')
   @Permissions('heroSlides.manage')
   remove(@Param('id') id: string) {
     return this.heroSlides.remove(id)

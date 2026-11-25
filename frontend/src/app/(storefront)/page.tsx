@@ -1,37 +1,12 @@
-import { createPageMetadata } from '@/lib/seo'
-import { fetchPublicCategoryImages } from '@/lib/categoryImagesApi'
-import { fetchActiveProducts } from '@/lib/server-products'
+import type { Metadata } from 'next'
 import HomePage from '@/views/HomePage'
 
-export const metadata = createPageMetadata({
-  title: 'Electronics & Shipping from China and Dubai',
-  description: 'Shop electronics, request product sourcing, or ship purchases from China and Dubai to Rwanda with DubazaarMart.',
-  path: '/',
-})
+export const metadata: Metadata = {
+  title: 'DubazaarMart — Discover. Trade. Grow.',
+  description:
+    'Your one-stop platform for international sourcing, global shipping, wholesale distribution, and retail shopping in Rwanda.',
+}
 
-export default async function Page() {
-  const [productsResult, categoryImagesResult] = await Promise.allSettled([
-    fetchActiveProducts(),
-    fetchPublicCategoryImages(),
-  ])
-
-  if (productsResult.status === 'rejected') {
-    console.error('Homepage products could not be preloaded.', productsResult.reason)
-  }
-  if (categoryImagesResult.status === 'rejected') {
-    console.error('Homepage category images could not be preloaded.', categoryImagesResult.reason)
-  }
-
-  const initialCategoryImages = categoryImagesResult.status === 'fulfilled'
-    ? Object.fromEntries(
-        categoryImagesResult.value.map(({ categoryId, imageUrl }) => [categoryId, imageUrl]),
-      )
-    : undefined
-
-  return (
-    <HomePage
-      initialProducts={productsResult.status === 'fulfilled' ? productsResult.value : undefined}
-      initialCategoryImages={initialCategoryImages}
-    />
-  )
+export default function Page() {
+  return <HomePage />
 }

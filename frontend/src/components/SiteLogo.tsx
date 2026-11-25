@@ -5,6 +5,7 @@ interface SiteLogoProps {
   showName?: boolean
   size?: number
   priority?: boolean
+  variant?: "light" | "dark"
 }
 
 export default function SiteLogo({
@@ -12,15 +13,16 @@ export default function SiteLogo({
   showName = true,
   size = 44,
   priority = true,
+  variant = "light",
 }: SiteLogoProps) {
   return (
     <span className="flex min-w-0 items-center gap-2.5">
       <span
-        className={`${className} flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-0.5 shadow-[0_6px_24px_rgba(8,116,249,0.2)]`}
+        className={`${className} flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-0.5 shadow-sm border border-[#E2E8F0]`}
       >
         <Image
           src="/site-logo.png"
-          alt="Dubazaarmart logo"
+          alt="DubazaarMart logo"
           width={size}
           height={size}
           priority={priority}
@@ -28,8 +30,12 @@ export default function SiteLogo({
         />
       </span>
       {showName && (
-        <span className="truncate text-lg font-extrabold tracking-tight text-[#111111]">
-          Dubazaar<span className="logo-gradient-text">mart</span>
+        <span
+          className={`truncate text-lg font-extrabold tracking-tight ${
+            variant === "dark" ? "text-white" : "text-[#0A1F44]"
+          }`}
+        >
+          Dubazaar<span className="text-[#FF6A00]">Mart</span>
         </span>
       )}
     </span>

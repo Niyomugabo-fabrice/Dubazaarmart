@@ -117,7 +117,9 @@ export default function HeroSlidesPanel({ canManage }: { canManage: boolean }) {
           <div className="badge mb-1" style={{ color: "#FF6A00" }}>STOREFRONT CONTENT</div>
           <h1 className="text-3xl font-bold tracking-tight text-[#111111]">Hero Section</h1>
           <p className="mt-1 text-sm text-[#0B5B24]">
-            Manage the homepage banner slides, their text, visibility, and display order.
+            {canManage
+              ? "Manage the homepage hero image. Only the first active image is displayed."
+              : "View the homepage hero image. Only managers can change it."}
           </p>
         </div>
         {canManage && (

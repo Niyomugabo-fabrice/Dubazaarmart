@@ -2671,7 +2671,7 @@ export default function AdminPage() {
         {section === "testimonials" && <TestimonialsPanel />}
         {section === "categories" && <CategoryImagesPanel />}
         {section === "heroSlides" && (
-          <HeroSlidesPanel canManage={isManager || admin?.role === "STAFF"} />
+          <HeroSlidesPanel canManage={isManager} />
         )}
         {section === "staff" && isManager && <StaffManagementPanel />}
         {section === "audit" && isManager && <AuditLogPanel />}

@@ -145,5 +145,5 @@
 *.nc                 filter=lfs diff=lfs merge=lfs -text
 *.mat                filter=lfs diff=lfs merge=lfs -text
 
-# Keep the storefront logo in Git so production builds do not depend on LFS fetching.
-frontend/public/site-logo.png -filter -diff -merge -text
+# Keep publicly served assets in Git so production builds do not serve LFS pointers.
+frontend/public/** -filter -diff -merge

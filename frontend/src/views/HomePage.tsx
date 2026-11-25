@@ -104,7 +104,7 @@ const benefits = [
 export default function HomePage() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [testimonialIndex, setTestimonialIndex] = useState(0)
-  const [heroImageUrl, setHeroImageUrl] = useState("/images/hero-panorama.png")
+  const [heroImageUrl, setHeroImageUrl] = useState("/images/hero-panorama.png?v=534f607")
 
   useEffect(() => {
     let active = true

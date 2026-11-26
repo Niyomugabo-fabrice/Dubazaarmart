@@ -4,10 +4,15 @@ import { WORKER_ROLE_DEFINITIONS, type UserIdentity, type UserStatus } from '../
 import { USER_REPOSITORY, type UserRepository } from '../domain/user.repository'
 import type { CreateStaffDto, ListStaffQueryDto, UpdateStaffDto } from '../presentation/dto/create-staff.dto'
 import { isUniqueViolation, validatePassword } from './user-validation'
+import { AuditService } from '../../audit/application/audit.service'
+import type { UserAccount } from '../domain/user-account'
 
 @Injectable()
 export class UserManagementService {
-  constructor(@Inject(USER_REPOSITORY) private readonly users: UserRepository) {}
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly audit: AuditService,
+  ) {}
 
   async listManagedUsers(actor: UserIdentity, query: ListStaffQueryDto) {
     this.assertManager(actor)
@@ -54,6 +59,24 @@ export class UserManagementService {
         emailVerified: status === 'ACTIVE',
         permissions,
       })
+
+      await this.audit.record({
+        actorUserId: actor.id,
+        actorName: actor.name,
+        action: 'staff.created',
+        targetResource: 'staff',
+        targetId: user.id,
+        recordNumber: user.email,
+        newValues: {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          role: user.role,
+          workerRole: user.workerRole,
+          permissions: user.permissions,
+          status: user.status,
+        },
+      })
+
       return identityOf(user)
     } catch (error) {
       if (isUniqueViolation(error)) throw new ConflictException('An account already exists for this email.')
@@ -68,9 +91,45 @@ export class UserManagementService {
       const existing = await this.users.findByEmail(dto.email.trim().toLowerCase())
       if (existing && existing.id !== id) throw new ConflictException('An account already exists for this email.')
     }
+
+    const existing = await this.users.findById(id)
+    if (!existing) throw new NotFoundException('Managed account not found.')
+
     try {
       const user = await this.users.updateManagedUser(id, dto)
       if (!user) throw new NotFoundException('Managed account not found.')
+
+      const changes = AuditService.diff(
+        {
+          role: existing.role,
+          workerRole: existing.workerRole,
+          permissions: existing.permissions,
+          status: existing.status,
+          email: existing.email,
+        },
+        {
+          role: user.role,
+          workerRole: user.workerRole,
+          permissions: user.permissions,
+          status: user.status,
+          email: user.email,
+        },
+      )
+
+      const isPermissionChange = changes.oldValues.permissions !== undefined || changes.oldValues.workerRole !== undefined
+      const action = isPermissionChange ? 'staff.permissions_changed' : 'staff.updated'
+
+      await this.audit.record({
+        actorUserId: actor.id,
+        actorName: actor.name,
+        action,
+        targetResource: 'staff',
+        targetId: user.id,
+        recordNumber: user.email,
+        oldValues: changes.oldValues,
+        newValues: changes.newValues,
+      })
+
       return identityOf(user)
     } catch (error) {
       if (isUniqueViolation(error)) throw new ConflictException('An account already exists for this email.')
@@ -82,6 +141,17 @@ export class UserManagementService {
     this.assertManager(actor)
     const user = await this.users.updateManagedUser(id, { emailVerified: true })
     if (!user) throw new NotFoundException('Managed account not found.')
+
+    await this.audit.record({
+      actorUserId: actor.id,
+      actorName: actor.name,
+      action: 'staff.verified',
+      targetResource: 'staff',
+      targetId: user.id,
+      recordNumber: user.email,
+      newValues: { emailVerified: true },
+    })
+
     return identityOf(user)
   }
 
@@ -94,6 +164,18 @@ export class UserManagementService {
     }
     const promoted = await this.users.promoteStaffToManager(id)
     if (!promoted) throw new ConflictException('This user account can no longer be promoted.')
+
+    await this.audit.record({
+      actorUserId: actor.id,
+      actorName: actor.name,
+      action: 'staff.promoted_manager',
+      targetResource: 'staff',
+      targetId: id,
+      recordNumber: target.email,
+      oldValues: { role: 'STAFF' },
+      newValues: { role: 'MANAGER' },
+    })
+
     return promoted
   }
 
@@ -115,6 +197,23 @@ export class UserManagementService {
     const target = await this.users.findById(id)
     if (!target || !isManagedRole(target.role)) throw new NotFoundException('Managed account not found.')
     if (!(await this.users.softDeleteManagedUser(id))) throw new NotFoundException('Managed account not found.')
+
+    await this.audit.record({
+      actorUserId: actor.id,
+      actorName: actor.name,
+      action: 'staff.deleted',
+      targetResource: 'staff',
+      targetId: id,
+      recordNumber: target.email,
+      oldValues: {
+        email: target.email,
+        role: target.role,
+        workerRole: target.workerRole,
+        status: target.status,
+      },
+      newValues: { status: 'DELETED' },
+    })
+
     return {
       success: true,
       name: [target.firstName, target.lastName].filter(Boolean).join(' '),
@@ -127,8 +226,29 @@ export class UserManagementService {
     if (actor.id === id && status !== 'ACTIVE') {
       throw new ForbiddenException('You cannot deactivate or suspend your own account.')
     }
+    const existing = await this.users.findById(id)
+    if (!existing) throw new NotFoundException('Managed account not found.')
+
     const user = await this.users.updateManagedUserStatus(id, status)
     if (!user) throw new NotFoundException('Managed account not found.')
+
+    const action = status === 'INACTIVE'
+      ? 'staff.deactivated'
+      : status === 'ACTIVE'
+        ? 'staff.activated'
+        : 'staff.status_changed'
+
+    await this.audit.record({
+      actorUserId: actor.id,
+      actorName: actor.name,
+      action,
+      targetResource: 'staff',
+      targetId: id,
+      recordNumber: existing.email,
+      oldValues: { status: existing.status },
+      newValues: { status },
+    })
+
     return identityOf(user)
   }
 
@@ -138,35 +258,22 @@ export class UserManagementService {
 }
 
 function isManagedRole(role: UserIdentity['role']): boolean {
-  return role === 'STAFF' || role === 'MANAGER'
+  return role === 'MANAGER' || role === 'STAFF'
 }
 
-function identityOf(user: {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phoneNumber: string | null
-  role: 'MANAGER' | 'STAFF'
-  workerRole?: string | null
-  status: UserStatus
-  emailVerified: boolean
-  permissions: UserIdentity['permissions']
-  createdAt: Date
-  lastLoginAt: Date | null
-}): UserIdentity {
+function identityOf(user: UserAccount): UserIdentity {
   return {
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
-    name: [user.firstName, user.lastName].filter(Boolean).join(' '),
+    name: [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email,
     email: user.email,
     phoneNumber: user.phoneNumber,
     role: user.role,
-    workerRole: user.workerRole ?? (user.role === 'MANAGER' ? 'MANAGER' : 'STAFF'),
+    workerRole: user.workerRole,
     status: user.status,
     emailVerified: user.emailVerified,
-    permissions: Array.isArray(user.permissions) ? user.permissions : [],
+    permissions: user.permissions,
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
   }

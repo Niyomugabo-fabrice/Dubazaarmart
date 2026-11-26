@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import { useCart, cartStore } from '../store/cartStore'
+import { useCart, cartStore, getProductUnitPrice, isWholesalePriceApplied } from '../store/cartStore'
 import { createCustomerOrder } from '../lib/dashboardApi'
 import { useAppNavigation } from '../lib/navigation'
 
@@ -31,6 +31,7 @@ export default function CheckoutPage() {
     deliveryDate: '',
     deliveryTime: '',
     paymentMethod: 'mtn',
+    mtnTransactionId: '',
   })
 
   function update(field: keyof typeof form, value: string) {
@@ -50,12 +51,19 @@ export default function CheckoutPage() {
   async function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault()
     if (paymentLoading) return
+    if (form.paymentMethod === 'mtn' && !form.mtnTransactionId.trim()) {
+      setSubmitError('Please enter your MTN Mobile Money transaction ID received via SMS.')
+      return
+    }
     setPaymentLoading(true)
     setSubmitError(null)
     try {
       const requestedDeliveryTime = form.deliveryDate
         ? new Date(`${form.deliveryDate}T${form.deliveryTime || '10:00'}:00`).toISOString()
         : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
+      const isWholesale = cartItems.some(item => isWholesalePriceApplied(item.product, item.quantity))
+      const orderType = isWholesale ? 'wholesale' : 'shopping'
 
       const order = await createCustomerOrder({
         customerName: form.fullName,
@@ -70,6 +78,8 @@ export default function CheckoutPage() {
           instructions: form.instructions,
         },
         paymentMethod: form.paymentMethod === 'airtel' ? 'airtel' : 'mtn',
+        orderType,
+        mtnTransactionId: form.paymentMethod === 'mtn' ? form.mtnTransactionId.trim() : undefined,
         requestedDeliveryTime,
         customerInstructions: form.instructions || undefined,
         channel: 'web',
@@ -234,18 +244,30 @@ export default function CheckoutPage() {
                 <div>
                   <h2 className="font-bold text-[#111111] text-lg mb-6">Order Review</h2>
                   <div className="space-y-3 mb-6">
-                    {cartItems.map(item => (
-                      <div key={item.product.id} className="flex gap-3 py-3" style={{ borderBottom: '1px solid #FFB800' }}>
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                          <Image src={item.product.image} alt={item.product.name} fill sizes="48px" unoptimized={item.product.image.includes('images.unsplash.com')} className="object-cover" />
+                    {cartItems.map(item => {
+                      const isWholesale = isWholesalePriceApplied(item.product, item.quantity)
+                      const unitPrice = getProductUnitPrice(item.product, item.quantity)
+                      const lineTotal = unitPrice * item.quantity
+                      return (
+                        <div key={item.product.id} className="flex gap-3 py-3" style={{ borderBottom: '1px solid #FFB800' }}>
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                            <Image src={item.product.image} alt={item.product.name} fill sizes="48px" unoptimized={item.product.image.includes('images.unsplash.com')} className="object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-[#111111] line-clamp-1">{item.product.name}</div>
+                            <div className="flex items-center gap-2 text-xs" style={{ color: '#0B5B24' }}>
+                              <span>Qty: {item.quantity}</span>
+                              <span>·</span>
+                              <span>{formatPrice(unitPrice)}/unit</span>
+                              {isWholesale && (
+                                <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-800">Wholesale</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm font-bold" style={{ color: '#FF6A00' }}>{formatPrice(lineTotal)}</div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-[#111111] line-clamp-1">{item.product.name}</div>
-                          <div className="text-xs" style={{ color: '#0B5B24' }}>Qty: {item.quantity}</div>
-                        </div>
-                        <div className="text-sm font-bold" style={{ color: '#FF6A00' }}>{formatPrice(item.product.price * item.quantity)}</div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   <div className="p-4 rounded-xl space-y-2 text-sm" style={{ background: '#F1FFF0' }}>
                     <div><span style={{ color: '#111111' }}>Delivering to: </span><span className="text-[#111111] font-semibold">{form.fullName}</span></div>
@@ -272,7 +294,7 @@ export default function CheckoutPage() {
                   <h2 className="font-bold text-[#111111] text-lg mb-6">Payment Method</h2>
                   <div className="space-y-3 mb-6">
                     {[
-                      { id: 'mtn', label: 'MTN Mobile Money', desc: 'Pay with your MTN MoMo account', color: '#FFB800' },
+                      { id: 'mtn', label: 'MTN Mobile Money', desc: 'Pay instantly with your MTN MoMo wallet', color: '#FFB800' },
                       { id: 'airtel', label: 'Airtel Money', desc: 'Pay with your Airtel Money account', color: '#FF6A00' },
                     ].map(method => (
                       <label
@@ -298,8 +320,66 @@ export default function CheckoutPage() {
                       </label>
                     ))}
                   </div>
-                  <div className="mb-6 rounded-xl border p-4 text-sm leading-6" style={{ background: 'rgba(255,106,0,0.06)', borderColor: 'rgba(255,106,0,0.2)', color: '#111111' }}>
-                    Your order will be saved with payment marked pending. Payment is only marked paid after confirmation from the payment provider.
+
+                  {form.paymentMethod === 'mtn' && (
+                    <div className="mb-6 rounded-2xl border-2 border-[#FFB800] bg-[#FFF7E8] p-5 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFB800] text-sm font-black text-black">
+                          M
+                        </span>
+                        <h3 className="font-bold text-sm text-[#111111]">
+                          MTN Mobile Money Payment Instructions
+                        </h3>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                        <div className="p-3 bg-white rounded-xl border border-[#FFB800]/50">
+                          <span className="text-gray-500 block mb-0.5">MoMo Pay Merchant Code:</span>
+                          <span className="font-mono text-base font-bold text-[#FF6A00] select-all">
+                            *182*8*1*0789545954#
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white rounded-xl border border-[#FFB800]/50">
+                          <span className="text-gray-500 block mb-0.5">Merchant Phone / Recipient:</span>
+                          <span className="font-mono text-base font-bold text-[#111111] select-all">
+                            +250 789 545 954
+                          </span>
+                          <span className="block text-[11px] text-gray-500 font-semibold">(DubazaarMart)</span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-[#0B5B24] space-y-1 bg-white/70 p-3 rounded-xl border border-[#FFB800]/30">
+                        <p className="font-bold text-black">How to complete payment:</p>
+                        <ol className="list-decimal pl-4 space-y-1">
+                          <li>Dial <strong>*182*8*1*0789545954#</strong> on your MTN phone (or send to <strong>0789545954</strong>).</li>
+                          <li>Enter the payable amount: <strong>{formatPrice(total)}</strong>.</li>
+                          <li>Approve the transaction with your MTN PIN.</li>
+                          <li>Copy the <strong>Transaction ID</strong> from the MTN confirmation SMS and paste it below.</li>
+                        </ol>
+                      </div>
+
+                      <div>
+                        <label htmlFor="checkout-mtn-txid" className="block text-xs font-bold uppercase tracking-wider text-[#111111] mb-1.5">
+                          MTN MoMo Transaction ID / Reference <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id="checkout-mtn-txid"
+                          type="text"
+                          required
+                          value={form.mtnTransactionId}
+                          onChange={(e) => update('mtnTransactionId', e.target.value)}
+                          placeholder="e.g. 1928374650 or MP2611.450"
+                          className="w-full px-4 py-3 rounded-xl text-sm font-mono font-bold bg-white border border-[#FFB800] focus:ring-2 focus:ring-[#FF6A00]"
+                        />
+                        <span className="text-[11px] text-gray-500 mt-1 block">
+                          Enter the exact transaction reference code found in your MTN SMS to expedite approval.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mb-6 rounded-xl border p-4 text-xs leading-5" style={{ background: 'rgba(255,106,0,0.06)', borderColor: 'rgba(255,106,0,0.2)', color: '#111111' }}>
+                    ℹ️ <strong>Status after payment:</strong> Once submitted, your order status is set to <em>Waiting for payment approval</em>. Our admin will verify your MTN transaction ID and approve it to <em>Paid → Pending dispatch</em>.
                   </div>
 
                   {submitError && (
@@ -309,7 +389,7 @@ export default function CheckoutPage() {
                   )}
                   <button
                     type="submit"
-                    disabled={paymentLoading}
+                    disabled={paymentLoading || (form.paymentMethod === 'mtn' && !form.mtnTransactionId.trim())}
                     className="w-full py-4 rounded-xl font-bold btn-gold disabled:opacity-50"
                   >
                     {paymentLoading ? (
@@ -318,9 +398,9 @@ export default function CheckoutPage() {
                           <circle cx="12" cy="12" r="10" stroke="rgba(0,0,0,0.3)" strokeWidth="3"/>
                           <path d="M12 2a10 10 0 0 1 10 10" stroke="#000" strokeWidth="3" strokeLinecap="round"/>
                         </svg>
-                        Saving your order…
+                        Submitting payment…
                       </span>
-                    ) : `Place order · ${formatPrice(total)}`}
+                    ) : `Submit Order & Payment · ${formatPrice(total)}`}
                   </button>
                 </form>
               )}
@@ -348,12 +428,15 @@ export default function CheckoutPage() {
           <div className="p-5 rounded-2xl h-fit sticky top-24" style={{ background: '#FFF7E8', border: '1px solid #FFB800' }}>
             <h3 className="font-bold text-[#111111] mb-4 text-sm">Order Summary</h3>
             <div className="space-y-2 mb-4">
-              {cartItems.slice(0, 3).map(item => (
-                <div key={item.product.id} className="flex justify-between text-xs">
-                  <span className="truncate flex-1 mr-2" style={{ color: '#111111' }}>{item.product.name} ×{item.quantity}</span>
-                  <span className="flex-shrink-0 text-[#111111]">{formatPrice(item.product.price * item.quantity)}</span>
-                </div>
-              ))}
+              {cartItems.slice(0, 3).map(item => {
+                const unitPrice = getProductUnitPrice(item.product, item.quantity)
+                return (
+                  <div key={item.product.id} className="flex justify-between text-xs">
+                    <span className="truncate flex-1 mr-2" style={{ color: '#111111' }}>{item.product.name} ×{item.quantity}</span>
+                    <span className="flex-shrink-0 text-[#111111]">{formatPrice(unitPrice * item.quantity)}</span>
+                  </div>
+                )
+              })}
               {cartItems.length > 3 && <div className="text-xs" style={{ color: '#0B5B24' }}>+{cartItems.length - 3} more items</div>}
             </div>
             <div className="section-divider mb-3" />

@@ -39,16 +39,20 @@ export default function ShopPage({ initialCategory, initialQuery = '', initialCa
   useEffect(() => setSelectedCategory(normalizeCategory(initialCategory)), [initialCategory])
   useEffect(() => setSearchQuery(initialQuery), [initialQuery])
 
+  const retailProducts = useMemo(() => {
+    return products.filter((product) => !product.listingType || product.listingType === 'retail' || product.listingType === 'both')
+  }, [products])
+
   const brandOptions = useMemo(() => {
     const brands = new Map<string, string>([['samsung', 'Samsung']])
-    for (const product of products) {
+    for (const product of retailProducts) {
       const brand = product.brand.trim()
       if (!brand) continue
       const id = brand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       if (id) brands.set(id, brand)
     }
     return [...brands.entries()].map(([id, name]) => ({ id, name }))
-  }, [products])
+  }, [retailProducts])
 
   const categoryLabel = useMemo(() => {
     const normalized = selectedCategory.toLowerCase()
@@ -71,14 +75,14 @@ export default function ShopPage({ initialCategory, initialQuery = '', initialCa
   }
 
   const categoryProducts = useMemo(() => {
-    if (selectedCategory === 'all') return products
+    if (selectedCategory === 'all') return retailProducts
     const normalized = selectedCategory.toLowerCase()
-    return products.filter((product) => {
+    return retailProducts.filter((product) => {
       const category = product.category.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
       const brand = product.brand.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       return category === normalized || brand === normalized || (normalized === 'iphone' && /iphone/i.test(product.name))
     })
-  }, [products, selectedCategory])
+  }, [retailProducts, selectedCategory])
 
   const filtered = useMemo(() => {
     let list = [...categoryProducts]

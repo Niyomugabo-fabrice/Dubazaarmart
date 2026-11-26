@@ -14,6 +14,12 @@ export class TypeOrmProductRepository implements ProductRepository {
     if (query.category && query.category !== 'all') {
       builder.andWhere('LOWER(product.category) = LOWER(:category)', { category: query.category })
     }
+    if (query.listingType) {
+      const normalized = query.listingType.toLowerCase().trim()
+      builder.andWhere('(product.listingType = :listingType OR product.listingType = \'both\')', {
+        listingType: normalized,
+      })
+    }
     if (query.search?.trim()) {
       const term = `%${query.search.trim()}%`
       builder.andWhere('(product.name ILIKE :term OR product.brand ILIKE :term OR product.sku ILIKE :term OR product.description ILIKE :term)', { term })

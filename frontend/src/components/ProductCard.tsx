@@ -9,12 +9,19 @@ import { rememberProductSelection } from '../lib/navigation'
 
 interface Props {
   product: Product
+  mode?: 'retail' | 'wholesale'
 }
 
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product, mode = 'retail' }: Props) {
   const { wishlist } = useCart()
   const inWishlist = wishlist.includes(product.id)
   const productHref = `/products/${getProductSlug(product)}`
+
+  const isWholesale = mode === 'wholesale'
+  const displayPrice = isWholesale && product.wholesalePrice != null && product.wholesalePrice > 0
+    ? product.wholesalePrice
+    : product.price
+  const moq = Math.max(1, product.moq ?? 1)
 
   function formatPrice(n: number) {
     return `RWF ${n.toLocaleString()}`
@@ -41,12 +48,16 @@ export default function ProductCard({ product }: Props) {
             sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          {product.badge && (
+          {isWholesale ? (
+            <span className="badge absolute left-3 top-3 rounded-md bg-purple-700 px-2 py-1 font-semibold text-white">
+              MOQ {moq}
+            </span>
+          ) : product.badge ? (
             <span className="badge absolute left-3 top-3 rounded-md bg-[#FF6A00] px-2 py-1 font-semibold text-white">
               {product.badge}
             </span>
-          )}
-          {product.discount > 0 && (
+          ) : null}
+          {!isWholesale && product.discount > 0 && (
             <span className="badge absolute right-3 top-3 rounded-md bg-[#0A1F44]/85 px-2 py-1 font-semibold text-white">
               -{product.discount}%
             </span>
@@ -80,6 +91,14 @@ export default function ProductCard({ product }: Props) {
           <h3 className="line-clamp-2 text-sm font-semibold text-[#0A1F44]">{product.name}</h3>
         </Link>
 
+        {/* Wholesale indicator badge */}
+        {isWholesale && (
+          <div className="mb-3 flex items-center justify-between rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 border border-purple-200">
+            <span>Wholesale Price</span>
+            <span className="font-bold">MOQ: {moq} units</span>
+          </div>
+        )}
+
         {/* Rating */}
         <div className="mb-3 flex items-center gap-1.5">
           <div className="flex" role="img" aria-label={`Rated ${product.rating} out of 5`}>
@@ -105,22 +124,27 @@ export default function ProductCard({ product }: Props) {
         {/* Price & Cart */}
         <div className="flex flex-col gap-2 border-t border-[#E2E8F0] pt-2.5">
           <Link href={productHref} onClick={rememberSelection}>
-            {product.originalPrice > product.price && (
+            {isWholesale && product.wholesalePrice != null && product.price > product.wholesalePrice && (
+              <div className="text-xs text-slate-400 line-through">
+                Retail: {formatPrice(product.price)}
+              </div>
+            )}
+            {!isWholesale && product.originalPrice > product.price && (
               <div className="text-xs text-slate-400 line-through">
                 {formatPrice(product.originalPrice)}
               </div>
             )}
             <div className="text-base font-extrabold text-[#0A1F44]">
-              {formatPrice(product.price)}
+              {formatPrice(displayPrice)}
             </div>
           </Link>
           <button
             type="button"
-            onClick={() => cartStore.add(product)}
+            onClick={() => cartStore.add(product, isWholesale ? moq : 1)}
             className="flex w-full items-center justify-center rounded-full bg-[#FF6A00] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#E55A00] active:scale-95"
             aria-label={`Add ${product.name} to cart`}
           >
-            Add to cart
+            {isWholesale ? `Order Wholesale (${moq} min)` : 'Add to cart'}
           </button>
         </div>
       </div>

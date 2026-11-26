@@ -128,6 +128,11 @@ export type AdminOrder = {
   status: string
   paymentStatus: string
   paymentMethod: string
+  orderType?: "wholesale" | "shopping" | "sourcing" | "shipping"
+  mtnTransactionId?: string | null
+  paymentApprovedAt?: string | null
+  paymentApprovedBy?: string | null
+  paymentRejectionReason?: string | null
   subtotal: number | null
   deliveryFee: number | null
   total: number
@@ -136,6 +141,7 @@ export type AdminOrder = {
   channel?: "web" | "whatsapp"
   cancelReason?: string | null
   customerInstructions?: string | null
+  requestDetails?: Record<string, unknown>
   items: OrderLineSnapshot[]
 }
 
@@ -275,7 +281,10 @@ export type AuditLogRecord = {
   action: string
   targetResource: string
   targetId: string | null
-  metadata: Record<string, string | number | boolean | null>
+  recordNumber?: string | null
+  oldValues?: Record<string, unknown> | null
+  newValues?: Record<string, unknown> | null
+  metadata: Record<string, unknown>
   createdAt: string
 }
 
@@ -308,6 +317,7 @@ export type AdminOrdersQuery = {
   status: string
   paymentStatus: string
   channel?: string
+  orderType?: string
 }
 
 export type NewCustomerOrder = {
@@ -323,6 +333,8 @@ export type NewCustomerOrder = {
     instructions: string
   }
   paymentMethod: "mtn" | "airtel"
+  orderType?: "wholesale" | "shopping" | "sourcing" | "shipping"
+  mtnTransactionId?: string
   requestedDeliveryTime?: string | null
   customerInstructions?: string
   channel?: "web" | "whatsapp"
@@ -333,6 +345,9 @@ export type CustomerOrderReceipt = {
   orderId: string
   status: string
   paymentStatus: string
+  orderType?: string
+  mtnTransactionId?: string | null
+  paymentRejectionReason?: string | null
   subtotal: number
   deliveryFee: number
   total: number
@@ -548,6 +563,10 @@ export async function fetchAdminOrders(
   if (query.status) params.set("status", query.status)
 
   if (query.paymentStatus) params.set("paymentStatus", query.paymentStatus)
+
+  if (query.channel) params.set("channel", query.channel)
+
+  if (query.orderType) params.set("orderType", query.orderType)
 
   const response = await apiFetch(apiUrl(`/api/admin/orders?${params}`), {
     headers: { Accept: "application/json", ...getAdminAuthHeaders() },
@@ -1057,6 +1076,10 @@ export async function fetchAuditLogs(options: {
   pageSize?: number
   action?: string
   targetResource?: string
+  worker?: string
+  recordNumber?: string
+  startDate?: string
+  endDate?: string
 } = {}): Promise<{ items: AuditLogRecord[]; total: number; page: number; pageSize: number }> {
   const params = new URLSearchParams({
     page: String(options.page ?? 1),
@@ -1064,6 +1087,10 @@ export async function fetchAuditLogs(options: {
   })
   if (options.action) params.set("action", options.action)
   if (options.targetResource) params.set("targetResource", options.targetResource)
+  if (options.worker) params.set("worker", options.worker)
+  if (options.recordNumber) params.set("recordNumber", options.recordNumber)
+  if (options.startDate) params.set("startDate", options.startDate)
+  if (options.endDate) params.set("endDate", options.endDate)
   const response = await apiFetch(apiUrl(`/api/admin/audit-logs?${params}`), {
     headers: { Accept: "application/json", ...getAdminAuthHeaders() },
   })
@@ -1080,5 +1107,278 @@ export async function fetchAuditLogs(options: {
     total: typeof result.total === "number" ? result.total : 0,
     page: typeof result.page === "number" ? result.page : options.page ?? 1,
     pageSize: typeof result.pageSize === "number" ? result.pageSize : options.pageSize ?? 25,
+  }
+}
+
+// ==================== MTN Payment Approvals & Quotations ====================
+
+export async function fetchPaymentApprovals(): Promise<{ count: number; approvals: AdminOrder[] }> {
+  const response = await apiFetch(apiUrl("/api/admin/orders/approvals"), {
+    headers: { Accept: "application/json", ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to load payment approvals."))
+  }
+  const result = await readJsonResponse(response)
+  if (!isRecord(result) || !Array.isArray(result.approvals)) {
+    throw new Error("Invalid response from payment approvals API.")
+  }
+  return {
+    count: typeof result.count === "number" ? result.count : result.approvals.length,
+    approvals: result.approvals as AdminOrder[],
+  }
+}
+
+export async function approvePayment(orderId: string): Promise<{ success: boolean; order: AdminOrder }> {
+  const response = await apiFetch(apiUrl(`/api/admin/orders/${orderId}/approve-payment`), {
+    method: "POST",
+    headers: { Accept: "application/json", ...getAdminAuthHeaders() },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to approve payment."))
+  }
+  return readJsonResponse(response) as Promise<{ success: boolean; order: AdminOrder }>
+}
+
+export async function rejectPayment(orderId: string, reason?: string): Promise<{ success: boolean; order: AdminOrder }> {
+  const response = await apiFetch(apiUrl(`/api/admin/orders/${orderId}/reject-payment`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...getAdminAuthHeaders(),
+    },
+    body: JSON.stringify({ reason }),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to reject payment."))
+  }
+  return readJsonResponse(response) as Promise<{ success: boolean; order: AdminOrder }>
+}
+
+export async function submitOrderPayment(
+  orderId: string,
+  mtnTransactionId: string,
+): Promise<{ success: boolean; order: any }> {
+  const response = await apiFetch(apiUrl(`/api/orders/${orderId}/submit-payment`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ mtnTransactionId }),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to submit payment."))
+  }
+  return readJsonResponse(response) as Promise<{ success: boolean; order: any }>
+}
+
+export async function acceptQuotationOrder(payload: {
+  customerName: string
+  phone: string
+  email: string
+  deliveryAddress?: Record<string, string>
+  quotationRef: string
+  orderType: "sourcing" | "shipping"
+  amount: number
+  mtnTransactionId: string
+  description?: string
+}): Promise<{ success: boolean; orderId: string; order: any }> {
+  const response = await apiFetch(apiUrl("/api/orders/accept-quotation"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to accept quotation."))
+  }
+  return readJsonResponse(response) as Promise<{ success: boolean; orderId: string; order: any }>
+}
+
+// ==================== Sourcing & Shipping Requests & Negotiation Threads ====================
+
+export type OrderMessage = {
+  id: string
+  orderId: string
+  senderType: "customer" | "staff" | "system"
+  senderName: string
+  senderId?: string | null
+  message: string
+  attachments?: string[]
+  createdAt: string
+}
+
+export type OrderQuotation = {
+  id: string
+  orderId: string
+  version: number
+  productCost: number
+  sourcingFee: number
+  shippingCost: number
+  totalAmount: number
+  notes?: string | null
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "SUPERSEDED"
+  createdBy: string
+  createdAt: string
+}
+
+export type OrderThreadResponse = {
+  order: AdminOrder
+  messages: OrderMessage[]
+  quotations: OrderQuotation[]
+}
+
+export type CreateSourcingRequestPayload = {
+  productName: string
+  photoOrLink?: string
+  specifications?: string
+  quantity: number
+  targetBudget?: number
+  freightType: "Sea" | "Air"
+  customerName?: string
+  fullName?: string
+  phone: string
+  email?: string
+  deliveryAddress: Record<string, string> | string
+}
+
+export type CreateShippingRequestPayload = {
+  cargoDescription: string
+  weightOrSize?: string
+  pickupAddress: string
+  deliveryAddress: Record<string, string> | string
+  freightType: "Sea" | "Air"
+  customerName?: string
+  fullName?: string
+  phone: string
+  email?: string
+}
+
+export async function createSourcingRequest(payload: CreateSourcingRequestPayload): Promise<{
+  success: boolean
+  orderId: string
+  order: AdminOrder
+  message: string
+}> {
+  const response = await apiFetch(apiUrl("/api/orders/sourcing"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to submit sourcing request."))
+  }
+  return (await readJsonResponse(response)) as {
+    success: boolean
+    orderId: string
+    order: AdminOrder
+    message: string
+  }
+}
+
+export async function createShippingRequest(payload: CreateShippingRequestPayload): Promise<{
+  success: boolean
+  orderId: string
+  order: AdminOrder
+  message: string
+}> {
+  const response = await apiFetch(apiUrl("/api/orders/shipping"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to submit shipping request."))
+  }
+  return (await readJsonResponse(response)) as {
+    success: boolean
+    orderId: string
+    order: AdminOrder
+    message: string
+  }
+}
+
+export async function fetchOrderThread(orderId: string): Promise<OrderThreadResponse> {
+  const response = await apiFetch(apiUrl(`/api/orders/${orderId}/thread`), {
+    headers: { Accept: "application/json" },
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to load order thread."))
+  }
+  return (await readJsonResponse(response)) as OrderThreadResponse
+}
+
+export async function sendOrderMessage(
+  orderId: string,
+  message: string,
+  senderName?: string,
+  senderType: "customer" | "staff" = "customer",
+  attachments?: string[],
+): Promise<{ success: boolean; message: OrderMessage }> {
+  const isAdmin = senderType === "staff"
+  const url = isAdmin
+    ? apiUrl(`/api/admin/orders/${orderId}/messages`)
+    : apiUrl(`/api/orders/${orderId}/messages`)
+
+  const response = await apiFetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(isAdmin ? getAdminAuthHeaders() : {}),
+    },
+    body: JSON.stringify({ message, senderName, senderType, attachments }),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to send message."))
+  }
+  return (await readJsonResponse(response)) as { success: boolean; message: OrderMessage }
+}
+
+export async function createOrderQuotation(
+  orderId: string,
+  payload: { productCost: number; sourcingFee: number; shippingCost: number; notes?: string },
+): Promise<{ success: boolean; quotation: OrderQuotation }> {
+  const response = await apiFetch(apiUrl(`/api/admin/orders/${orderId}/quotations`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...getAdminAuthHeaders(),
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to create quotation."))
+  }
+  return (await readJsonResponse(response)) as { success: boolean; quotation: OrderQuotation }
+}
+
+export async function acceptOrderQuotationWithMtn(
+  orderId: string,
+  mtnTransactionId: string,
+): Promise<{ success: boolean; order: AdminOrder; quotation: OrderQuotation; message: string }> {
+  const response = await apiFetch(apiUrl(`/api/orders/${orderId}/accept-and-pay`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ mtnTransactionId }),
+  })
+  if (!response.ok) {
+    const data = await readJsonResponse(response)
+    throw new Error(getApiErrorMessage(data, "Failed to accept quotation."))
+  }
+  return (await readJsonResponse(response)) as {
+    success: boolean
+    order: AdminOrder
+    quotation: OrderQuotation
+    message: string
   }
 }

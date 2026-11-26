@@ -5,8 +5,11 @@ import { OrderItemEntity } from '../../../../orders/infrastructure/persistence/t
 @Index('products_sku_key', ['sku'], { unique: true })
 @Index('products_slug_key', ['slug'], { unique: true })
 @Index('products_quantity_idx', ['quantity'])
-@Check('products_price_check', 'price >= 0')
+@Index('products_listing_type_idx', ['listingType'])
+@Check('products_price_check', 'price > 0')
+@Check('products_wholesale_price_check', 'wholesale_price IS NULL OR wholesale_price > 0')
 @Check('products_quantity_check', 'quantity >= 0')
+@Check('products_moq_check', 'moq >= 1')
 export class ProductEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string
@@ -32,6 +35,9 @@ export class ProductEntity {
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   price!: string
 
+  @Column({ name: 'wholesale_price', type: 'numeric', precision: 14, scale: 2, nullable: true })
+  wholesalePrice!: string | null
+
   @Column({ name: 'original_price', type: 'numeric', precision: 14, scale: 2, default: 0 })
   originalPrice!: string
 
@@ -40,6 +46,12 @@ export class ProductEntity {
 
   @Column({ type: 'integer', default: 0 })
   quantity!: number
+
+  @Column({ type: 'integer', default: 1 })
+  moq!: number
+
+  @Column({ name: 'listing_type', type: 'text', default: 'both' })
+  listingType!: 'wholesale' | 'retail' | 'both'
 
   @Column({ type: 'boolean', default: true })
   active!: boolean

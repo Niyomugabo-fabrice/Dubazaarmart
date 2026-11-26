@@ -22,6 +22,15 @@ export default function ProductDetailPage({ product }: Props) {
   const { navigate } = useAppNavigation()
   const inWishlist = wishlist.includes(product.id)
 
+  const moq = Math.max(1, product.moq ?? 1)
+  const isWholesaleTier = Boolean(
+    product.wholesalePrice != null &&
+    product.wholesalePrice > 0 &&
+    product.listingType !== 'retail' &&
+    qty >= moq,
+  )
+  const currentUnitPrice = isWholesaleTier ? product.wholesalePrice! : product.price
+
   const related = useMemo(
     () => products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4),
     [products, product.category, product.id],
@@ -113,22 +122,72 @@ export default function ProductDetailPage({ product }: Props) {
             </div>
 
             {/* Price */}
-            <div className="flex items-center gap-3 mb-6">
-              {product.originalPrice > product.price && (
-                <>
-                  <div className="flex flex-col items-start">
-                    <span className="text-xl line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</span>
+            <div className="flex flex-col gap-2 mb-6">
+              <div className="flex items-center gap-3">
+                {isWholesaleTier ? (
+                  <>
+                    <div className="flex flex-col items-start">
+                      <span className="text-xs font-bold text-purple-700">Wholesale Price (MOQ {moq} hit!)</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold text-purple-900">{formatPrice(currentUnitPrice)}</span>
+                        {product.price > currentUnitPrice && (
+                          <span className="text-base line-through text-slate-400">Retail: {formatPrice(product.price)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="badge px-2.5 py-1 rounded bg-purple-100 text-purple-800 font-bold text-xs border border-purple-300">
+                      Save {formatPrice(product.price - currentUnitPrice)} / unit
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {product.originalPrice > product.price && (
+                      <span className="text-xl line-through" style={{ color: '#0B5B24' }}>{formatPrice(product.originalPrice)}</span>
+                    )}
                     <span className="text-4xl font-bold gold-text">{formatPrice(product.price)}</span>
-                  </div>
-                  <span className="badge px-2 py-1 rounded" style={{ background: 'rgba(255,106,0,0.15)', color: '#FF6A00', border: '1px solid rgba(255,106,0,0.3)' }}>
-                    Save {formatPrice(product.originalPrice - product.price)}
-                  </span>
-                </>
-              )}
-              {product.originalPrice <= product.price && (
-                <span className="text-4xl font-bold gold-text">{formatPrice(product.price)}</span>
+                    {product.originalPrice > product.price && (
+                      <span className="badge px-2 py-1 rounded" style={{ background: 'rgba(255,106,0,0.15)', color: '#FF6A00', border: '1px solid rgba(255,106,0,0.3)' }}>
+                        Save {formatPrice(product.originalPrice - product.price)}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+              {qty > 1 && (
+                <div className="text-xs font-semibold text-[#0B5B24]">
+                  Total: {formatPrice(currentUnitPrice * qty)} ({qty} units × {formatPrice(currentUnitPrice)})
+                </div>
               )}
             </div>
+
+            {/* Wholesale Tier Notice */}
+            {product.wholesalePrice != null && product.listingType !== 'retail' && (
+              <div className={`mb-6 rounded-2xl border p-4 transition-colors ${
+                isWholesaleTier ? 'border-purple-400 bg-purple-100/70' : 'border-purple-200 bg-purple-50/70'
+              }`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                      {isWholesaleTier ? '✓ Wholesale Pricing Active' : 'Wholesale & Bulk Price'}
+                    </span>
+                    <div className="mt-0.5 text-xl font-extrabold text-purple-900">
+                      {formatPrice(product.wholesalePrice)} <span className="text-xs font-normal text-purple-700">/ unit</span>
+                    </div>
+                  </div>
+                  <div className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    isWholesaleTier ? 'bg-purple-700 text-white' : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    MOQ: {moq} units
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-purple-800">
+                  {isWholesaleTier
+                    ? `Great news! You reached the MOQ (${moq} units). Wholesale price of ${formatPrice(product.wholesalePrice)} / unit is now applied to this order.`
+                    : `Add ${moq - qty} more unit${moq - qty === 1 ? '' : 's'} to hit the MOQ (${moq} units) and unlock wholesale price of ${formatPrice(product.wholesalePrice)} / unit!`
+                  }
+                </p>
+              </div>
+            )}
 
             {/* Stock */}
             <div className="flex items-center gap-2 mb-6">

@@ -14,6 +14,11 @@ import { CategoryImages20261119234000 } from './migrations/20261119234000-Catego
 import { HeroSlidesManagement20261120010000 } from './migrations/20261120010000-HeroSlidesManagement'
 import { CompanyOrderProductReferences20261120020000 } from './migrations/20261120020000-CompanyOrderProductReferences'
 import { WorkerRolesAndPermissions20261126210000 } from './migrations/20261126210000-WorkerRolesAndPermissions'
+import { ActivityLogEnhancements20261126220000 } from './migrations/20261126220000-ActivityLogEnhancements'
+import { ProductMoqAndListingType20261126224000 } from './migrations/20261126224000-ProductMoqAndListingType'
+import { ProductWholesalePrice20261126230000 } from './migrations/20261126230000-ProductWholesalePrice'
+import { OrderMtnPaymentAndApproval20261126234000 } from './migrations/20261126234000-OrderMtnPaymentAndApproval'
+import { SourcingShippingNegotiation20261127003000 } from './migrations/20261127003000-SourcingShippingNegotiation'
 
 export function databaseOptions(databaseUrl: string): TypeOrmModuleOptions {
   return {
@@ -35,6 +40,11 @@ export function databaseOptions(databaseUrl: string): TypeOrmModuleOptions {
       HeroSlidesManagement20261120010000,
       CompanyOrderProductReferences20261120020000,
       WorkerRolesAndPermissions20261126210000,
+      ActivityLogEnhancements20261126220000,
+      ProductMoqAndListingType20261126224000,
+      ProductWholesalePrice20261126230000,
+      OrderMtnPaymentAndApproval20261126234000,
+      SourcingShippingNegotiation20261127003000,
     ],
     migrationsTableName: 'typeorm_migrations',
     synchronize: false,

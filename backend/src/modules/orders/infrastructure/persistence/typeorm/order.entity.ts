@@ -1,9 +1,14 @@
 import { Check, Column, CreateDateColumn, DeleteDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { OrderItemEntity } from './order-item.entity'
+import { OrderMessageEntity } from './order-message.entity'
+import { OrderQuotationEntity } from './order-quotation.entity'
 
 @Entity({ name: 'orders' })
 @Index('orders_created_at_idx', ['createdAt'])
 @Index('orders_status_idx', ['status'])
+@Index('orders_payment_status_idx', ['paymentStatus'])
+@Index('orders_order_type_idx', ['orderType'])
+@Index('orders_mtn_transaction_id_idx', ['mtnTransactionId'])
 @Check('orders_subtotal_check', 'subtotal >= 0')
 @Check('orders_delivery_fee_check', 'delivery_fee >= 0')
 @Check('orders_total_amount_check', 'total_amount >= 0')
@@ -32,6 +37,21 @@ export class OrderEntity {
   @Column({ name: 'payment_method', type: 'text', default: 'unknown' })
   paymentMethod!: string
 
+  @Column({ name: 'order_type', type: 'text', default: 'shopping' })
+  orderType!: string
+
+  @Column({ name: 'mtn_transaction_id', type: 'text', nullable: true })
+  mtnTransactionId!: string | null
+
+  @Column({ name: 'payment_approved_at', type: 'timestamptz', nullable: true })
+  paymentApprovedAt!: Date | null
+
+  @Column({ name: 'payment_approved_by', type: 'text', nullable: true })
+  paymentApprovedBy!: string | null
+
+  @Column({ name: 'payment_rejection_reason', type: 'text', nullable: true })
+  paymentRejectionReason!: string | null
+
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   subtotal!: string
 
@@ -56,6 +76,9 @@ export class OrderEntity {
   @Column({ name: 'admin_notes', type: 'text', default: '' })
   adminNotes!: string
 
+  @Column({ name: 'request_details', type: 'jsonb', default: () => "'{}'::jsonb" })
+  requestDetails!: Record<string, unknown>
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date
 
@@ -64,4 +87,10 @@ export class OrderEntity {
 
   @OneToMany(() => OrderItemEntity, (item) => item.order, { cascade: ['insert'] })
   items!: OrderItemEntity[]
+
+  @OneToMany(() => OrderMessageEntity, (msg) => msg.order)
+  messages!: OrderMessageEntity[]
+
+  @OneToMany(() => OrderQuotationEntity, (quo) => quo.order)
+  quotations!: OrderQuotationEntity[]
 }

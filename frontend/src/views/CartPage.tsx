@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { cartStore, useCart } from '../store/cartStore'
+import { cartStore, useCart, getProductUnitPrice, isWholesalePriceApplied } from '../store/cartStore'
 import { createWhatsAppOrder } from '../lib/dashboardApi'
 
 export default function CartPage() {
@@ -88,29 +88,56 @@ export default function CartPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Items */}
           <div className="lg:col-span-2 space-y-4">
-            {cartItems.map(item => (
-              <div key={item.product.id} className="flex gap-4 p-4 rounded-2xl shadow-sm" style={{ background: '#FFF7E8', border: '2px solid #FFB800' }}>
-                <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 product-img-wrap">
-                  <Image src={item.product.image} alt={item.product.name} fill sizes="80px" unoptimized={item.product.image.includes('images.unsplash.com')} className="object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="badge mb-1" style={{ color: '#FF6A00' }}>{item.product.brand}</div>
-                  <h3 className="font-semibold text-[#111111] text-sm mb-2 line-clamp-2">{item.product.name}</h3>
-                  <div className="text-sm font-bold" style={{ color: '#FF6A00' }}>Unit price: {formatPrice(item.product.price)}</div>
-                </div>
-                <div className="flex flex-col items-end gap-3">
-                  <button type="button" onClick={() => cartStore.remove(item.product.id)} className="text-xs" style={{ color: '#0B5B24' }} aria-label={`Remove ${item.product.name} from cart`}>
-                    ✕ Remove
-                  </button>
-                  <div className="flex items-center rounded-lg overflow-hidden bg-white" style={{ border: '1px solid #FFB800' }}>
-                    <button type="button" onClick={() => cartStore.updateQty(item.product.id, item.quantity - 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold" aria-label={`Decrease ${item.product.name} quantity`}>−</button>
-                    <span className="px-3 font-mono text-[#111111] text-sm font-bold" aria-live="polite">{item.quantity}</span>
-                    <button type="button" onClick={() => cartStore.updateQty(item.product.id, item.quantity + 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold" aria-label={`Increase ${item.product.name} quantity`}>+</button>
+            {cartItems.map(item => {
+              const moq = Math.max(1, item.product.moq ?? 1)
+              const isWholesale = isWholesalePriceApplied(item.product, item.quantity)
+              const unitPrice = getProductUnitPrice(item.product, item.quantity)
+              const lineTotal = unitPrice * item.quantity
+
+              return (
+                <div key={item.product.id} className="flex gap-4 p-4 rounded-2xl shadow-sm" style={{ background: '#FFF7E8', border: '2px solid #FFB800' }}>
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 product-img-wrap">
+                    <Image src={item.product.image} alt={item.product.name} fill sizes="80px" unoptimized={item.product.image.includes('images.unsplash.com')} className="object-cover" />
                   </div>
-                  <div className="text-sm font-bold text-[#111111]">Total: {formatPrice(item.product.price * item.quantity)}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="badge mb-1" style={{ color: '#FF6A00' }}>{item.product.brand}</div>
+                    <h3 className="font-semibold text-[#111111] text-sm mb-1.5 line-clamp-2">{item.product.name}</h3>
+                    <div className="flex flex-col gap-1">
+                      <div className="text-sm font-bold flex items-center gap-2">
+                        <span style={{ color: isWholesale ? '#6B21A8' : '#FF6A00' }}>
+                          Unit price: {formatPrice(unitPrice)}
+                        </span>
+                        {isWholesale && item.product.price > unitPrice && (
+                          <span className="text-xs text-slate-400 line-through">
+                            {formatPrice(item.product.price)}
+                          </span>
+                        )}
+                      </div>
+                      {isWholesale ? (
+                        <span className="inline-flex w-fit items-center gap-1 rounded-md bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-800">
+                          ✓ Wholesale price active (MOQ {moq} hit!)
+                        </span>
+                      ) : item.product.wholesalePrice != null && item.product.wholesalePrice > 0 ? (
+                        <span className="text-[11px] text-purple-700 font-medium">
+                          Add {moq - item.quantity} more to unlock wholesale price of {formatPrice(item.product.wholesalePrice)}/unit (MOQ: {moq})
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-3">
+                    <button type="button" onClick={() => cartStore.remove(item.product.id)} className="text-xs" style={{ color: '#0B5B24' }} aria-label={`Remove ${item.product.name} from cart`}>
+                      ✕ Remove
+                    </button>
+                    <div className="flex items-center rounded-lg overflow-hidden bg-white" style={{ border: '1px solid #FFB800' }}>
+                      <button type="button" onClick={() => cartStore.updateQty(item.product.id, item.quantity - 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold" aria-label={`Decrease ${item.product.name} quantity`}>−</button>
+                      <span className="px-3 font-mono text-[#111111] text-sm font-bold" aria-live="polite">{item.quantity}</span>
+                      <button type="button" onClick={() => cartStore.updateQty(item.product.id, item.quantity + 1)} className="px-3 py-1.5 text-[#111111] hover:bg-black/5 text-sm font-bold" aria-label={`Increase ${item.product.name} quantity`}>+</button>
+                    </div>
+                    <div className="text-sm font-bold text-[#111111]">Total: {formatPrice(lineTotal)}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             <div className="flex items-center justify-between pt-2">
               <button onClick={() => cartStore.clear()} className="text-sm text-red-600 hover:underline">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import ProductCard from "../components/ProductCard"
@@ -10,6 +10,11 @@ import { useToast } from "../components/ui/Toast"
 export default function WholesalePage() {
   const toast = useToast()
   const { products, loading } = useProducts()
+  const wholesaleProducts = useMemo(() => {
+    return products.filter(
+      (product) => !product.listingType || product.listingType === 'wholesale' || product.listingType === 'both',
+    )
+  }, [products])
   const [sent, setSent] = useState(false)
   const [form, setForm] = useState({
     businessName: "",
@@ -100,7 +105,7 @@ export default function WholesalePage() {
       </section>
 
       {/* Live Catalog Preview */}
-      {!loading && products.length > 0 && (
+      {!loading && wholesaleProducts.length > 0 && (
         <section className="border-t border-[#E2E8F0] bg-[#F8FAFC] py-14 px-4 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -109,19 +114,22 @@ export default function WholesalePage() {
                   Available Stock
                 </span>
                 <h2 className="mt-1 text-2xl font-extrabold text-[#0A1F44]">
-                  Popular Wholesale &amp; Retail Lines
+                  Wholesale Products &amp; Bulk Pricing
                 </h2>
+                <p className="mt-1 text-sm text-[#475569]">
+                  Tiered wholesale pricing with Minimum Order Quantities (MOQ).
+                </p>
               </div>
               <Link
                 href="/shop"
                 className="text-sm font-bold text-[#FF6A00] hover:underline"
               >
-                View Full Catalog →
+                View Retail Catalog →
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {products.slice(0, 4).map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {wholesaleProducts.map((product) => (
+                <ProductCard key={product.id} product={product} mode="wholesale" />
               ))}
             </div>
           </div>

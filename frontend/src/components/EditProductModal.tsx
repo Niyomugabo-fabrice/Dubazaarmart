@@ -18,8 +18,11 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
   const [category, setCategory] = useState('')
   const [brand, setBrand] = useState('')
   const [price, setPrice] = useState('')
+  const [wholesalePrice, setWholesalePrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [quantity, setQuantity] = useState('0')
+  const [moq, setMoq] = useState('1')
+  const [listingType, setListingType] = useState<'both' | 'wholesale' | 'retail'>('both')
   const [description, setDescription] = useState('')
   const [active, setActive] = useState(true)
   const [featured, setFeatured] = useState(false)
@@ -35,8 +38,11 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
       setCategory('')
       setBrand('')
       setPrice('')
+      setWholesalePrice('')
       setOriginalPrice('')
-      setQuantity('')
+      setQuantity('0')
+      setMoq('1')
+      setListingType('both')
       setDescription('')
       setActive(true)
       setFeatured(false)
@@ -51,8 +57,11 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
     setCategory(product.category || '')
     setBrand(product.brand || '')
     setPrice(String(product.price ?? ''))
+    setWholesalePrice(product.wholesalePrice != null ? String(product.wholesalePrice) : '')
     setOriginalPrice(String(product.originalPrice ?? product.price ?? ''))
-    setQuantity(String(product.quantity ?? ''))
+    setQuantity(String(product.quantity ?? 0))
+    setMoq(String(product.moq ?? 1))
+    setListingType((product.listingType as 'both' | 'wholesale' | 'retail') || 'both')
     setDescription(product.description || '')
     setActive(product.active !== undefined ? product.active : true)
     setFeatured(Boolean(product.featured))
@@ -80,18 +89,33 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
     }
 
     const priceValue = Number(price)
+    const wholesalePriceValue = wholesalePrice.trim() ? Number(wholesalePrice) : undefined
     const originalPriceValue = originalPrice.trim() ? Number(originalPrice) : priceValue
     const quantityValue = Number(quantity)
+    const moqValue = moq.trim() ? Number(moq) : 1
+
     if (!Number.isFinite(priceValue) || priceValue <= 0) {
-      setError('Please provide a valid price.')
+      setError('Retail unit price must be positive (greater than 0 RWF).')
+      return
+    }
+    if (wholesalePriceValue !== undefined && (!Number.isFinite(wholesalePriceValue) || wholesalePriceValue <= 0)) {
+      setError('Wholesale price must be positive (greater than 0 RWF).')
+      return
+    }
+    if (listingType === 'wholesale' && (wholesalePriceValue === undefined || wholesalePriceValue <= 0)) {
+      setError('Please provide a wholesale unit price for wholesale products.')
       return
     }
     if (!Number.isFinite(originalPriceValue) || originalPriceValue < 0) {
       setError('Please provide a valid discount/original price.')
       return
     }
-    if (!Number.isFinite(quantityValue) || quantityValue < 0) {
-      setError('Please provide a valid stock quantity.')
+    if (!Number.isInteger(quantityValue) || quantityValue < 0) {
+      setError('Stock quantity must be a whole number of 0 or more.')
+      return
+    }
+    if (!Number.isInteger(moqValue) || moqValue < 1) {
+      setError('MOQ must be a whole number of 1 or more.')
       return
     }
 
@@ -116,11 +140,14 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
           category,
           brand: brand.trim(),
           price: priceValue,
+          wholesalePrice: wholesalePriceValue ?? null,
           originalPrice: Math.max(originalPriceValue, priceValue),
           discount: originalPriceValue > priceValue
             ? Math.round(((originalPriceValue - priceValue) / originalPriceValue) * 100)
             : 0,
           quantity: quantityValue,
+          moq: moqValue,
+          listingType,
           description: description.trim(),
           active,
           featured,
@@ -205,11 +232,12 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Price (RWF) *</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Retail Unit Price (RWF) *</label>
               <input
                 required
                 type="number"
-                min="0"
+                min="1"
+                step="any"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm font-mono font-bold"
@@ -229,11 +257,12 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
 
           <div className="grid sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Available Quantity *</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Stock Quantity *</label>
               <input
                 required
                 type="number"
                 min="0"
+                step="1"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm font-mono font-bold"
@@ -257,7 +286,7 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
                   onChange={(e) => setActive(e.target.checked)}
                   className="rounded"
                 />
-                Published (Active)
+                Active
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
                 <input
@@ -268,6 +297,64 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
                 />
                 Featured
               </label>
+            </div>
+          </div>
+
+          {/* Where it appears, Wholesale Price & MOQ Section */}
+          <div className="grid sm:grid-cols-3 gap-3 rounded-xl p-3.5 border bg-gray-50 border-gray-200">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Where it appears *
+              </label>
+              <select
+                value={listingType}
+                onChange={(e) => setListingType(e.target.value as 'both' | 'wholesale' | 'retail')}
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm bg-white"
+              >
+                <option value="both">Both Wholesale &amp; Shopping (Retail)</option>
+                <option value="retail">Shopping (Retail) Only</option>
+                <option value="wholesale">Wholesale Only</option>
+              </select>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Visible on Wholesale, Shopping, or both.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Wholesale Price (RWF) {listingType === 'wholesale' ? '*' : '(Wholesale)'}
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="any"
+                placeholder={price ? `e.g. ${Math.round(Number(price) * 0.85)}` : 'e.g. 42000'}
+                value={wholesalePrice}
+                onChange={(e) => setWholesalePrice(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm font-mono font-bold bg-white"
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Bulk price shown on Wholesale page. Can differ from retail unit price.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                MOQ (Min Order Qty) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                required
+                placeholder="e.g. 1, 5, 20"
+                value={moq}
+                onChange={(e) => setMoq(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm font-mono font-bold bg-white"
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Minimum quantity for wholesale (whole number &ge; 1).
+              </p>
             </div>
           </div>
 
@@ -313,7 +400,7 @@ export default function EditProductModal({ product, isOpen, onClose, onProductUp
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-sm"
+              className="px-6 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-sm disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>

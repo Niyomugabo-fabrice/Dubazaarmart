@@ -16,8 +16,11 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
   const [category, setCategory] = useState('')
   const [brand, setBrand] = useState('')
   const [price, setPrice] = useState('')
+  const [wholesalePrice, setWholesalePrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [quantity, setQuantity] = useState('0')
+  const [moq, setMoq] = useState('1')
+  const [listingType, setListingType] = useState<'both' | 'wholesale' | 'retail'>('both')
   const [sku, setSku] = useState('')
   const [badge, setBadge] = useState('')
   const [images, setImages] = useState<string[]>([])
@@ -33,8 +36,11 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
     setCategory('')
     setBrand('')
     setPrice('')
+    setWholesalePrice('')
     setOriginalPrice('')
-    setQuantity('')
+    setQuantity('0')
+    setMoq('1')
+    setListingType('both')
     setSku('')
     setBadge('')
     setImages([])
@@ -51,15 +57,33 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
     setError(null)
 
     const numPrice = Number(price.replace(/,/g, ''))
+    const numWholesale = wholesalePrice.trim() ? Number(wholesalePrice.replace(/,/g, '')) : undefined
     const numOrig = originalPrice ? Number(originalPrice.replace(/,/g, '')) : numPrice
-    const numQty = Number(quantity)
+    const numQty = quantity.trim() ? Number(quantity) : 0
+    const numMoq = moq.trim() ? Number(moq) : 1
 
     if (!name.trim()) {
       setError('Please provide a product name.')
       return
     }
     if (isNaN(numPrice) || numPrice <= 0) {
-      setError('Please provide a valid price in RWF.')
+      setError('Retail unit price must be positive (greater than 0 RWF).')
+      return
+    }
+    if (numWholesale !== undefined && (isNaN(numWholesale) || numWholesale <= 0)) {
+      setError('Wholesale price must be positive (greater than 0 RWF).')
+      return
+    }
+    if (listingType === 'wholesale' && (numWholesale === undefined || numWholesale <= 0)) {
+      setError('Please specify a wholesale unit price for wholesale products.')
+      return
+    }
+    if (isNaN(numQty) || !Number.isInteger(numQty) || numQty < 0) {
+      setError('Stock quantity must be a whole number of 0 or more.')
+      return
+    }
+    if (isNaN(numMoq) || !Number.isInteger(numMoq) || numMoq < 1) {
+      setError('MOQ must be a whole number of 1 or more.')
       return
     }
     if (!category) {
@@ -85,8 +109,11 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
       category,
       brand: brand.trim(),
       price: numPrice,
+      wholesalePrice: numWholesale ?? (listingType === 'wholesale' ? numPrice : null),
       originalPrice: numOrig >= numPrice ? numOrig : numPrice,
-      quantity: isNaN(numQty) || numQty < 0 ? 0 : numQty,
+      quantity: numQty,
+      moq: numMoq,
+      listingType,
       sku: generatedSku,
       badge: badge.trim() || undefined,
       image: productImages[0] || '',
@@ -102,7 +129,6 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
     }
 
     try {
-      // Use the productsStore helper so the global store notifies all listeners immediately
       const newProduct = await addProductToBackend(payload)
       if (!newProduct) throw new Error('Failed to save product')
 
@@ -112,7 +138,9 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
       setBrand('')
       setPrice('')
       setOriginalPrice('')
-      setQuantity('')
+      setQuantity('0')
+      setMoq('1')
+      setListingType('both')
       setSku('')
       setBadge('')
       setImages([])
@@ -132,8 +160,11 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
     setCategory('')
     setBrand('')
     setPrice('')
+    setWholesalePrice('')
     setOriginalPrice('')
-    setQuantity('')
+    setQuantity('0')
+    setMoq('1')
+    setListingType('both')
     setSku('')
     setBadge('')
     setImages([])
@@ -145,7 +176,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center">
       <div
         className="max-h-[calc(100dvh_-_2rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-3xl p-6 shadow-2xl animate-scaleUp sm:p-8"
         style={{ background: '#FFFFFF', border: '1px solid #FFB800' }}
@@ -237,27 +268,29 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
 
             <div>
               <label className="block text-xs font-semibold mb-1 text-[#111111]">
-                Price (RWF) *
+                Retail Unit Price (RWF) *
               </label>
               <input
                 type="number"
+                min="1"
+                step="any"
                 required
-                placeholder="e.g. 4999.99"
+                placeholder="e.g. 50000"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
+                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50 font-mono font-bold"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1 text-[#111111]">
-                Discount / Original Price (RWF)
+                Discount / Original Price
               </label>
               <input
                 type="number"
                 min="0"
-                placeholder="e.g. 5999.99"
+                placeholder="e.g. 60000"
                 value={originalPrice}
                 onChange={e => setOriginalPrice(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
@@ -267,17 +300,80 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
 
             <div>
               <label className="block text-xs font-semibold mb-1 text-[#111111]">
-                Stock Quantity
+                Stock Quantity *
               </label>
               <input
                 type="number"
                 min="0"
-                placeholder="Enter stock quantity"
+                step="1"
+                required
+                placeholder="e.g. 25"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50"
+                className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50 font-mono font-bold"
                 style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
               />
+            </div>
+          </div>
+
+          {/* Where it appears, Wholesale Price & MOQ Section */}
+          <div className="grid sm:grid-cols-3 gap-4 rounded-2xl p-3.5 border" style={{ background: '#FAFAFA', borderColor: '#E5E7EB' }}>
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-[#111111]">
+                Where it appears *
+              </label>
+              <select
+                value={listingType}
+                onChange={e => setListingType(e.target.value as 'both' | 'wholesale' | 'retail')}
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm font-medium"
+                style={{ background: '#FFFFFF', border: '1px solid #D1D5DB', color: '#111111' }}
+              >
+                <option value="both">Both Wholesale &amp; Shopping (Retail)</option>
+                <option value="retail">Shopping (Retail) Only</option>
+                <option value="wholesale">Wholesale Only</option>
+              </select>
+              <p className="mt-1 text-[11px] text-gray-500">
+                Visible on Wholesale, Shopping, or both.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-[#111111]">
+                Wholesale Price (RWF) {listingType === 'wholesale' ? '*' : '(Wholesale)'}
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="any"
+                placeholder={price ? `e.g. ${Math.round(Number(price) * 0.85)}` : 'e.g. 42000'}
+                value={wholesalePrice}
+                onChange={e => setWholesalePrice(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm font-mono font-bold"
+                style={{ background: '#FFFFFF', border: '1px solid #D1D5DB', color: '#111111' }}
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Bulk price shown on the Wholesale page. Can differ from retail unit price.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-[#111111]">
+                MOQ (Minimum Order Qty) *
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                required
+                placeholder="e.g. 1, 5, 20"
+                value={moq}
+                onChange={e => setMoq(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm font-mono font-bold"
+                style={{ background: '#FFFFFF', border: '1px solid #D1D5DB', color: '#111111' }}
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Minimum order quantity for wholesale (whole number &ge; 1).
+              </p>
             </div>
           </div>
 
@@ -318,6 +414,7 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
                 <option value="Featured">Featured</option>
                 <option value="Top Pick">Top Pick</option>
                 <option value="Premium">Premium</option>
+                <option value="Wholesale">Wholesale</option>
               </select>
             </div>
           </div>
@@ -329,11 +426,11 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
               Description
             </label>
             <textarea
-              rows={2}
+              rows={3}
               placeholder="Enter product description"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl text-sm resize-none placeholder:text-gray-400 placeholder:opacity-50"
+              className="w-full px-3.5 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50 resize-none"
               style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
             />
           </div>
@@ -344,10 +441,10 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
             </label>
             <textarea
               rows={3}
-              placeholder={'e.g. Color: Black\nStorage: 256 GB'}
+              placeholder={'e.g. Color: Space Gray\nRAM: 16 GB\nStorage: 512 GB SSD'}
               value={specsText}
               onChange={e => setSpecsText(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl text-sm resize-y placeholder:text-gray-400 placeholder:opacity-50"
+              className="w-full px-3.5 py-2.5 rounded-xl text-sm placeholder:text-gray-400 placeholder:opacity-50 resize-y"
               style={{ background: '#FFF7E8', border: '1px solid #FFB800', color: '#111111' }}
             />
             <p className="mt-1 text-[11px] text-gray-500">Enter one specification per line as “name: value”.</p>
@@ -356,38 +453,31 @@ export default function AddProductModal({ isOpen, onClose, onProductAdded }: Pro
           <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
-              id="featuredCheck"
+              id="featured-product"
               checked={featured}
               onChange={e => setFeatured(e.target.checked)}
-              className="h-4 w-4 rounded accent-[#FF6A00]"
+              className="rounded"
             />
-            <label htmlFor="featuredCheck" className="text-xs font-medium text-[#111111] cursor-pointer">
-              Show in Featured Collection on Home Page
+            <label htmlFor="featured-product" className="text-xs font-semibold text-[#111111] cursor-pointer">
+              Feature on Homepage
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: '#F1FFF0' }}>
+          <div className="flex justify-end gap-3 pt-3 border-t" style={{ borderColor: '#F1FFF0' }}>
             <button
               type="button"
               onClick={handleClose}
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl text-xs font-semibold btn-ghost"
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-gray-700 hover:bg-black/5 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold btn-gold flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-md hover:opacity-90 transition disabled:opacity-50"
             >
-              {submitting ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  Saving Product...
-                </>
-              ) : (
-                'Add Product'
-              )}
+              {submitting ? 'Adding...' : 'Add Product'}
             </button>
           </div>
         </form>

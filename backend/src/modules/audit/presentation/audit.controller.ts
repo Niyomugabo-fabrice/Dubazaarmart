@@ -33,8 +33,28 @@ class AuditLogQueryDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  worker?: string
+
+  @IsOptional()
+  @IsString()
   @MaxLength(64)
   actorUserId?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  recordNumber?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  startDate?: string
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  endDate?: string
 }
 
 @ApiTags('audit logs')

@@ -113,6 +113,19 @@ export const cartStore = {
   },
 }
 
+export function getProductUnitPrice(product: Product, quantity: number): number {
+  const moq = Math.max(1, product.moq ?? 1)
+  if (product.wholesalePrice != null && product.wholesalePrice > 0 && quantity >= moq) {
+    return product.wholesalePrice
+  }
+  return product.price
+}
+
+export function isWholesalePriceApplied(product: Product, quantity: number): boolean {
+  const moq = Math.max(1, product.moq ?? 1)
+  return Boolean(product.wholesalePrice != null && product.wholesalePrice > 0 && quantity >= moq)
+}
+
 export function useCart() {
   useEffect(() => cartStore.hydrate(), [])
   const cartItems = useSyncExternalStore(
@@ -125,7 +138,10 @@ export function useCart() {
     cartStore.getWishlist,
     () => EMPTY_WISHLIST,
   )
-  const subtotal = cartItems.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+  const subtotal = cartItems.reduce((sum, i) => {
+    const unitPrice = getProductUnitPrice(i.product, i.quantity)
+    return sum + unitPrice * i.quantity
+  }, 0)
   const delivery = cartItems.length > 0 ? 10_000 : 0
   const total = subtotal + delivery
   const count = cartItems.reduce((sum, i) => sum + i.quantity, 0)

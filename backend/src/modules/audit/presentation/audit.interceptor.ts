@@ -14,7 +14,7 @@ export class AuditInterceptor implements NestInterceptor {
   constructor(private readonly audit: AuditService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest<Request & { user?: UserIdentity }>()
+    const request = context.switchToHttp().getRequest<Request & { user?: UserIdentity; auditLogged?: boolean }>()
     const method = request.method.toUpperCase()
     const path = request.route?.path ? `${request.baseUrl}${request.route.path}` : request.path
     const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
@@ -28,7 +28,13 @@ export class AuditInterceptor implements NestInterceptor {
     const targetResource = segments[3] || segments[2] || 'admin'
     const rawTargetId = request.params.id || request.params.productId
     const targetId = typeof rawTargetId === 'string' ? rawTargetId : null
+
     return next.handle().pipe(concatMap(async (response) => {
+      // If controller or service already recorded a specific audit action, skip duplicate generic record
+      if (request.auditLogged) {
+        return response
+      }
+
       const target = describeTarget(response)
       await this.audit.record({
         actorUserId: user?.id,
@@ -36,6 +42,7 @@ export class AuditInterceptor implements NestInterceptor {
         action: `${method.toLowerCase()}.${targetResource}`,
         targetResource,
         targetId,
+        recordNumber: target.label || targetId,
         metadata: {
           method,
           path,

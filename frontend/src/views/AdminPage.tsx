@@ -16,6 +16,8 @@ import {
   recordAdminOrderPayment,
   deleteAdminOrder,
   deleteCompanyOrder,
+  fetchPaymentApprovals,
+  approvePayment,
   type AdminOrdersPage,
   type DashboardData,
   type RevenueRange,
@@ -64,6 +66,10 @@ const CategoryImagesPanel = dynamic(() => import("./admin/CategoryImagesPanel"),
 const HeroSlidesPanel = dynamic(() => import("./admin/HeroSlidesPanel"), {
   loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading hero slides…</div>,
 })
+const PaymentApprovalsPanel = dynamic(() => import("./admin/PaymentApprovalsPanel"), {
+  loading: () => <div role="status" aria-live="polite" className="p-6 text-sm text-slate-500">Loading payment approvals…</div>,
+})
+const OrderThreadModal = dynamic(() => import("../components/OrderThreadModal"))
 
 function DashboardIcon({ name }: { name: string }) {
   const common = {
@@ -257,7 +263,12 @@ function DonutBreakdown({
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  RECEIVED: "#0284C7",        // Sky Blue
+  UNDER_NEGOTIATION: "#8B5CF6",// Purple
+  QUOTATION_SENT: "#D97706",  // Amber
+  PENDING: "#F59E0B",         // Amber
   PENDING_PAYMENT: "#F59E0B", // Amber
+  WAITING_APPROVAL: "#F59E0B",// Amber
   PAID: "#10B981",            // Emerald Green
   PROCESSING: "#2563EB",      // Royal Blue
   PACKED: "#8B5CF6",          // Purple
@@ -265,12 +276,13 @@ const STATUS_COLORS: Record<string, string> = {
   OUT_FOR_DELIVERY: "#EA580C",// Orange
   DELIVERED: "#059669",       // Forest Green
   CANCELLED: "#DC2626",       // Crimson Red
+  PAYMENT_REJECTED: "#DC2626",// Crimson Red
   RETURNED: "#6B7280",        // Gray
 }
 
 const ORDERS_PAGE_SIZE = 10
 
-type AdminSection = "overview" | "orders" | "companyOrders" | "products" | "inventory" | "announcements" | "testimonials" | "categories" | "heroSlides" | "settings" | "staff" | "audit"
+type AdminSection = "overview" | "paymentApprovals" | "orders" | "companyOrders" | "products" | "inventory" | "announcements" | "testimonials" | "categories" | "heroSlides" | "settings" | "staff" | "audit"
 
 export default function AdminPage() {
   const { navigate } = useAppNavigation()
@@ -309,7 +321,7 @@ export default function AdminPage() {
   const [section, setSectionState] = useState<AdminSection>(() => {
     if (typeof window === "undefined") return "overview"
     const stored = sessionStorage.getItem("dubazaar_admin_section") as AdminSection
-    if (stored && ["overview", "orders", "companyOrders", "products", "inventory", "announcements", "testimonials", "categories", "heroSlides", "settings", "staff", "audit"].includes(stored)) {
+    if (stored && ["overview", "paymentApprovals", "orders", "companyOrders", "products", "inventory", "announcements", "testimonials", "categories", "heroSlides", "settings", "staff", "audit"].includes(stored)) {
       return stored
     }
     return "overview"
@@ -343,6 +355,7 @@ export default function AdminPage() {
   useEffect(() => {
     const requiredPermissions: Partial<Record<AdminSection, string>> = {
       overview: "reports.view",
+      paymentApprovals: "payments.approve",
       orders: "orders.view",
       companyOrders: "procurement.view",
       products: "products.view",
@@ -356,7 +369,7 @@ export default function AdminPage() {
       (!requiredPermissions[section] || hasPermission(requiredPermissions[section] as string)))) return
     const fallback: AdminSection = isManager
       ? "overview"
-      : (["overview", "orders", "products", "inventory", "companyOrders", "announcements", "testimonials", "categories", "heroSlides"] as AdminSection[])
+      : (["overview", "paymentApprovals", "orders", "products", "inventory", "companyOrders", "announcements", "testimonials", "categories", "heroSlides"] as AdminSection[])
         .find((candidate) => {
           const permission = requiredPermissions[candidate]
           return permission !== undefined && hasPermission(permission)
@@ -369,6 +382,8 @@ export default function AdminPage() {
   const [orderFilter, setOrderFilter] = useState("ALL")
   const [paymentFilter, setPaymentFilter] = useState("ALL")
   const [channelFilter, setChannelFilter] = useState("ALL")
+  const [orderTypeFilter, setOrderTypeFilter] = useState("ALL")
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0)
   const [ordersPage, setOrdersPage] = useState(1)
   const [ordersData, setOrdersData] = useState<AdminOrdersPage | null>(null)
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -385,6 +400,7 @@ export default function AdminPage() {
 
   // Modals & New Features State
   const [orderForEdit, setOrderForEdit] = useState<AdminOrder | null>(null)
+  const [orderForThread, setOrderForThread] = useState<AdminOrder | null>(null)
   const [expandedOrderIds, setExpandedOrderIds] = useState<string[]>([])
   const [orderIdToCancel, setOrderIdToCancel] = useState<string | null>(null)
   const [productToEdit, setProductToEdit] = useState<StoredProduct | null>(null)
@@ -435,6 +451,18 @@ export default function AdminPage() {
       setRefreshToken((v) => v + 1)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record payment", "Payment Failed")
+    }
+  }
+
+  async function handleApproveMoMoPayment(orderId: string) {
+    try {
+      await approvePayment(orderId)
+      setActionSuccess(`Payment for Order #${orderId.slice(0, 8)} approved! Order status is now Paid → Pending.`)
+      setTimeout(() => setActionSuccess(null), 3500)
+      setOrdersPage(1)
+      setRefreshToken((v) => v + 1)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve payment", "Approval Failed")
     }
   }
 
@@ -550,6 +578,19 @@ export default function AdminPage() {
   }, [isAuthenticated, hasPermission])
 
   useEffect(() => {
+    if (!isAuthenticated || !hasPermission("payments.approve")) return
+    let isMounted = true
+    fetchPaymentApprovals()
+      .then((res) => {
+        if (isMounted) setPendingApprovalsCount(res.count)
+      })
+      .catch(() => {})
+    return () => {
+      isMounted = false
+    }
+  }, [isAuthenticated, hasPermission, refreshToken])
+
+  useEffect(() => {
     if (!isAuthenticated || section !== "orders") return
 
     let isMounted = true
@@ -563,6 +604,7 @@ export default function AdminPage() {
         status: orderFilter === "ALL" ? "" : orderFilter,
         paymentStatus: paymentFilter === "ALL" ? "" : paymentFilter,
         channel: channelFilter === "ALL" ? "" : channelFilter,
+        orderType: orderTypeFilter === "ALL" ? "" : orderTypeFilter,
       })
         .then((result) => {
           if (!isMounted) return
@@ -605,6 +647,7 @@ export default function AdminPage() {
     orderFilter,
     paymentFilter,
     channelFilter,
+    orderTypeFilter,
     refreshToken,
   ])
 
@@ -705,6 +748,7 @@ export default function AdminPage() {
 
   const navItems: { id: AdminSection; label: string; icon: string; permission?: string }[] = [
     { id: "overview", label: "Overview", icon: "📊", permission: "reports.view" },
+    { id: "paymentApprovals", label: "Payment Approvals", icon: "💳", permission: "payments.approve" },
     { id: "orders", label: "Customer Orders", icon: "📦", permission: "orders.view" },
     { id: "companyOrders", label: "Company Orders", icon: "🚢", permission: "procurement.view" },
     { id: "products", label: "Products", icon: "🏷️", permission: "products.view" },
@@ -818,7 +862,12 @@ export default function AdminPage() {
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-base">
                   {item.icon}
                 </span>
-                {item.label}
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.id === "paymentApprovals" && pendingApprovalsCount > 0 && (
+                  <span className="rounded-full bg-[#FF6A00] px-2 py-0.5 text-[10px] font-black text-white shadow-xs">
+                    {pendingApprovalsCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -1554,6 +1603,11 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Payment Approvals */}
+        {section === "paymentApprovals" && (
+          <PaymentApprovalsPanel onPaymentProcessed={() => setRefreshToken((v) => v + 1)} />
+        )}
+
         {/* Orders */}
         {section === "orders" && (
           <div>
@@ -1602,7 +1656,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(200px,1fr)_160px_160px_160px_110px]">
+            <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_140px_140px_140px_140px_100px]">
               <input
                 value={orderSearch}
                 onChange={(event) => {
@@ -1613,6 +1667,21 @@ export default function AdminPage() {
                 placeholder="Search ID, customer, phone, email, product…"
                 className="min-w-0 rounded-xl px-4 py-3 text-sm"
               />
+              <select
+                value={orderTypeFilter}
+                onChange={(event) => {
+                  setOrderTypeFilter(event.target.value)
+                  setOrdersPage(1)
+                }}
+                aria-label="Filter by order type"
+                className="rounded-xl px-3 py-3 text-sm"
+              >
+                <option value="ALL">All order types</option>
+                <option value="shopping">Shopping (Retail)</option>
+                <option value="wholesale">Wholesale</option>
+                <option value="sourcing">Sourcing quote</option>
+                <option value="shipping">Shipping quote</option>
+              </select>
               <select
                 value={orderFilter}
                 onChange={(event) => {
@@ -1640,9 +1709,12 @@ export default function AdminPage() {
               >
                 <option value="ALL">All payment statuses</option>
                 {[
+                  "UNPAID",
+                  "WAITING_APPROVAL",
                   "PENDING",
                   "PROCESSING",
                   "PAID",
+                  "REJECTED",
                   "FAILED",
                   "CANCELLED",
                   "REFUNDED",
@@ -1721,7 +1793,22 @@ export default function AdminPage() {
                   return (
                     <tbody key={order.id} className="divide-y divide-slate-200">
                       <tr className="hover:bg-slate-50">
-                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-bold text-slate-800">#{order.id}</td>
+                        <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-bold text-slate-800">
+                          #{order.id}
+                          <div className="mt-1">
+                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                              order.orderType === 'wholesale'
+                                ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                : order.orderType === 'sourcing'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                  : order.orderType === 'shipping'
+                                    ? 'bg-teal-100 text-teal-800 border-teal-200'
+                                    : 'bg-blue-100 text-blue-800 border-blue-200'
+                            }`}>
+                              {order.orderType === 'wholesale' ? 'Wholesale' : order.orderType === 'sourcing' ? 'Sourcing' : order.orderType === 'shipping' ? 'Shipping' : 'Shopping'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 font-semibold text-slate-900">{order.customerName}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-600">
                           {new Intl.DateTimeFormat("en-RW", {
@@ -1745,6 +1832,16 @@ export default function AdminPage() {
                           >
                             {order.paymentStatus}
                           </span>
+                          {order.mtnTransactionId && (
+                            <div className="mt-1 font-mono text-[10px] font-bold text-amber-900 bg-amber-50 rounded px-1.5 py-0.5 border border-amber-200 truncate max-w-[140px]" title={`MTN MoMo: ${order.mtnTransactionId}`}>
+                              MoMo: {order.mtnTransactionId}
+                            </div>
+                          )}
+                          {order.paymentRejectionReason && (
+                            <div className="mt-1 text-[10px] text-red-700 bg-red-50 rounded px-1.5 py-0.5 border border-red-200 truncate max-w-[140px]" title={order.paymentRejectionReason}>
+                              Rejected: {order.paymentRejectionReason}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -1756,6 +1853,16 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
+                            {(order.orderType === "sourcing" || order.orderType === "shipping" || ["RECEIVED", "UNDER_NEGOTIATION", "QUOTATION_SENT"].includes(order.status)) && (
+                              <button
+                                type="button"
+                                onClick={() => setOrderForThread(order)}
+                                className="rounded-lg border border-purple-300 bg-purple-50 px-2.5 py-1.5 text-xs font-bold text-purple-800 hover:bg-purple-100"
+                                title="Open negotiation thread and manage quotations"
+                              >
+                                💬 Quotation &amp; Chat
+                              </button>
+                            )}
                             <button
                               type="button"
                               aria-expanded={expanded}
@@ -1853,6 +1960,15 @@ export default function AdminPage() {
                                 >
                                   📞 Call Customer
                                 </a>
+                              )}
+                              {hasPermission("payments.approve") && order.paymentStatus !== "PAID" && (order.status === "WAITING_APPROVAL" || order.paymentStatus === "WAITING_APPROVAL" || order.mtnTransactionId) && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleApproveMoMoPayment(order.id)}
+                                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
+                                >
+                                  ✓ Approve MoMo
+                                </button>
                               )}
                               {order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && (hasPermission("payments.approve") || hasPermission("orders.update")) && (
                                 <button
@@ -2226,10 +2342,22 @@ export default function AdminPage() {
                       {p.name}
                     </div>
                     <div
-                      className="text-xs mt-0.5"
+                      className="text-xs mt-0.5 flex flex-wrap items-center gap-2"
                       style={{ color: "#0B5B24" }}
                     >
-                      {p.brand} · {p.sku}
+                      <span>{p.brand} · {p.sku}</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold font-mono bg-amber-100 text-amber-900">
+                        MOQ: {p.moq || 1}
+                      </span>
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold"
+                        style={{
+                          background: p.listingType === 'wholesale' ? '#F3E8FF' : p.listingType === 'retail' ? '#E0F2FE' : '#ECFDF5',
+                          color: p.listingType === 'wholesale' ? '#6B21A8' : p.listingType === 'retail' ? '#0369A1' : '#047857',
+                        }}
+                      >
+                        {p.listingType === 'wholesale' ? 'Wholesale Only' : p.listingType === 'retail' ? 'Retail Only' : 'Wholesale & Retail'}
+                      </span>
                     </div>
                   </div>
                   <div className="text-right hidden sm:block">
@@ -2239,6 +2367,11 @@ export default function AdminPage() {
                     >
                       {formatPrice(p.price)}
                     </div>
+                    {p.wholesalePrice != null && (
+                      <div className="text-xs font-semibold text-purple-700">
+                        WS: {formatPrice(p.wholesalePrice)} <span className="text-slate-500 font-normal">(MOQ: {p.moq || 1})</span>
+                      </div>
+                    )}
                     <div className="text-xs" style={{ color: "#0B5B24" }}>
                       Stock: {p.quantity}
                     </div>
@@ -2900,6 +3033,21 @@ export default function AdminPage() {
         }}
         onClose={() => setConfirmDeleteProduct(null)}
       />
+
+      {/* Negotiation & Quotation Thread Modal */}
+      {orderForThread && (
+        <OrderThreadModal
+          orderId={orderForThread.id}
+          orderTitle={`${(orderForThread.orderType || "order").toUpperCase()} #${orderForThread.id.slice(0, 8)} - ${orderForThread.customerName}`}
+          isOpen={true}
+          onClose={() => {
+            setOrderForThread(null)
+            setRefreshToken((v) => v + 1)
+          }}
+          isStaffMode={true}
+          canManageQuotations={hasPermission("quotations.manage")}
+        />
+      )}
     </div>
   )
 }

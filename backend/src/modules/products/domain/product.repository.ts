@@ -6,6 +6,7 @@ export interface CatalogQuery {
   activeOnly: boolean
   category?: string
   search?: string
+  listingType?: string
 }
 
 export interface ProductRepository {

@@ -65,11 +65,12 @@ export class AuthController {
 
     await this.audit.record({
       actorUserId: result.user.id,
-      actorName: result.user.email,
+      actorName: result.user.name || result.user.email,
       action: 'auth.login.success',
       targetResource: 'auth',
       targetId: result.user.id,
-      metadata: { role: result.user.role },
+      recordNumber: result.user.email,
+      metadata: { role: result.user.role, workerRole: result.user.workerRole || null },
     })
     setRefreshCookie(response, result.refreshToken, this.auth.getRefreshTtlMs(), isProduction(this.config))
     return { success: result.success, token: result.token, user: result.user }

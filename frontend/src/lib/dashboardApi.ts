@@ -260,6 +260,7 @@ export type StaffUserRecord = {
   email: string
   phoneNumber: string | null
   role: "MANAGER" | "STAFF"
+  workerRole?: string | null
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING"
   emailVerified: boolean
   permissions: string[]
@@ -965,7 +966,9 @@ export async function createStaffUser(payload: {
   email: string
   phoneNumber?: string
   password: string
+  workerRole?: string
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'
+  permissions?: string[]
 }): Promise<StaffUserRecord> {
   const response = await apiFetch(apiUrl("/api/admin/users"), {
     method: "POST",
@@ -981,7 +984,15 @@ export async function createStaffUser(payload: {
 
 export async function updateStaffUser(
   id: string,
-  payload: { firstName: string; lastName: string; email: string; phoneNumber: string | null },
+  payload: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    phoneNumber?: string | null
+    workerRole?: string
+    permissions?: string[]
+    status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'
+  },
 ): Promise<StaffUserRecord> {
   const response = await apiFetch(apiUrl(`/api/admin/users/${id}`), {
     method: "PATCH",

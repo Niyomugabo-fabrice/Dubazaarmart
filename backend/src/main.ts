@@ -1,4 +1,6 @@
 import 'reflect-metadata'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { ConfigService } from '@nestjs/config'
@@ -26,9 +28,25 @@ function isLocalDevelopmentOrigin(origin: string): boolean {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false })
   const config = app.get(ConfigService)
-  app.use(helmet({ contentSecurityPolicy: false }))
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }))
   app.use(express.json({ limit: '10mb' }))
   app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+  const uploadsDir = path.resolve(process.cwd(), 'uploads')
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true })
+  }
+  const staticUploadOptions = {
+    setHeaders: (res: express.Response) => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    },
+  }
+  app.use('/uploads', express.static(uploadsDir, staticUploadOptions))
+  app.use('/api/v1/uploads', express.static(uploadsDir, staticUploadOptions))
   const origins = (config.get<string>('FRONTEND_URL') || '')
     .split(',')
     .map((origin) => origin.trim().replace(/\/+$/, ''))

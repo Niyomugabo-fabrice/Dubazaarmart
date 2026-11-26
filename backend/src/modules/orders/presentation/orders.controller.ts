@@ -65,13 +65,13 @@ export class AdminOrdersController {
   }
 
   @Patch(':id/status')
-  @Permissions('orders.update')
+  @Permissions('orders.status')
   updateStatus(@Param('id') id: string, @Body() body: unknown) {
     return this.orders.updateStatus(id, body)
   }
 
   @Patch(':id/payment')
-  @Permissions('orders.update')
+  @Permissions('payments.approve')
   recordPayment(@Param('id') id: string) {
     return this.orders.recordPayment(id)
   }

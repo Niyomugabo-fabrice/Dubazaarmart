@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import bcrypt from 'bcryptjs'
-import type { UserIdentity, UserStatus } from '../domain/user-account'
+import { WORKER_ROLE_DEFINITIONS, type UserIdentity, type UserStatus } from '../domain/user-account'
 import { USER_REPOSITORY, type UserRepository } from '../domain/user.repository'
 import type { CreateStaffDto, ListStaffQueryDto, UpdateStaffDto } from '../presentation/dto/create-staff.dto'
 import { isUniqueViolation, validatePassword } from './user-validation'
@@ -34,6 +34,13 @@ export class UserManagementService {
     if (await this.users.findByEmail(email)) throw new ConflictException('An account already exists for this email.')
     validatePassword(dto.password)
     const status = dto.status ?? 'PENDING'
+    const workerRole = dto.workerRole || 'STAFF'
+
+    let permissions = dto.permissions
+    if (!permissions || permissions.length === 0) {
+      const preset = WORKER_ROLE_DEFINITIONS.find((def) => def.id === workerRole)
+      permissions = preset ? [...preset.defaultPermissions] : []
+    }
 
     try {
       const user = await this.users.createStaff({
@@ -42,8 +49,10 @@ export class UserManagementService {
         email,
         phoneNumber: dto.phoneNumber,
         passwordHash: await bcrypt.hash(dto.password, 12),
+        workerRole,
         status,
         emailVerified: status === 'ACTIVE',
+        permissions,
       })
       return identityOf(user)
     } catch (error) {
@@ -139,6 +148,7 @@ function identityOf(user: {
   email: string
   phoneNumber: string | null
   role: 'MANAGER' | 'STAFF'
+  workerRole?: string | null
   status: UserStatus
   emailVerified: boolean
   permissions: UserIdentity['permissions']
@@ -153,9 +163,10 @@ function identityOf(user: {
     email: user.email,
     phoneNumber: user.phoneNumber,
     role: user.role,
+    workerRole: user.workerRole ?? (user.role === 'MANAGER' ? 'MANAGER' : 'STAFF'),
     status: user.status,
     emailVerified: user.emailVerified,
-    permissions: user.permissions,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
   }

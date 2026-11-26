@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { IsNull, Repository } from 'typeorm'
-import { STAFF_OPERATIONAL_PERMISSION_KEYS, type StaffPermission, type UserAccount, type UserIdentity } from '../../../domain/user-account'
+import { type StaffPermission, type UserAccount, type UserIdentity } from '../../../domain/user-account'
 import type {
   CreateUserRecord,
   StaffListQuery,
@@ -80,6 +80,7 @@ export class TypeOrmUserRepository implements UserRepository {
       phoneNumber: record.phoneNumber?.trim() || null,
       passwordHash: record.passwordHash,
       role: 'STAFF',
+      workerRole: record.workerRole || 'STAFF',
       status: record.status,
       emailVerified: record.emailVerified ?? false,
       permissions: record.permissions ?? [],
@@ -100,6 +101,7 @@ export class TypeOrmUserRepository implements UserRepository {
       phoneNumber: record.phoneNumber?.trim() || null,
       passwordHash: record.passwordHash,
       role: 'MANAGER',
+      workerRole: 'MANAGER',
       status: record.status,
       emailVerified: record.emailVerified ?? true,
       permissions: record.permissions ?? [],
@@ -117,6 +119,8 @@ export class TypeOrmUserRepository implements UserRepository {
     if (values.firstName !== undefined) user.firstName = values.firstName.trim()
     if (values.lastName !== undefined) user.lastName = values.lastName.trim()
     if (values.phoneNumber !== undefined) user.phoneNumber = values.phoneNumber?.trim() || null
+    if (values.workerRole !== undefined) user.workerRole = values.workerRole
+    if (values.permissions !== undefined) user.permissions = values.permissions
     if (values.emailVerified !== undefined) user.emailVerified = values.emailVerified
     if (values.status !== undefined) user.status = values.status
     if (values.email !== undefined && values.email.trim().toLowerCase() !== user.email) {
@@ -140,7 +144,7 @@ export class TypeOrmUserRepository implements UserRepository {
   async promoteStaffToManager(id: string): Promise<UserIdentity | null> {
     const result = await this.users.createQueryBuilder()
       .update(UserEntity)
-      .set({ role: 'MANAGER' })
+      .set({ role: 'MANAGER', workerRole: 'MANAGER' })
       .where(
         "id = :id AND role = 'STAFF' AND status = 'ACTIVE' AND email_verified = true AND deleted_at IS NULL",
         { id },
@@ -180,9 +184,10 @@ export class TypeOrmUserRepository implements UserRepository {
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role,
+      workerRole: user.workerRole ?? (user.role === 'MANAGER' ? 'MANAGER' : 'STAFF'),
       status: user.status,
       emailVerified: user.emailVerified,
-      permissions: user.role === 'STAFF' ? [...STAFF_OPERATIONAL_PERMISSION_KEYS] : user.permissions as StaffPermission[],
+      permissions: Array.isArray(user.permissions) ? (user.permissions as StaffPermission[]) : [],
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
     }

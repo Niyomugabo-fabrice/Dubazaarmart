@@ -3,6 +3,7 @@ import type { StaffPermission, UserRole, UserStatus } from '../../../domain/user
 
 @Entity({ name: 'users' })
 @Index('users_role_status_idx', ['role', 'status'])
+@Index('users_worker_role_idx', ['workerRole'])
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string
@@ -24,6 +25,9 @@ export class UserEntity {
 
   @Column({ type: 'text' })
   role!: UserRole
+
+  @Column({ name: 'worker_role', type: 'text', nullable: true, default: 'STAFF' })
+  workerRole!: string | null
 
   @Column({ type: 'text', default: 'PENDING' })
   status!: UserStatus

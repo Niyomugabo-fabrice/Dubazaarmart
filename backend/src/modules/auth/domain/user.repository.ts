@@ -8,6 +8,7 @@ export interface CreateUserRecord {
   email: string
   phoneNumber?: string | null
   passwordHash: string
+  workerRole?: string | null
   status: UserStatus
   emailVerified?: boolean
   permissions?: StaffPermission[]
@@ -18,8 +19,10 @@ export interface UpdateStaffRecord {
   lastName?: string
   email?: string
   phoneNumber?: string | null
+  workerRole?: string | null
   emailVerified?: boolean
   status?: UserStatus
+  permissions?: StaffPermission[]
 }
 
 export interface StaffListQuery {

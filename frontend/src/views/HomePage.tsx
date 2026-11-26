@@ -138,9 +138,9 @@ export default function HomePage() {
 
   return (
     <div className="bg-white text-[#0A1F44]">
-      <section className="relative isolate min-h-[420px] overflow-hidden bg-[#EAF3FF] sm:min-h-[350px] lg:min-h-[380px]">
+      <section className="relative isolate min-h-[440px] overflow-hidden bg-[#EAF3FF] sm:min-h-[350px] lg:min-h-[380px]">
         <div className="absolute inset-0 bg-[#EAF3FF]" />
-        <div className="absolute inset-y-0 right-0 w-full sm:left-[28%] sm:w-[72%]">
+        <div className="absolute inset-0 sm:inset-y-0 sm:right-0 sm:left-[28%] sm:w-[72%]">
           <Image
             src={heroImageUrl}
             alt="DubazaarMart homepage hero"
@@ -148,29 +148,27 @@ export default function HomePage() {
             priority
             unoptimized
             sizes="(min-width: 640px) 72vw, 100vw"
-            className="object-cover object-right sm:object-center"
+            className="object-cover object-[65%_center] sm:object-center"
           />
         </div>
+        <div aria-hidden="true" className="absolute inset-0 z-[2] bg-[linear-gradient(180deg,rgba(7,25,48,0.2)_0%,rgba(7,25,48,0.78)_100%)] sm:hidden" />
         <div
           aria-hidden="true"
-          className="absolute inset-y-0 left-0 z-[2] w-[85%] bg-[linear-gradient(90deg,#ffffff_0%,#ffffff_55%,rgba(255,255,255,0.88)_72%,rgba(255,255,255,0)_100%)] sm:w-[46%] sm:bg-[linear-gradient(90deg,#ffffff_0%,#ffffff_64%,rgba(255,255,255,0.92)_78%,rgba(255,255,255,0)_100%)]"
+          className="absolute inset-y-0 left-0 z-[2] hidden w-[46%] bg-[linear-gradient(90deg,#ffffff_0%,#ffffff_64%,rgba(255,255,255,0.92)_78%,rgba(255,255,255,0)_100%)] sm:block"
         />
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 z-[2] h-5 bg-gradient-to-t from-white/25 to-transparent" />
-        <div className="relative z-10 mx-auto flex min-h-[420px] max-w-7xl items-center px-4 py-10 sm:min-h-[350px] sm:px-6 sm:py-10 lg:min-h-[380px] lg:px-8 lg:py-12">
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 z-[2] hidden h-5 bg-gradient-to-t from-white/25 to-transparent sm:block" />
+        <div className="relative z-10 mx-auto flex min-h-[440px] max-w-7xl items-center justify-center px-4 py-8 text-center sm:min-h-[350px] sm:justify-start sm:px-6 sm:py-10 sm:text-left lg:min-h-[380px] lg:px-8 lg:py-12">
           <div className="max-w-[440px]">
-            <h1 className="text-[1.85rem] font-black leading-[1.04] tracking-[-0.035em] text-[#102744] sm:text-[2.1rem] lg:text-[2.25rem]">
-              One Partner for
-              <br />
-              <span className="text-[#0874F9]">Shipping,</span>{" "}
-              <span className="text-[#F26A21]">Logistics,</span>
-              <br />
-              <span className="text-[#168D42]">Wholesale</span> &amp;{" "}
-              <span className="text-[#0874F9]">Retail</span>
+            <h1 className="text-[1.85rem] font-black leading-[1.04] tracking-[-0.035em] text-white sm:text-[#102744] sm:text-[2.1rem] lg:text-[2.25rem]">
+              DubazaarMart
+              <span className="mt-2 block text-sm font-semibold leading-snug tracking-normal text-white/90 sm:text-[#52657C] sm:text-base">
+                Rwanda Global sourcing, shipping and logistic company
+              </span>
             </h1>
-            <p className="mt-3 max-w-[390px] text-xs leading-relaxed text-[#26384D] sm:text-sm">
+            <p className="mt-3 hidden max-w-[390px] text-xs leading-relaxed text-[#26384D] sm:block sm:text-sm">
               From global sourcing and freight management to wholesale distribution and retail sales, we provide complete commerce solutions that move products from suppliers to customers efficiently.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2.5">
+            <div className="mt-5 flex flex-wrap justify-center gap-2.5 sm:mt-4 sm:justify-start">
               <Link href="/contact?topic=quote" className="inline-flex items-center rounded-md bg-[#F26A21] px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#D95412]">
                 Get a Quote <ArrowIcon />
               </Link>
@@ -178,7 +176,7 @@ export default function HomePage() {
                 Explore Services
               </Link>
             </div>
-            <div className="mt-4 flex max-w-[440px] flex-wrap gap-x-4 gap-y-1.5 text-[10px] font-semibold text-[#26384D] sm:text-[11px]">
+            <div className="mt-4 hidden max-w-[440px] flex-wrap gap-x-4 gap-y-1.5 text-[10px] font-semibold text-[#26384D] sm:flex sm:text-[11px]">
               <span className="inline-flex items-center gap-1"><span className="text-[#168D42]">✓</span> Reliable Service</span>
               <span className="inline-flex items-center gap-1"><span className="text-[#0874F9]">◎</span> Global Network</span>
               <span className="inline-flex items-center gap-1"><span className="text-[#0874F9]">●</span> Business &amp; Consumer Focus</span>

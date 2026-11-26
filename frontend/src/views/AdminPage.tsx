@@ -287,7 +287,18 @@ export default function AdminPage() {
     .join("")
     .toUpperCase()
   const hasPermission = useCallback(
-    (permission: string) => isManager || admin?.role === "STAFF" || Boolean(admin?.permissions.includes(permission)),
+    (permission: string) => {
+      if (isManager) return true
+      const userPermissions = admin?.permissions || []
+      if (userPermissions.includes(permission)) return true
+      if (permission.startsWith("products.") && userPermissions.includes("products.manage")) return true
+      if (permission.startsWith("batches.") && userPermissions.includes("batches.manage")) return true
+      if (permission === "orders.status" && (userPermissions.includes("orders.update") || userPermissions.includes("orders.status"))) return true
+      if (permission === "payments.approve" && (userPermissions.includes("payments.approve") || userPermissions.includes("orders.update"))) return true
+      if (permission === "orders.contact" && (userPermissions.includes("orders.contact") || userPermissions.includes("orders.view") || userPermissions.includes("orders.update"))) return true
+      if (permission === "procurement.view" && userPermissions.includes("procurement.manage")) return true
+      return false
+    },
     [admin, isManager],
   )
   const { products: storeProducts, deleteProduct } = useProducts()
@@ -712,6 +723,12 @@ export default function AdminPage() {
   }
   const visibleNavItems = navItems.filter((item) => !item.permission || hasPermission(item.permission))
 
+  useEffect(() => {
+    if (visibleNavItems.length > 0 && !visibleNavItems.some((item) => item.id === section)) {
+      setSection(visibleNavItems[0].id)
+    }
+  }, [section, visibleNavItems])
+
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
@@ -913,7 +930,7 @@ export default function AdminPage() {
                     {admin?.name || "Account"}
                   </span>
                   <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                    {isManager ? "Manager" : "User"}
+                    {isManager ? "Manager" : admin?.workerRole ? admin.workerRole.replace(/_/g, " ") : "Staff"}
                   </span>
                 </span>
                 <svg
@@ -1553,13 +1570,15 @@ export default function AdminPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateOrderOpen(true)}
-                  className="btn-gold flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold sm:text-sm shadow-md"
-                >
-                  <span className="text-base leading-none font-bold">+</span> Create Order
-                </button>
+                {hasPermission("orders.create") && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateOrderOpen(true)}
+                    className="btn-gold flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold sm:text-sm shadow-md"
+                  >
+                    <span className="text-base leading-none font-bold">+</span> Create Order
+                  </button>
+                )}
                 <div
                   className="flex items-center gap-2 rounded-full border px-3 py-2 text-xs"
                   style={{
@@ -1748,13 +1767,15 @@ export default function AdminPage() {
                             >
                               {expanded ? "Hide details" : "View details"}
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setOrderForEdit(order)}
-                              className="rounded-lg bg-[#FFB800] px-3 py-1.5 text-xs font-bold text-slate-950 hover:brightness-95"
-                            >
-                              Edit
-                            </button>
+                            {hasPermission("orders.update") && (
+                              <button
+                                type="button"
+                                onClick={() => setOrderForEdit(order)}
+                                className="rounded-lg bg-[#FFB800] px-3 py-1.5 text-xs font-bold text-slate-950 hover:brightness-95"
+                              >
+                                Edit
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1815,7 +1836,25 @@ export default function AdminPage() {
                               </section>
                             </div>
                             <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
-                              {order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && (
+                              {hasPermission("orders.contact") && order.phone && (
+                                <a
+                                  href={`https://wa.me/${order.phone.replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 inline-flex items-center gap-1"
+                                >
+                                  💬 Contact via WhatsApp
+                                </a>
+                              )}
+                              {hasPermission("orders.contact") && order.phone && (
+                                <a
+                                  href={`tel:${order.phone}`}
+                                  className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 hover:bg-blue-100 inline-flex items-center gap-1"
+                                >
+                                  📞 Call Customer
+                                </a>
+                              )}
+                              {order.paymentStatus !== "PAID" && order.status !== "CANCELLED" && (hasPermission("payments.approve") || hasPermission("orders.update")) && (
                                 <button
                                   type="button"
                                   onClick={() => void handleRecordPayment(order.id)}
@@ -1824,7 +1863,7 @@ export default function AdminPage() {
                                   Record paid
                                 </button>
                               )}
-                              {order.status !== "CANCELLED" && order.status !== "DELIVERED" && (
+                              {order.status !== "CANCELLED" && order.status !== "DELIVERED" && hasPermission("orders.update") && (
                                 <button
                                   type="button"
                                   onClick={() => setOrderIdToCancel(order.id)}
@@ -1833,13 +1872,15 @@ export default function AdminPage() {
                                   Cancel order
                                 </button>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteOrder(order.id)}
-                                className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-800 hover:bg-red-100"
-                              >
-                                Archive order
-                              </button>
+                              {hasPermission("orders.delete") && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-800 hover:bg-red-100"
+                                >
+                                  Archive order
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1907,13 +1948,15 @@ export default function AdminPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateCompanyOrderOpen(true)}
-                  className="btn-gold flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold sm:text-sm shadow-md"
-                >
-                  <span className="text-base leading-none font-bold">+</span> Create Purchase Order
-                </button>
+                {hasPermission("procurement.manage") && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateCompanyOrderOpen(true)}
+                    className="btn-gold flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold sm:text-sm shadow-md"
+                  >
+                    <span className="text-base leading-none font-bold">+</span> Create Purchase Order
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2039,20 +2082,24 @@ export default function AdminPage() {
                         >
                           {isExpanded ? "Hide details" : "View details"}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setPoForEdit(po)}
-                          className="rounded-lg border border-[#FFB800] bg-[#FFF7E8] px-3 py-2 text-xs font-bold text-slate-800 hover:bg-[#FFB800]/20"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCompanyOrder(po.id, po.poNumber)}
-                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
-                        >
-                          Delete
-                        </button>
+                        {hasPermission("procurement.manage") && (
+                          <button
+                            type="button"
+                            onClick={() => setPoForEdit(po)}
+                            className="rounded-lg border border-[#FFB800] bg-[#FFF7E8] px-3 py-2 text-xs font-bold text-slate-800 hover:bg-[#FFB800]/20"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {hasPermission("procurement.manage") && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCompanyOrder(po.id, po.poNumber)}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -2095,7 +2142,7 @@ export default function AdminPage() {
                             Shipping: ${po.shippingCost.toFixed(2)} · Other charges: ${po.otherCharges.toFixed(2)}
                             <div className="mt-1 whitespace-pre-wrap"><strong>Notes:</strong> {po.notes || "—"}</div>
                           </div>
-                          {po.status !== "RECEIVED" && po.status !== "CANCELLED" && (
+                          {po.status !== "RECEIVED" && po.status !== "CANCELLED" && hasPermission("procurement.manage") && (
                             <button
                               type="button"
                               onClick={() => setPoForReceive(po)}
@@ -2137,13 +2184,15 @@ export default function AdminPage() {
                 </div>
                 <h1 className="text-3xl font-bold text-[#111111]">Products</h1>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAddProductOpen(true)}
-                className="btn-gold px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md"
-              >
-                + Add Product
-              </button>
+              {(hasPermission("products.create") || hasPermission("products.manage")) && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddProductOpen(true)}
+                  className="btn-gold px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md"
+                >
+                  + Add Product
+                </button>
+              )}
             </div>
 
             <div className="flex gap-3 mb-6">
@@ -2208,29 +2257,33 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setProductToEdit(p as any)}
-                      className="px-3 py-1.5 rounded-lg text-xs btn-ghost border border-[#FFB800] hover:bg-[#FFB800]/20"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setConfirmDeleteProduct({ id: p.id, name: p.name })
-                      }}
-                      className="px-3 py-1.5 rounded-lg text-xs transition-colors hover:brightness-125"
-                      style={{
-                        background: "rgba(255,106,0,0.1)",
-                        color: "#FF6A00",
-                        border: "1px solid rgba(255,106,0,0.2)",
-                      }}
-                    >
-                      Delete
-                    </button>
+                    {(hasPermission("products.update") || hasPermission("products.manage")) && (
+                      <button
+                        type="button"
+                        onClick={() => setProductToEdit(p as any)}
+                        className="px-3 py-1.5 rounded-lg text-xs btn-ghost border border-[#FFB800] hover:bg-[#FFB800]/20"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {(hasPermission("products.delete") || hasPermission("products.manage")) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setConfirmDeleteProduct({ id: p.id, name: p.name })
+                        }}
+                        className="px-3 py-1.5 rounded-lg text-xs transition-colors hover:brightness-125"
+                        style={{
+                          background: "rgba(255,106,0,0.1)",
+                          color: "#FF6A00",
+                          border: "1px solid rgba(255,106,0,0.2)",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

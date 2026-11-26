@@ -222,6 +222,7 @@ function identityOf(user: {
   email: string
   phoneNumber: string | null
   role: 'MANAGER' | 'STAFF'
+  workerRole?: string | null
   status: UserIdentity['status']
   emailVerified: boolean
   permissions: UserIdentity['permissions']
@@ -236,9 +237,10 @@ function identityOf(user: {
     email: user.email,
     phoneNumber: user.phoneNumber,
     role: user.role,
+    workerRole: user.workerRole ?? (user.role === 'MANAGER' ? 'MANAGER' : 'STAFF'),
     status: user.status,
     emailVerified: user.emailVerified,
-    permissions: user.permissions,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
   }

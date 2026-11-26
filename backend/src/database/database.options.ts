@@ -12,6 +12,8 @@ import { OrderAdminNotes20261119213000 } from './migrations/20261119213000-Order
 import { TestimonialsManagement20261119232000 } from './migrations/20261119232000-TestimonialsManagement'
 import { CategoryImages20261119234000 } from './migrations/20261119234000-CategoryImages'
 import { HeroSlidesManagement20261120010000 } from './migrations/20261120010000-HeroSlidesManagement'
+import { CompanyOrderProductReferences20261120020000 } from './migrations/20261120020000-CompanyOrderProductReferences'
+import { WorkerRolesAndPermissions20261126210000 } from './migrations/20261126210000-WorkerRolesAndPermissions'
 
 export function databaseOptions(databaseUrl: string): TypeOrmModuleOptions {
   return {
@@ -31,6 +33,8 @@ export function databaseOptions(databaseUrl: string): TypeOrmModuleOptions {
       TestimonialsManagement20261119232000,
       CategoryImages20261119234000,
       HeroSlidesManagement20261120010000,
+      CompanyOrderProductReferences20261120020000,
+      WorkerRolesAndPermissions20261126210000,
     ],
     migrationsTableName: 'typeorm_migrations',
     synchronize: false,

@@ -49,11 +49,11 @@ export class MediaController {
     const result = await this.cloudinary.uploadImage(imageData, cleanFilename, uploadFolder)
     return {
       success: true,
-      url: result.secure_url,
+      url: result.secure_url || result.url,
       public_id: result.public_id,
       format: result.format,
       filename: cleanFilename,
-      storage: 'cloudinary',
+      storage: result.storage || 'cloudinary',
     }
   }
 }

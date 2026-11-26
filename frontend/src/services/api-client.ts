@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = 'http://localhost:3001/api/v1'
+const DEFAULT_API_URL = 'http://127.0.0.1:3001/api/v1'
 
 export interface AdminSessionUser {
   id: string
@@ -8,6 +8,7 @@ export interface AdminSessionUser {
   email: string
   phoneNumber: string | null
   role: 'MANAGER' | 'STAFF'
+  workerRole?: string | null
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING'
   emailVerified: boolean
   permissions: string[]

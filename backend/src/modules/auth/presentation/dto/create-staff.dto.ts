@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator'
-import type { UserStatus } from '../../domain/user-account'
+import { IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator'
+import type { StaffPermission, UserStatus } from '../../domain/user-account'
 import { RegisterStaffDto } from './register-staff.dto'
 
 const USER_STATUSES: UserStatus[] = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING']
@@ -11,6 +11,16 @@ export class CreateStaffDto extends RegisterStaffDto {
   @IsOptional()
   @IsIn(USER_STATUSES)
   status?: UserStatus
+
+  @ApiPropertyOptional({ example: 'SOURCING_AGENT' })
+  @IsOptional()
+  @IsString()
+  workerRole?: string
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  permissions?: StaffPermission[]
 }
 
 export class UpdateStaffDto {
@@ -39,6 +49,21 @@ export class UpdateStaffDto {
   @IsString()
   @MaxLength(32)
   phoneNumber?: string | null
+
+  @ApiPropertyOptional({ example: 'SOURCING_AGENT' })
+  @IsOptional()
+  @IsString()
+  workerRole?: string
+
+  @ApiPropertyOptional({ enum: USER_STATUSES })
+  @IsOptional()
+  @IsIn(USER_STATUSES)
+  status?: UserStatus
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  permissions?: StaffPermission[]
 }
 
 export class ListStaffQueryDto {
